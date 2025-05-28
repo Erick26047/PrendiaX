@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Panel de control - PrendiaX</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: white;
+            color: black;
+        }
+        header {
+            background-color: black;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 {
+            color: white;
+            margin: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        form label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        form input, form select, form textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        #otra-categoria {
+            margin-top: 10px;
+        }
+        form button {
+            margin-top: 25px;
+            background-color: black;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        form button:hover {
+            background-color: #333;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>PrendiaX</h1>
+    </header>
+    <div class="container">
+        <h2>Publica tu negocio</h2>
+        <form action="/guardar_datos" method="post" enctype="multipart/form-data">
+            <label for="nombre_empresa">Nombre del negocio</label>
+            <input type="text" id="nombre_empresa" name="nombre_empresa" required>
+
+            <label for="direccion">Dirección</label>
+            <input type="text" id="direccion" name="direccion">
+
+            <label for="ubicacion_google_maps">Ubicación (enlace de Google Maps)</label>
+            <input type="text" id="ubicacion_google_maps" name="ubicacion_google_maps" placeholder="https://goo.gl/maps/...">
+
+            <label for="telefono">Teléfono de contacto</label>
+            <input type="text" id="telefono" name="telefono">
+
+            <label for="horario">Horario de atención</label>
+            <input type="text" id="horario" name="horario">
+
+            <label for="categoria">Categoría</label>
+            <select name="categoria" id="categoria" onchange="verificarCategoria(this)">
+                <option disabled selected>Selecciona una categoría</option>
+                <option>Restaurantes y comida rápida</option>
+                <option>Alimentos y bebidas</option>
+                <option>Ropa</option>
+                <option>Artículos religiosos</option>
+                <option>Tecnología y electrónica</option>
+                <option>Servicios profesionales</option>
+                <option>Salud y bienestar</option>
+                <option>Créditos y servicios financieros</option>
+                <option>Bienes raíces</option>
+                <option>Entretenimiento y eventos</option>
+                <option>Educación</option>
+                <option>Mascotas y veterinarias</option>
+                <option>Productos artesanales o locales</option>
+                <option value="otro">Otro</option>
+            </select>
+
+            <div id="otra-categoria" style="display:none;">
+                <label for="otra_categoria">¿Cuál es tu categoría?</label>
+                <input type="text" id="otra_categoria" name="otra_categoria">
+            </div>
+
+            <label for="servicios">Productos o servicios que ofreces</label>
+            <textarea id="servicios" name="servicios" rows="3"></textarea>
+
+            <label for="sitio_web">Sitio web (opcional)</label>
+            <input type="text" id="sitio_web" name="sitio_web">
+
+            <label for="foto">Foto de perfil del negocio</label>
+            <input type="file" id="foto" name="foto" accept="image/*">
+
+            <button type="submit">Guardar negocio</button>
+        </form>
+    </div>
+
+    <script>
+        function verificarCategoria(select) {
+            const campoExtra = document.getElementById("otra-categoria");
+            campoExtra.style.display = select.value === "otro" ? "block" : "none";
+        }
+    </script>
+</body>
+</html>

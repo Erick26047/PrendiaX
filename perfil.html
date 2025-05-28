@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Perfil | PrendiaX</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            color: #000;
+            position: relative;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            z-index: -1;
+            pointer-events: none;
+            display: none;
+        }
+
+        .star {
+            position: absolute;
+            background: #fff;
+            border-radius: 50%;
+            animation: twinkle 5s infinite, move 20s linear infinite;
+            opacity: 0.8;
+        }
+
+        .star:nth-child(odd) { width: 2px; height: 2px; }
+        .star:nth-child(even) { width: 1px; height: 1px; }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.3; }
+        }
+
+        @keyframes move {
+            0% { transform: translateY(0) translateX(0); }
+            100% { transform: translateY(100vh) translateX(10vw); }
+        }
+
+        header {
+            background-color: #000;
+            color: #fff;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        header h1 {
+            color: #fff;
+            margin: 0;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .botones {
+            display: flex;
+            gap: 10px;
+        }
+
+        .boton {
+            background-color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 18px;
+            color: #000;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .boton:hover {
+            background-color: #e0e0e0;
+        }
+
+        #theme-toggle {
+            background-color: #fff;
+            color: #000;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            border: none;
+        }
+
+        #theme-toggle:hover {
+            background-color: #e0e0e0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 40px auto;
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 20px;
+                gap: 20px;
+            }
+        }
+
+        .column-left, .column-center, .column-right {
+            background-color: #fafafa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .profile-data {
+            text-align: center;
+        }
+
+        .profile-pic {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #ccc;
+            margin: 0 auto 20px;
+            display: block;
+            transition: border-color 0.3s ease;
+        }
+
+        .profile-data h2 {
+            font-size: 24px;
+            margin: 0 0 10px;
+            color: #000;
+            transition: color 0.3s ease;
+        }
+
+        .campo {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .campo label {
+            font-weight: bold;
+            font-size: 16px;
+            display: block;
+            margin-bottom: 5px;
+            color: #000;
+            transition: color 0.3s ease;
+        }
+
+        .campo p {
+            margin: 0;
+            padding: 8px;
+            background: #f2f2f2;
+            border-radius: 8px;
+            font-size: 16px;
+            color: #000;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .feed {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .post {
+            background-color: #fafafa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+            position: relative;
+        }
+
+        .post-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .post-profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #ccc;
+        }
+
+        .post-user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .post-user-info .company-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #000;
+            margin: 0;
+            transition: color 0.3s ease;
+        }
+
+        .post-content {
+            margin-bottom: 10px;
+        }
+
+        .post-content p {
+            margin: 0 0 10px;
+            font-size: 16px;
+            color: #000;
+            line-height: 1.5;
+            transition: color 0.3s ease;
+        }
+
+        .post-media {
+            margin-top: 10px;
+        }
+
+        .post-media img, .post-media video {
+            max-width: 100%;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .post-meta p {
+            margin: 10px 0 0;
+            font-size: 14px;
+            color: #666;
+            transition: color 0.3s ease;
+        }
+
+        .post-meta p:last-child {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .delete-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #f44336;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+        }
+
+        .delete-button:hover {
+            background-color: #d32f2f;
+        }
+
+        .reviews {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .review {
+            background-color: #f2f2f2;
+            padding: 15px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+        }
+
+        .review p {
+            margin: 0;
+            font-size: 14px;
+            color: #000;
+            transition: color 0.3s ease;
+        }
+
+        .review .review-author {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #4caf50;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            animation: slideIn 0.3s ease-in-out;
+        }
+
+        .notification.error {
+            background-color: #f44336;
+        }
+
+        .notification i {
+            font-size: 18px;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slideOut {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(100%); }
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        .modal-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            color: #000;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .modal-content p {
+            margin: 0 0 20px;
+            font-size: 16px;
+        }
+
+        .modal-content button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s ease;
+        }
+
+        #confirm-btn {
+            background: #f44336;
+            color: white;
+        }
+
+        #confirm-btn:hover {
+            background: #d32f2f;
+        }
+
+        #cancel-btn {
+            background: #ccc;
+            color: black;
+        }
+
+        #cancel-btn:hover {
+            background: #bbb;
+        }
+
+        body.dark-mode {
+            background-color: #000;
+            color: #fff;
+        }
+
+        body.dark-mode .stars {
+            display: block;
+        }
+
+        body.dark-mode .boton {
+            background-color: #000;
+            color: #fff;
+        }
+
+        body.dark-mode .boton:hover {
+            background-color: #222;
+        }
+
+        body.dark-mode #theme-toggle {
+            background-color: #000;
+            color: #fff;
+        }
+
+        body.dark-mode #theme-toggle:hover {
+            background-color: #222;
+        }
+
+        body.dark-mode .column-left, body.dark-mode .column-center, body.dark-mode .column-right {
+            background-color: #000;
+            border: 1px solid #333;
+            box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark-mode .profile-data h2 {
+            color: #fff;
+        }
+
+        body.dark-mode .campo label {
+            color: #fff;
+        }
+
+        body.dark-mode .campo p {
+            background-color: #222;
+            color: #fff;
+        }
+
+        body.dark-mode .post {
+            background-color: #000;
+            border: 1px solid #333;
+            box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark-mode .post-user-info .company-name {
+            color: #fff;
+        }
+
+        body.dark-mode .post-content p {
+            color: #fff;
+        }
+
+        body.dark-mode .post-meta p {
+            color: #bbb;
+        }
+
+        body.dark-mode .post-meta p:last-child {
+            color: #888;
+        }
+
+        body.dark-mode .review {
+            background-color: #fff;
+            color: #000;
+        }
+
+        body.dark-mode .review p {
+            color: #000;
+        }
+
+        body.dark-mode .notification {
+            box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
+        }
+
+        body.dark-mode .modal-content {
+            background: #222;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="stars"></div>
+
+    <header>
+        <h1>Perfil</h1>
+        <div class="botones">
+            <button class="boton" onclick="irAInicio()">
+                <i class="fas fa-home"></i> Inicio
+            </button>
+            <button class="boton" onclick="window.location.href='/editar-perfil.html'">
+                <i class="fas fa-pen"></i> Editar
+            </button>
+            <button class="boton" onclick="cerrarSesion()">
+                <i class="fas fa-sign-out-alt"></i> Salir
+            </button>
+            <button id="theme-toggle" title="Cambiar modo">
+                <i class="fas fa-moon"></i> Modo Nocturno
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="notification" id="notification">
+            <i class="fas fa-check-circle"></i>
+            <span id="notification-message"></span>
+        </div>
+
+        <div class="column-left">
+            <div class="profile-data">
+                {% if datos_usuario[11] %}
+                    <img src="data:image/png;base64,{{ datos_usuario[11] }}" alt="Foto de perfil" class="profile-pic">
+                {% else %}
+                    <img src="/static/default_profile.png" alt="Sin foto de perfil" class="profile-pic">
+                {% endif %}
+                <h2>{{ datos_usuario[2] }}</h2>
+                <div class="campo"><label>Dirección:</label><p>{{ datos_usuario[3] }}</p></div>
+                <div class="campo"><label>Ubicación en Google Maps:</label><p>{{ datos_usuario[4] }}</p></div>
+                <div class="campo"><label>Teléfono:</label><p>{{ datos_usuario[5] }}</p></div>
+                <div class="campo"><label>Horario:</label><p>{{ datos_usuario[6] }}</p></div>
+                <div class="campo"><label>Categoría:</label><p>{{ datos_usuario[7] }}</p></div>
+                <div class="campo"><label>Otra categoría:</label><p>{{ datos_usuario[8] }}</p></div>
+                <div class="campo"><label>Servicios:</label><p>{{ datos_usuario[9] }}</p></div>
+                <div class="campo"><label>Sitio web:</label><p>{{ datos_usuario[10] }}</p></div>
+            </div>
+        </div>
+
+        <div class="column-center">
+            <div class="feed" id="feed">
+                <p id="feed-message" style="display: none; text-align: center; color: #666;"></p>
+            </div>
+        </div>
+
+        <div class="column-right">
+            <h3>Reseñas</h3>
+            <div class="reviews" id="reviews">
+                <!-- Placeholder para reseñas -->
+                <div class="review">
+                    <p class="review-author">Usuario Ejemplo</p>
+                    <p>¡Gran servicio, muy recomendado!</p>
+                    <p>Calificación: ⭐⭐⭐⭐⭐</p>
+                </div>
+                <div class="review">
+                    <p class="review-author">Otro Usuario</p>
+                    <p>Buena atención, pero puede mejorar.</p>
+                    <p>Calificación: ⭐⭐⭐</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="confirm-modal">
+        <div class="modal-content">
+            <p>¿Estás seguro de que quieres eliminar esta publicación?</p>
+            <button id="confirm-btn">Eliminar</button>
+            <button id="cancel-btn">Cancelar</button>
+        </div>
+    </div>
+
+    <script>
+        // Estrellas para modo oscuro
+        const starsContainer = document.querySelector('.stars');
+        const numStars = 100;
+        for (let i = 0; i < numStars; i++) {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            star.style.left = `${Math.random() * 100}vw`;
+            star.style.top = `${Math.random() * 100}vh`;
+            star.style.animationDelay = `${Math.random() * 5}s`;
+            star.style.animationDuration = `${10 + Math.random() * 10}s`;
+            starsContainer.appendChild(star);
+        }
+
+        // Modo oscuro
+        let savedTheme = localStorage.getItem('theme') || 'light';
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-sun"></i> Modo Claro';
+        } else {
+            document.body.classList.remove('dark-mode');
+            document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-moon"></i> Modo Nocturno';
+        }
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            if (document.body.classList.contains('dark-mode')) {
+                localStorage.setItem('theme', 'dark');
+                document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-sun"></i> Modo Claro';
+            } else {
+                localStorage.setItem('theme', 'light');
+                document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-moon"></i> Modo Nocturno';
+            }
+        });
+
+        // Notificaciones
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            const messageElement = document.getElementById('notification-message');
+            messageElement.textContent = message;
+            notification.classList.remove('error');
+            if (isError) {
+                notification.classList.add('error');
+                notification.querySelector('i').className = 'fas fa-exclamation-circle';
+            } else {
+                notification.querySelector('i').className = 'fas fa-check-circle';
+            }
+            notification.style.display = 'flex';
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in-out';
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                    notification.style.animation = 'slideIn 0.3s ease-in-out';
+                }, 300);
+            }, 3000);
+        }
+
+        // Modal para eliminar
+        function showConfirmModal(onConfirm) {
+            const modal = document.getElementById('confirm-modal');
+            modal.style.display = 'flex';
+            const confirmBtn = document.getElementById('confirm-btn');
+            const cancelBtn = document.getElementById('cancel-btn');
+            confirmBtn.onclick = () => {
+                onConfirm();
+                modal.style.display = 'none';
+            };
+            cancelBtn.onclick = () => {
+                modal.style.display = 'none';
+                console.log('Eliminación cancelada por el usuario');
+            };
+        }
+
+        // Feed de publicaciones
+        let offset = 0;
+        const limit = 10;
+        let isLoading = false;
+        let hasMore = true;
+        let loadedPostIds = new Set();
+        let currentUserId = null;
+
+        async function fetchCurrentUserId() {
+            try {
+                const response = await fetch('/current_user', { credentials: 'include' });
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        showNotification('Sesión expirada, por favor inicia sesión', true);
+                        setTimeout(() => { window.location.href = '/login'; }, 2000);
+                        return;
+                    }
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                console.log('Respuesta de /current_user:', data);
+                if (data.user_id !== null && data.user_id !== undefined) {
+                    currentUserId = Number(data.user_id);
+                    console.log('Current User ID:', currentUserId, 'Type:', typeof currentUserId);
+                } else {
+                    console.error('No se pudo obtener el ID del usuario desde /current_user. Respuesta:', data);
+                    showNotification('No se pudo identificar al usuario', true);
+                    setTimeout(() => { window.location.href = '/login'; }, 2000);
+                }
+            } catch (error) {
+                console.error('Error al obtener el ID del usuario desde /current_user:', error);
+                showNotification('Error al obtener datos del usuario', true);
+            }
+        }
+
+        async function cargarFeed() {
+            if (isLoading || !hasMore) return;
+            isLoading = true;
+
+            const feedMessage = document.getElementById('feed-message');
+            feedMessage.style.display = 'none';
+
+            try {
+                const res = await fetch(`/perfil/feed?limit=${limit}&offset=${offset}`, { credentials: 'include' });
+                console.log('Estado de la respuesta /perfil/feed:', res.status);
+                if (!res.ok) {
+                    if (res.status === 401) {
+                        showNotification('Sesión expirada, por favor inicia sesión', true);
+                        setTimeout(() => { window.location.href = '/login'; }, 2000);
+                        return;
+                    }
+                    throw new Error(`HTTP error! Status: ${res.status}`);
+                }
+                const publicaciones = await res.json();
+                console.log('Publicaciones cargadas:', publicaciones);
+
+                if (!Array.isArray(publicaciones)) {
+                    throw new Error('La respuesta de /perfil/feed no es un arreglo');
+                }
+
+                if (publicaciones.length === 0 && offset === 0) {
+                    feedMessage.textContent = 'No hay publicaciones para mostrar';
+                    feedMessage.style.display = 'block';
+                } else if (publicaciones.length < limit) {
+                    hasMore = false;
+                }
+
+                const feedDiv = document.getElementById('feed');
+                publicaciones.forEach(pub => {
+                    if (loadedPostIds.has(pub.id)) return;
+                    loadedPostIds.add(pub.id);
+
+                    console.log(`Renderizando publicación ID: ${pub.id}`, {
+                        contenido: pub.contenido,
+                        imagen_url: pub.imagen_url,
+                        video_url: pub.video_url,
+                        user_id: pub.user_id
+                    });
+
+                    const div = document.createElement('div');
+                    div.classList.add('post');
+
+                    let postContent = `
+                        <div class="post-header">
+                            <img src="${pub.foto_perfil_url || '/static/default_profile.png'}" alt="Foto de perfil" class="post-profile-pic" onerror="this.src='/static/default_profile.png'">
+                            <div class="post-user-info">
+                                <span class="company-name">${pub.nombre_empresa || 'Usuario'}</span>
+                            </div>
+                        </div>
+                    `;
+                    console.log(`Comparando pub.user_id: ${pub.user_id} (${typeof pub.user_id}) con currentUserId: ${currentUserId} (${typeof currentUserId})`);
+                    if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
+                        console.log(`Mostrando botón de eliminar para publicación ID: ${pub.id}`);
+                        postContent += `
+                            <button class="delete-button" onclick="borrarPublicacion(${pub.id}, this.parentElement)" title="Eliminar publicación">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        `;
+                    } else {
+                        console.log(`No se muestra botón de eliminar para publicación ID: ${pub.id}`);
+                    }
+
+                    postContent += '<div class="post-content">';
+                    if (pub.contenido && pub.contenido.trim() !== '') {
+                        postContent += `<p>${pub.contenido}</p>`;
+                    } else {
+                        console.log(`Omitiendo texto para publicación ID: ${pub.id} porque contenido es: ${pub.contenido}`);
+                    }
+                    postContent += '</div>';
+
+                    postContent += '<div class="post-media">';
+                    if (pub.imagen_url && pub.imagen_url.trim() !== '') {
+                        postContent += `<img src="${pub.imagen_url}" alt="Imagen">`;
+                    }
+                    if (pub.video_url && pub.video_url.trim() !== '') {
+                        postContent += `<video controls src="${pub.video_url}"></video>`;
+                    }
+                    postContent += '</div>';
+
+                    postContent += '<div class="post-meta">';
+                    postContent += `
+                        <p>Etiquetas: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : 'Ninguna'}</p>
+                        <p>${pub.fecha_creacion || 'Sin fecha'}</p>
+                    `;
+                    postContent += '</div>';
+
+                    div.innerHTML = postContent;
+                    feedDiv.appendChild(div);
+                });
+
+                offset += limit;
+            } catch (err) {
+                console.error('Error al cargar publicaciones:', err);
+                console.error('Mensaje de error:', err.message);
+                feedMessage.textContent = 'No se pudieron cargar las publicaciones';
+                feedMessage.style.display = 'block';
+                showNotification(`Error al cargar publicaciones: ${err.message}`, true);
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        async function borrarPublicacion(postId, postElement) {
+            showConfirmModal(async () => {
+                try {
+                    const response = await fetch(`/borrar_publicacion/${postId}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log(`Publicación ID: ${postId} eliminada exitosamente`, data);
+                        postElement.style.transition = 'opacity 0.3s';
+                        postElement.style.opacity = '0';
+                        setTimeout(() => {
+                            postElement.remove();
+                            loadedPostIds.delete(postId);
+                        }, 300);
+                        showNotification('Publicación eliminada correctamente');
+                    } else {
+                        const data = await response.json();
+                        console.error(`Error al eliminar publicación ID: ${postId}`, data);
+                        showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
+                    }
+                } catch (error) {
+                    console.error(`Error en la solicitud para eliminar publicación ID: ${postId}`, error);
+                    showNotification('Ocurrió un error al eliminar la publicación', true);
+                }
+            });
+        }
+
+        // Funciones de los botones
+        function irAInicio() {
+            console.log("user antes de ir a inicio:", localStorage.getItem("user"));
+            window.location.href = "/inicio.html";
+        }
+
+        function cerrarSesion() {
+            console.log("Cerrando sesión, user:", localStorage.getItem("user"));
+            fetch('/salir', {
+                method: 'POST',
+                credentials: 'include'
+            }).finally(() => {
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
+            });
+        }
+
+        // Inicialización
+        let hasLoaded = false;
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchCurrentUserId();
+            if (!hasLoaded && currentUserId) {
+                hasLoaded = true;
+                cargarFeed();
+            } else if (!currentUserId) {
+                console.error('No se puede cargar el feed sin currentUserId');
+                document.getElementById('feed-message').textContent = 'Por favor, inicia sesión para ver las publicaciones';
+                document.getElementById('feed-message').style.display = 'block';
+                setTimeout(() => { window.location.href = '/login'; }, 2000);
+            }
+        });
+
+        // Scroll infinito
+        let isScrolling = false;
+        window.addEventListener('scroll', () => {
+            if (isScrolling) return;
+            isScrolling = true;
+            setTimeout(() => {
+                if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100 && !isLoading && hasMore) {
+                    cargarFeed();
+                }
+                isScrolling = false;
+            }, 100);
+        });
+    </script>
+</body>
+</html>

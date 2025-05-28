@@ -1,0 +1,80 @@
+const translations = {
+  es: {
+    index: {
+      logo: "PrendiaX",
+      hero_title: "Conecta tu emprendimiento con el mundo",
+      hero_text: "Descubre, promueve y haz crecer tu negocio con PrendiaX.",
+      explore_button: "Explorar negocios",
+      upload_button: "Sube tu negocio",
+      about_title: "¿Qué es PrendiaX?",
+      about_text: "PrendiaX es una plataforma diseñada para conectar emprendedores y negocios locales con clientes potenciales. Aquí puedes descubrir nuevos productos y servicios, así como promocionar tu propio negocio.",
+      footer: "© 2025 PrendiaX. Todos los derechos reservados."
+    },
+    inicio: {
+      logo: "PrendiaX",
+      search_placeholder: "Buscar en PrendiaX",
+      theme_toggle: "Modo Nocturno",
+      theme_toggle_light: "Modo Claro",
+      profile_link: "Perfil",
+      logout: "Salir",
+      post_placeholder: "¿Qué estás pensando?",
+      tags_placeholder: "Etiquetas (separadas por comas)",
+      other_category_placeholder: "Especifica tu categoría",
+      post_button: "Publicar",
+      delete_confirm: "¿Estás seguro de que quieres eliminar esta publicación?",
+      delete_button: "Eliminar",
+      cancel_button: "Cancelar",
+      delete_post_title: "Eliminar publicación",
+      remove_preview_title: "Eliminar vista previa",
+      tags_label: "Categorías",
+      no_tags: "Sin categorías",
+      delete_success: "Publicación eliminada con éxito",
+      delete_error: "Error al eliminar la publicación",
+      delete_error_network: "Error de red al eliminar la publicación",
+      feed_error: "Error al cargar el feed",
+      post_success: "Publicación creada con éxito",
+      post_error: "Error al crear la publicación",
+      post_error_empty: "La publicación no puede estar vacía",
+      unknown_error: "Error desconocido"
+    }
+  },
+  en: {
+    index: {
+      logo: "PrendiaX",
+      hero_title: "Connect your venture with the world",
+      hero_text: "Discover, promote, and grow your business with PrendiaX.",
+      explore_button: "Explore businesses",
+      upload_button: "Upload your business",
+      about_title: "What is PrendiaX?",
+      about_text: "PrendiaX is a platform designed to connect entrepreneurs and local businesses with potential customers. Here you can discover new products and services, as well as promote your own business.",
+      footer: "© 2025 PrendiaX. All rights reserved."
+    },
+    inicio: {
+      logo: "PrendiaX",
+      search_placeholder: "Search in PrendiaX",
+      theme_toggle: "Dark Mode",
+      theme_toggle_light: "Light Mode",
+      profile_link: "Profile",
+      logout: "Log out",
+      post_placeholder: "What's on your mind?",
+      tags_placeholder: "Tags (comma-separated)",
+      other_category_placeholder: "Specify your category",
+      post_button: "Post",
+      delete_confirm: "Are you sure you want to delete this post?",
+      delete_button: "Delete",
+      cancel_button: "Cancel",
+      delete_post_title: "Delete post",
+      remove_preview_title: "Remove preview",
+      tags_label: "Categories",
+      no_tags: "No categories",
+      delete_success: "Post deleted successfully",
+      delete_error: "Error deleting post",
+      delete_error_network: "Network error while deleting post",
+      feed_error: "Error loading feed",
+      post_success: "Post created successfully",
+      post_error: "Error creating post",
+      post_error_empty: "Post cannot be empty",
+      unknown_error: "Unknown error"
+    }
+  }
+};

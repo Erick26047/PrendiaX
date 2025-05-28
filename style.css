@@ -1,0 +1,214 @@
+/* Tipografía base */
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  background-color: #ffffff;
+  color: #000000;
+}
+
+/* Contenedor general */
+.container {
+  width: 90%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header */
+header {
+  background-color: #000000;
+  color: #ffffff;
+  padding: 20px 0;
+}
+
+header .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+}
+
+.language-selector select {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  font-family: 'Poppins', sans-serif;
+  background-color: #ffffff;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+nav {
+  display: flex;
+  align-items: center;
+}
+
+nav a {
+  color: #ffffff;
+  text-decoration: none;
+  margin-left: 20px;
+  font-weight: 500;
+}
+
+/* Hero section */
+.hero {
+  background-color: #0057D9;
+  color: #ffffff;
+  text-align: center;
+  padding: 100px 20px;
+}
+
+.hero h2 {
+  font-size: 36px;
+  margin-bottom: 20px;
+}
+
+.hero p {
+  font-size: 18px;
+  margin-bottom: 40px;
+}
+
+.buttons .btn {
+  padding: 12px 24px;
+  font-weight: 600;
+  text-decoration: none;
+  margin: 0 10px;
+  border: 1px solid transparent;
+  transition: background-color 0.3s ease;
+}
+
+.btn.primary {
+  background-color: #ffffff;
+  color: #0057D9;
+}
+
+.btn.secondary {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+/* Footer */
+footer {
+  background-color: #f2f2f2;
+  text-align: center;
+  padding: 20px 0;
+  margin-top: 60px;
+  color: #666;
+}
+
+/* Login container */
+.login-container {
+  max-width: 400px;
+  margin: 100px auto;
+  padding: 40px;
+  text-align: center;
+  background-color: #ffffff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+}
+
+.login-container h2 {
+  margin-bottom: 30px;
+  color: #000000;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.login-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  font-weight: 600;
+  text-align: center;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.login-btn.google {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.login-btn.google:hover {
+  background-color: #f5f5f5;
+}
+
+.login-btn.apple {
+  background-color: #000000;
+  color: #ffffff;
+  border: 1px solid #000000;
+}
+
+.login-btn.apple:hover {
+  background-color: #333333;
+}
+
+.login-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.login-msg {
+  font-size: 14px;
+  color: #666666;
+  margin-top: 20px;
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 20px;
+  color: #0057D9;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Responsividad */
+@media (max-width: 600px) {
+  .login-container {
+    max-width: 90%;
+    padding: 20px;
+    margin: 50px auto;
+  }
+
+  .login-btn {
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  .login-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  header .container {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  nav {
+    float: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  nav a {
+    margin-left: 10px;
+  }
+}

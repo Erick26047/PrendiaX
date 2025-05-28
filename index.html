@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrendiaX - Conecta tu emprendimiento</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1 class="logo" data-translate="index.logo">PrendiaX</h1>
+      <div class="language-selector">
+        <select id="language-switcher">
+          <option value="es">ES</option>
+          <option value="en">EN</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <h2 data-translate="index.hero_title">Conecta tu emprendimiento con el mundo</h2>
+      <p data-translate="index.hero_text">Descubre, promueve y haz crecer tu negocio con PrendiaX.</p>
+      <div class="buttons">
+        <a href="/login?tipo=explorador&target=perfil-especifico" class="btn primary" data-translate="index.explore_button">Explorar negocios</a>
+        <a href="/login?tipo=emprendedor&target=perfil" class="btn secondary" data-translate="index.upload_button">Sube tu negocio</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="about">
+    <div class="container">
+      <h2 data-translate="index.about_title">¿Qué es PrendiaX?</h2>
+      <p data-translate="index.about_text">PrendiaX es una plataforma diseñada para conectar emprendedores y negocios locales con clientes potenciales. Aquí puedes descubrir nuevos productos y servicios, así como promocionar tu propio negocio.</p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p data-translate="index.footer">© 2025 PrendiaX. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <script src="translations.js"></script>
+  <script>
+    function updateLanguage(lang) {
+      document.querySelectorAll("[data-translate]").forEach(element => {
+        const key = element.getAttribute("data-translate");
+        const [page, textKey] = key.split(".");
+        element.textContent = translations[lang][page][textKey];
+      });
+      document.documentElement.lang = lang;
+    }
+
+    const langSwitcher = document.getElementById("language-switcher");
+    langSwitcher.addEventListener("change", (e) => {
+      const selectedLang = e.target.value;
+      localStorage.setItem("language", selectedLang);
+      updateLanguage(selectedLang);
+    });
+
+    window.onload = () => {
+      const savedLang = localStorage.getItem("language") || "es";
+      langSwitcher.value = savedLang;
+      updateLanguage(savedLang);
+    };
+  </script>
+</body>
+</html>

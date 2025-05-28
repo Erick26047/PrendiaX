@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Perfil | PrendiaX</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            color: #000;
+            position: relative;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            z-index: -1;
+            pointer-events: none;
+            display: none;
+        }
+
+        .star {
+            position: absolute;
+            background: #fff;
+            border-radius: 50%;
+            animation: twinkle 5s infinite, move 20s linear infinite;
+            opacity: 0.8;
+        }
+
+        .star:nth-child(odd) { width: 2px; height: 2px; }
+        .star:nth-child(even) { width: 1px; height: 1px; }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.3; }
+        }
+
+        @keyframes move {
+            0% { transform: translateY(0) translateX(0); }
+            100% { transform: translateY(100vh) translateX(10vw); }
+        }
+
+        header {
+            background-color: #000;
+            color: #fff;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        header h1 {
+            color: #fff;
+            margin: 0;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .botones {
+            display: flex;
+            gap: 10px;
+        }
+
+        .boton {
+            background-color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 18px;
+            color: #000;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .boton:hover {
+            background-color: #e0e0e0;
+        }
+
+        #theme-toggle {
+            background-color: #fff;
+            color: #000;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            border: none;
+        }
+
+        #theme-toggle:hover {
+            background-color: #e0e0e0;
+        }
+
+        .contenido {
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .perfil {
+            background-color: #fafafa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .perfil h2 {
+            font-size: 24px;
+            margin: 0 0 20px;
+            color: #000;
+            transition: color 0.3s ease;
+        }
+
+        .perfil .campo {
+            margin: 0 auto 15px auto; /* Centra los campos horizontalmente */
+            text-align: left;
+            max-width: 400px; /* Limita el ancho de los campos */
+        }
+
+        .perfil .campo label {
+            font-weight: bold;
+            font-size: 16px;
+            display: block;
+            margin-bottom: 5px;
+            color: #000;
+            transition: color 0.3s ease;
+        }
+
+        .perfil .campo p {
+            margin: 0;
+            padding: 8px;
+            background: #f2f2f2;
+            border-radius: 8px;
+            font-size: 16px;
+            color: #000;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            word-break: break-word; /* Asegura que el texto largo no desborde */
+        }
+
+        body.dark-mode {
+            background-color: #000;
+            color: #fff;
+        }
+
+        body.dark-mode .stars {
+            display: block;
+        }
+
+        body.dark-mode header {
+            background-color: #000000;
+        }
+
+        body.dark-mode .boton {
+            background-color: #000;
+            color: #fff;
+        }
+
+        body.dark-mode .boton:hover {
+            background-color: #000000;
+        }
+
+        body.dark-mode #theme-toggle {
+            background-color: #000;
+            color: #fff;
+        }
+
+        body.dark-mode #theme-toggle:hover {
+            background-color: #000000;
+        }
+
+        body.dark-mode .perfil {
+            background-color: #000;
+            border: 1px solid #000000;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark-mode .perfil h2 {
+            color: #fff;
+        }
+
+        body.dark-mode .perfil .campo label {
+            color: #fff;
+        }
+
+        body.dark-mode .perfil .campo p {
+            background-color: #222;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="stars"></div>
+
+    <header>
+        <h1>Perfil de Usuario</h1>
+        <div class="botones">
+            <button class="boton" onclick="irAInicio()">
+                <i class="fas fa-home"></i> Inicio
+            </button>
+            <button class="boton" onclick="cerrarSesion()">
+                <i class="fas fa-sign-out-alt"></i> Salir
+            </button>
+            <button id="theme-toggle" title="Cambiar modo">
+                <i class="fas fa-moon"></i> Modo Nocturno
+            </button>
+        </div>
+    </header>
+
+   <div class="contenido">
+    <div class="perfil">
+        <h2>Datos del usuario</h2>
+        <div class="campo">
+            <label>Nombre:</label>
+            <p>{nombre}</p>
+        </div>
+        <div class="campo">
+            <label>Email:</label>
+            <p>{email}</p>
+        </div>
+    </div>
+</div>
+
+    <script>
+        // Estrellas para modo oscuro
+        const starsContainer = document.querySelector('.stars');
+        const numStars = 100;
+        for (let i = 0; i < numStars; i++) {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            star.style.left = `${Math.random() * 100}vw`;
+            star.style.top = `${Math.random() * 100}vh`;
+            star.style.animationDelay = `${Math.random() * 5}s`;
+            star.style.animationDuration = `${10 + Math.random() * 10}s`;
+            starsContainer.appendChild(star);
+        }
+
+        // Modo oscuro
+        let savedTheme = localStorage.getItem('theme') || 'light';
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-sun"></i> Modo Claro';
+        } else {
+            document.body.classList.remove('dark-mode');
+            document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-moon"></i> Modo Nocturno';
+        }
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            if (document.body.classList.contains('dark-mode')) {
+                localStorage.setItem('theme', 'dark');
+                document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-sun"></i> Modo Claro';
+            } else {
+                localStorage.setItem('theme', 'light');
+                document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-moon"></i> Modo Nocturno';
+            }
+        });
+
+        // Funciones de los botones
+        function irAInicio() {
+            console.log("user antes de ir a inicio:", localStorage.getItem("user"));
+            window.location.href = "/inicio.html";
+        }
+
+        function cerrarSesion() {
+            console.log("Cerrando sesión, user:", localStorage.getItem("user"));
+            fetch('/salir', {
+                method: 'POST',
+                credentials: 'include'
+            }).finally(() => {
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
+            });
+        }
+    </script>
+</body>
+</html>
