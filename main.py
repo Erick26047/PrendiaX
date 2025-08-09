@@ -1,16 +1,47 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from auth_google import router as google_router
-import os
-from datos_usuario import router as datos_usuario_router
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates 
+from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI, Response
+import psycopg2
+import logging
+import os
+from auth_google import router as google_router
+from datos_usuario import router as datos_usuario_router
 from publicaciones import router as publicaciones_router
+from apple_auth import apple_router
+from chats import router as chats_router
+from resenas import router as resenas_router
 
+from pydantic import BaseModel
+from typing import Optional
+
+# --- Configurar logs ---
+logging.basicConfig(level=logging.DEBUG)
+
+# --- Esquema del perfil público ---
+class UserProfile(BaseModel):
+    id: int
+    nombre_empresa: str
+    email: Optional[str] = None
+
+# --- Conexión a la base de datos PostgreSQL ---
+def get_db_connection():
+    try:
+        conn = psycopg2.connect(
+            host="localhost",
+            database="prendia_db",
+            user="postgres",
+            password="Elbicho7",
+        )
+        logging.debug("Conexión a la base de datos establecida correctamente")
+        return conn
+    except Exception as e:
+        logging.error(f"Error al conectar a la base de datos: {e}")
+        raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
+
+# --- Configuración general ---
 app = FastAPI()
 templates = Jinja2Templates(directory=".")
 app.add_middleware(SessionMiddleware, secret_key="Elbicho7")
@@ -19,20 +50,37 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
+app.mount("/static", StaticFiles(directory="."), name="static")
+app.mount("/uploads", StaticFiles(directory="."), name="uploads")
+
+# --- Routers ---
 app.include_router(datos_usuario_router)
 app.include_router(google_router)
 app.include_router(publicaciones_router)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.include_router(apple_router)
+app.include_router(chats_router)
+app.include_router(resenas_router, prefix="/api")
 
+# --- Rutas principales ---
 @app.get("/")
 def home():
     return FileResponse("index.html")
 
-@app.get("/login")
-def login():
-    return FileResponse("login.html")
-
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    try:
+        # Limpiar datos residuales de la sesión
+        if 'tipo' in request.session:
+            del request.session['tipo']
+        if 'target' in request.session:
+            del request.session['target']
+        logging.debug("Página de login renderizada, sesión limpiada")
+        return templates.TemplateResponse("login.html", {"request": request})
+    except Exception as e:
+        logging.error(f"Error en /login: {e}")
+        raise HTTPException(status_code=500, detail="Error al cargar la página de login")
 
 @app.get("/dashboard")
 def dashboard(request: Request):
@@ -43,8 +91,7 @@ def dashboard(request: Request):
 
 @app.get("/inicio")
 def mostrar_inicio():
-    return FileResponse("inicio.html")  # o tu lógica con Jinja2/HTMLResponse
-
+    return FileResponse("inicio.html")
 
 @app.get("/perfil", response_class=HTMLResponse)
 async def perfil(request: Request):
@@ -53,23 +100,20 @@ async def perfil(request: Request):
         return RedirectResponse(url="/login")
     return templates.TemplateResponse("perfil.html", {"request": request, "user": user})
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.post("/salir")
-def cerrar_sesion(response: Response):
-    response.delete_cookie("session_token")  # Ajusta el nombre a tu cookie real
-    return {"mensaje": "Sesión cerrada"}
-
-
+@app.get("/salir")
+async def salir(request: Request):
+    try:
+        # Limpiar completamente la sesión
+        request.session.clear()
+        logging.debug("Sesión cerrada correctamente")
+        return RedirectResponse(url="/login", status_code=302)
+    except Exception as e:
+        logging.error(f"Error al cerrar sesión: {e}")
+        raise HTTPException(status_code=500, detail="Error al cerrar sesión")
 
 @app.get("/{filename}")
 def serve_static_files(filename: str):
     if os.path.exists(filename):
         return FileResponse(filename)
     return {"error": "Archivo no encontrado"}
+

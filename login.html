@@ -11,11 +11,11 @@
   <div class="login-container">
     <h2>Inicia sesión para continuar</h2>
     <div class="login-buttons">
-      <a href="/auth/google?target=perfil-especifico" class="login-btn google">
+      <a href="#" class="login-btn google">
         <img src="google.png" alt="Google logo" class="login-icon">
         Continuar con Google
       </a>
-      <a href="/auth/apple" class="login-btn apple">
+      <a href="#" class="login-btn apple">
         <img src="apple.png" alt="Apple logo" class="login-icon">
         Continuar con Apple
       </a>
@@ -23,5 +23,23 @@
     <p class="login-msg">Al iniciar sesión aceptas nuestros términos y condiciones.</p>
     <a href="/" class="back-link">← Volver al inicio</a>
   </div>
+
+  <!-- Script para insertar tipo y target automáticamente -->
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const tipo = params.get("tipo") || "emprendedor";
+    const target = params.get("target") || "perfil";
+
+    const googleBtn = document.querySelector('a.google');
+    const appleBtn = document.querySelector('a.apple');
+
+    if (googleBtn) {
+      googleBtn.href = `/auth/google?tipo=${tipo}&target=${target}`;
+    }
+
+    if (appleBtn) {
+      appleBtn.href = `/auth/apple?tipo=${tipo}&target=${target}`;
+    }
+  </script>
 </body>
 </html>

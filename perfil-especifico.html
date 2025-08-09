@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
     <title>Perfil | PrendiaX</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
@@ -27,7 +27,7 @@
             display: none;
         }
 
-        .background-star {
+        .stars .star {
             position: absolute;
             background: #fff;
             border-radius: 50%;
@@ -35,8 +35,8 @@
             opacity: 0.8;
         }
 
-        .background-star:nth-child(odd) { width: 2px; height: 2px; }
-        .background-star:nth-child(even) { width: 1px; height: 1px; }
+        .stars .star:nth-child(odd) { width: 2px; height: 2px; }
+        .stars .star:nth-child(even) { width: 1px; height: 1px; }
 
         @keyframes twinkle {
             0%, 100% { opacity: 0.8; }
@@ -116,7 +116,7 @@
             margin: 40px auto;
             padding: 30px;
             display: grid;
-            grid-template-columns: 1fr 2fr 1fr;
+            grid-template-columns: 1fr 3fr;
             gap: 30px;
         }
 
@@ -128,7 +128,7 @@
             }
         }
 
-        .column-left, .column-center, .column-right {
+        .column-left, .column-center {
             background-color: #fafafa;
             padding: 25px;
             border-radius: 10px;
@@ -141,20 +141,9 @@
             text-align: center;
         }
 
-        .profile-pic {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid #ccc;
-            margin: 0 auto 20px;
-            display: block;
-            transition: border-color 0.3s ease;
-        }
-
         .profile-data h2 {
             font-size: 24px;
-            margin: 0 0 10px;
+            margin: 0 0 20px;
             color: #000;
             transition: color 0.3s ease;
         }
@@ -162,6 +151,9 @@
         .campo {
             margin-bottom: 15px;
             text-align: left;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .campo label {
@@ -181,52 +173,62 @@
             font-size: 16px;
             color: #000;
             transition: background-color 0.3s ease, color 0.3s ease;
+            word-break: break-word;
         }
 
-        .google-maps-link {
-            color: #000;
-            text-decoration: underline;
-            word-break: break-all;
-            transition: color 0.3s ease;
-        }
-
-        .google-maps-link:hover {
-            color: #555;
-        }
-
-        .campo input, .campo textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font-size: 16px;
-            box-sizing: border-box;
-            transition: border-color 0.3s ease, background-color 0.3s ease;
-        }
-
-        .campo input[type="file"] {
-            padding: 3px;
-        }
-
-        .edit-buttons {
+        .action-buttons {
             display: flex;
             justify-content: center;
+            align-items: center;
             gap: 10px;
             margin-top: 20px;
         }
 
-        .edit-buttons button {
-            padding: 10px 20px;
+        .message-btn {
+            background-color: #2196f3;
+            color: white;
             border: none;
             border-radius: 8px;
+            padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
             transition: background-color 0.3s ease;
+        }
+
+        .message-btn:hover {
+            background-color: #1976d2;
+        }
+
+        .review-btn {
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .review-btn:hover {
+            background-color: #f57c00;
         }
 
         .save-btn {
             background-color: #4caf50;
             color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
         }
 
         .save-btn:hover {
@@ -236,10 +238,88 @@
         .cancel-btn {
             background-color: #f44336;
             color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
         }
 
         .cancel-btn:hover {
             background-color: #d32f2f;
+        }
+
+        .delete-review-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #f44336;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+        }
+
+        .delete-review-button:hover {
+            background-color: #d32f2f;
+        }
+
+        .reviews {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .reviews h3 {
+            font-size: 20px;
+            margin: 0 0 15px;
+            color: #000;
+            text-align: center;
+            transition: color 0.3s ease;
+        }
+
+        .review {
+            background-color: #f2f2f2;
+            padding: 15px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+            position: relative;
+        }
+
+        .review p {
+            margin: 0;
+            font-size: 14px;
+            color: #333;
+            transition: color 0.3s ease;
+        }
+
+        .review .review-author {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .review .review-text {
+            margin-bottom: 5px;
+        }
+
+        .review .review-rating {
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+
+        .review .review-date {
+            font-size: 12px;
+            color: #666;
         }
 
         .feed {
@@ -293,7 +373,7 @@
         .post-content p {
             margin: 0 0 10px;
             font-size: 16px;
-            color: #333;
+            color: #000;
             line-height: 1.5;
             transition: color 0.3s ease;
         }
@@ -341,77 +421,6 @@
 
         .delete-button:hover {
             background-color: #d32f2f;
-        }
-
-        .delete-review-button {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: #f44336;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            padding: 5px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 30px;
-            height: 30px;
-        }
-
-        .delete-review-button:hover {
-            background-color: #d32f2f;
-        }
-
-        .reviews {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .reviews h3 {
-            font-size: 20px;
-            margin: 0 0 15px;
-            color: #000;
-            text-align: center;
-            transition: color 0.3s ease;
-        }
-
-        .review {
-            background-color: #f2f2f2;
-            padding: 15px;
-            border-radius: 8px;
-            transition: background-color 0.3s ease;
-            position: relative;
-        }
-
-        .review p {
-            margin: 0;
-            font-size: 14px;
-            color: #333;
-            transition: color 0.3s ease;
-        }
-
-        .review .review-author {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .review .review-text {
-            margin-bottom: 5px;
-        }
-
-        .review .review-rating {
-            color: #ffd700;
-            margin-bottom: 5px;
-        }
-
-        .review .review-date {
-            font-size: 12px;
-            color: #666;
         }
 
         .notification {
@@ -547,32 +556,11 @@
             box-shadow: 0 0 5px rgba(102, 187, 106, 0.3);
         }
 
-        .modal-content button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            margin: 0 10px;
-            transition: background-color 0.3s ease;
-        }
-
-        #confirm-btn {
-            background: #f44336;
-            color: white;
-        }
-
-        #confirm-btn:hover {
-            background: #d32f2f;
-        }
-
-        #cancel-btn {
-            background: #ccc;
-            color: black;
-        }
-
-        #cancel-btn:hover {
-            background: #bbb;
+        .edit-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
         }
 
         body.dark-mode {
@@ -584,22 +572,39 @@
             display: block;
         }
 
-        body.dark-mode .boton, body.dark-mode #theme-toggle {
+        body.dark-mode header {
+            background-color: #000000;
+        }
+
+        body.dark-mode .boton {
             background-color: #000;
             color: #fff;
         }
 
-        body.dark-mode .boton:hover, body.dark-mode #theme-toggle:hover {
+        body.dark-mode .boton:hover {
             background-color: #222;
         }
 
-        body.dark-mode .column-left, body.dark-mode .column-center, body.dark-mode .column-right {
+        body.dark-mode #theme-toggle {
+            background-color: #000;
+            color: #fff;
+        }
+
+        body.dark-mode #theme-toggle:hover {
+            background-color: #222;
+        }
+
+        body.dark-mode .column-left, body.dark-mode .column-center {
             background-color: #000;
             border: 1px solid #333;
             box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
         }
 
-        body.dark-mode .profile-data h2, body.dark-mode .campo label, body.dark-mode .post-user-info .company-name, body.dark-mode .post-content p, body.dark-mode .reviews h3 {
+        body.dark-mode .profile-data h2 {
+            color: #fff;
+        }
+
+        body.dark-mode .campo label {
             color: #fff;
         }
 
@@ -608,18 +613,8 @@
             color: #fff;
         }
 
-        body.dark-mode .google-maps-link {
+        body.dark-mode .reviews h3 {
             color: #fff;
-        }
-
-        body.dark-mode .google-maps-link:hover {
-            color: #bbb;
-        }
-
-        body.dark-mode .campo input, body.dark-mode .campo textarea {
-            background-color: #222;
-            color: #fff;
-            border-color: #333;
         }
 
         body.dark-mode .post {
@@ -628,11 +623,19 @@
             box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
         }
 
+        body.dark-mode .post-user-info .company-name {
+            color: #fff;
+        }
+
+        body.dark-mode .post-content p {
+            color: #fff;
+        }
+
         body.dark-mode .post-meta p {
             color: #bbb;
         }
 
-        body.dark-mode .post-meta p:last-child, body.dark-mode .review .review-date {
+        body.dark-mode .post-meta p:last-child {
             color: #888;
         }
 
@@ -657,73 +660,16 @@
         body.dark-mode .modal-content h3 {
             color: #fff;
         }
-
-        .message-btn {
-            background-color: #2196f3;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin: 20px auto 0;
-            transition: background-color 0.3s ease;
-        }
-
-        .message-btn:hover {
-            background-color: #1976d2;
-        }
-
-        .review-btn {
-            background-color: #ff9800;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin: 10px 0;
-            transition: background-color 0.3s ease;
-        }
-
-        .review-btn:hover {
-            background-color: #f57c00;
-        }
-
-        body.dark-mode .message-btn {
-            background-color: #42a5f5;
-        }
-
-        body.dark-mode .message-btn:hover {
-            background-color: #2196f3;
-        }
-
-        body.dark-mode .review-btn {
-            background-color: #ffb300;
-        }
-
-        body.dark-mode .review-btn:hover {
-            background-color: #ff9800;
-        }
     </style>
 </head>
 <body>
     <div class="stars"></div>
 
     <header>
-        <h1>Perfil</h1>
+        <h1>Perfil de Usuario</h1>
         <div class="botones">
             <button class="boton" onclick="irAInicio()" title="Inicio">
                 <i class="fas fa-home"></i>
-            </button>
-            <button class="boton" id="edit-profile-btn" title="Editar Perfil">
-                <i class="fas fa-pen"></i>
             </button>
             <button class="boton" onclick="cerrarSesion()" title="Cerrar Sesión">
                 <i class="fas fa-sign-out-alt"></i>
@@ -741,101 +687,41 @@
         </div>
 
         <div class="column-left">
-            <div class="profile-data" id="profile-view">
-                <img src="/static/default_profile.png" alt="Foto de perfil" class="profile-pic" id="profile-pic">
-                <h2 id="profile-name">Usuario</h2>
-                <div class="campo"><label>Dirección:</label><p id="profile-direccion">Sin dirección</p></div>
+            <div class="profile-data">
+                <h2>Datos del usuario</h2>
                 <div class="campo">
-                    <label>Ubicación en Google Maps:</label>
-                    <p id="profile-ubicacion">Sin ubicación</p>
+                    <label>Nombre:</label>
+                    <p id="nombre">Cargando...</p>
                 </div>
-                <div class="campo"><label>Teléfono:</label><p id="profile-telefono">Sin teléfono</p></div>
-                <div class="campo"><label>Horario:</label><p id="profile-horario">Sin horario</p></div>
-                <div class="campo"><label>Categoría:</label><p id="profile-categoria">Sin categoría</p></div>
-                <div class="campo"><label>Otra categoría:</label><p id="profile-otra-categoria">Ninguna</p></div>
-                <div class="campo"><label>Servicios:</label><p id="profile-servicios">Sin servicios</p></div>
-                <div class="campo"><label>Sitio web:</label><p id="profile-sitio-web">Sin sitio web</p></div>
-                <button class="message-btn" id="message-btn" style="display: none;">
-                    <i class="fas fa-envelope"></i> Mandar mensaje
-                </button>
+                <div class="campo">
+                    <label>Email:</label>
+                    <p id="email">Cargando...</p>
+                </div>
+                <div class="action-buttons" id="action-buttons" style="display: none;">
+                    <button class="message-btn" onclick="openChat()">
+                        <i class="fas fa-envelope"></i> Enviar Mensaje
+                    </button>
+                    <button class="review-btn" onclick="openReviewModal()">
+                        <i class="fas fa-star"></i> Dejar Reseña
+                    </button>
+                </div>
             </div>
-            <form id="profile-edit-form" style="display: none;">
-                <div class="campo">
-                    <label>Foto de perfil:</label>
-                    <input type="file" id="foto_perfil" name="foto_perfil" accept="image/*">
-                    <img id="preview-foto" class="profile-pic" src="/static/default_profile.png" alt="Vista previa">
+            <div class="reviews">
+                <h3>Reseñas</h3>
+                <div id="reviews-container">
+                    <p id="reviews-message" style="display: none; text-align: center; color: #666;">No hay reseñas disponibles.</p>
                 </div>
-                <div class="campo">
-                    <label>Nombre Empresa:</label>
-                    <input type="text" id="nombre_empresa" name="nombre_empresa" required>
-                </div>
-                <div class="campo">
-                    <label>Dirección:</label>
-                    <input type="text" id="direccion" name="direccion">
-                </div>
-                <div class="campo">
-                    <label>Ubicación en Google Maps:</label>
-                    <input type="text" id="ubicacion_google_maps" name="ubicacion_google_maps">
-                </div>
-                <div class="campo">
-                    <label>Teléfono:</label>
-                    <input type="text" id="telefono" name="telefono">
-                </div>
-                <div class="campo">
-                    <label>Horario:</label>
-                    <input type="text" id="horario" name="horario">
-                </div>
-                <div class="campo">
-                    <label>Categoría:</label>
-                    <input type="text" id="categoria" name="categoria">
-                </div>
-                <div class="campo">
-                    <label>Otra categoría:</label>
-                    <input type="text" id="otra_categoria" name="otra_categoria">
-                </div>
-                <div class="campo">
-                    <label>Servicios:</label>
-                    <textarea id="servicios" name="servicios"></textarea>
-                </div>
-                <div class="campo">
-                    <label>Sitio web:</label>
-                    <input type="text" id="sitio_web" name="sitio_web">
-                </div>
-                <div class="edit-buttons">
-                    <button type="submit" class="save-btn">Guardar</button>
-                    <button type="button" class="cancel-btn" onclick="cancelarEdicion()">Cancelar</button>
-                </div>
-            </form>
+            </div>
         </div>
 
         <div class="column-center">
             <div class="feed" id="feed">
-                <p id="feed-message" style="display: none; text-align: center; color: #666;"></p>
-            </div>
-        </div>
-
-        <div class="column-right">
-            <h3>Reseñas</h3>
-            <button class="review-btn" id="review-btn" style="display: none;">
-                <i class="fas fa-star"></i> Dejar una reseña
-            </button>
-            <div class="reviews" id="reviews-container">
-                <p id="reviews-message" style="display: none; text-align: center; color: #666;">No hay reseñas disponibles.</p>
+                <p id="feed-message" style="display: none; text-align: center; color: #666;">No hay publicaciones disponibles.</p>
             </div>
         </div>
     </div>
 
-    <div class="modal" id="confirm-modal">
-        <div class="modal-content">
-            <p id="confirm-message">¿Estás seguro de que quieres eliminar esta publicación?</p>
-            <div class="edit-buttons">
-                <button id="confirm-btn" class="save-btn">Eliminar</button>
-                <button id="cancel-btn" class="cancel-btn">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="review-modal">
+    <div id="review-modal" class="modal">
         <div class="modal-content">
             <h3>Dejar una reseña</h3>
             <form id="review-form">
@@ -862,13 +748,23 @@
         </div>
     </div>
 
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <p id="confirm-message">¿Estás seguro de que quieres eliminar esta publicación?</p>
+            <div class="edit-buttons">
+                <button id="confirm-btn" class="save-btn">Eliminar</button>
+                <button id="cancel-btn" class="cancel-btn">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Estrellas para modo oscuro
+        // Estrellas para el fondo en modo oscuro
         const starsContainer = document.querySelector('.stars');
         const numStars = 100;
         for (let i = 0; i < numStars; i++) {
             const star = document.createElement('div');
-            star.classList.add('background-star');
+            star.classList.add('star');
             star.style.left = `${Math.random() * 100}vw`;
             star.style.top = `${Math.random() * 100}vh`;
             star.style.animationDelay = `${Math.random() * 5}s`;
@@ -942,15 +838,26 @@
         }
 
         // Variables globales
-        let currentUserId = null;
-        let viewedUserId = null;
-        const urlParams = new URLSearchParams(window.location.search);
-        viewedUserId = Number(urlParams.get('user_id')); // Obtener user_id de la URL
         let offset = 0;
         const limit = 10;
         let isLoading = false;
         let hasMore = true;
         let loadedPostIds = new Set();
+        let currentUserId = null;
+        let viewedUserId = null;
+
+        // Obtener viewed_user_id de la URL
+        function getViewedUserId() {
+            const params = new URLSearchParams(window.location.search);
+            const userId = params.get('user_id');
+            console.log('URL actual:', window.location.href);
+            console.log('Parámetro user_id:', userId);
+            if (!userId || isNaN(parseInt(userId))) {
+                console.warn('ID de usuario no proporcionado o inválido en la URL');
+                return null;
+            }
+            return parseInt(userId);
+        }
 
         // Obtener ID del usuario autenticado
         async function fetchCurrentUserId() {
@@ -959,7 +866,7 @@
                 if (!response.ok) {
                     if (response.status === 401) {
                         showNotification('Sesión expirada, por favor inicia sesión', true);
-                        setTimeout(() => { window.location.href = '/login'; }, 2000);
+                        setTimeout(() => { window.location.href = '/login.html'; }, 2000);
                         return;
                     }
                     throw new Error(`HTTP error! Status: ${response.status}`);
@@ -969,94 +876,67 @@
                 if (data.user_id !== null && data.user_id !== undefined) {
                     currentUserId = Number(data.user_id);
                     console.log('Current User ID:', currentUserId, 'Type:', typeof currentUserId);
-                    // Mostrar botón de edición y mensaje/reseña según el usuario
-                    if (!viewedUserId || viewedUserId === currentUserId) {
-                        document.getElementById('edit-profile-btn').style.display = 'block';
-                        document.getElementById('message-btn').style.display = 'none';
-                        document.getElementById('review-btn').style.display = 'none';
-                    } else {
-                        document.getElementById('edit-profile-btn').style.display = 'none';
-                        document.getElementById('message-btn').style.display = 'block';
-                        document.getElementById('review-btn').style.display = 'block';
-                    }
                 } else {
                     console.error('No se pudo obtener el ID del usuario desde /current_user. Respuesta:', data);
                     showNotification('No se pudo identificar al usuario', true);
-                    setTimeout(() => { window.location.href = '/login'; }, 2000);
+                    setTimeout(() => { window.location.href = '/login.html'; }, 2000);
                 }
             } catch (error) {
                 console.error('Error al obtener el ID del usuario desde /current_user:', error);
                 showNotification('Error al obtener datos del usuario', true);
+                setTimeout(() => { window.location.href = '/login.html'; }, 2000);
             }
         }
 
         // Cargar datos del usuario
-        async function loadUserData() {
-            const userId = viewedUserId || currentUserId; // Usar viewedUserId si existe, si no, currentUserId
-            if (!userId) {
-                showNotification('No se pudo cargar el perfil.', true);
+        async function cargarDatosUsuario() {
+            if (!viewedUserId) {
+                console.error('No se puede cargar datos del usuario sin viewedUserId');
+                showNotification('No se puede cargar el perfil', true);
+                setTimeout(() => { window.location.href = '/inicio.html'; }, 2000);
                 return;
             }
             try {
-                const response = await fetch(`/user/${userId}`, { credentials: 'include' });
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                const data = await response.json();
-                console.log('Datos del usuario cargados:', data);
-
-                // Actualizar la sección de perfil
-                document.getElementById('profile-pic').src = data.foto_perfil || '/static/default_profile.png';
-                document.getElementById('profile-name').textContent = data.nombre_empresa || 'Usuario';
-                document.getElementById('profile-direccion').textContent = data.direccion || 'Sin dirección';
-                document.getElementById('profile-ubicacion').innerHTML = data.ubicacion_google_maps
-                    ? `<a href="${data.ubicacion_google_maps}" target="_blank" class="google-maps-link">${data.ubicacion_google_maps}</a>`
-                    : 'Sin ubicación';
-                document.getElementById('profile-telefono').textContent = data.telefono || 'Sin teléfono';
-                document.getElementById('profile-horario').textContent = data.horario || 'Sin horario';
-                document.getElementById('profile-categoria').textContent = data.categoria || 'Sin categoría';
-                document.getElementById('profile-otra-categoria').textContent = data.otra_categoria || 'Ninguna';
-                document.getElementById('profile-servicios').textContent = data.servicios || 'Sin servicios';
-                document.getElementById('profile-sitio-web').textContent = data.sitio_web || 'Sin sitio web';
-
-                // Actualizar el formulario de edición (si es el usuario autenticado)
-                if (!viewedUserId || viewedUserId === currentUserId) {
-                    document.getElementById('nombre_empresa').value = data.nombre_empresa || '';
-                    document.getElementById('direccion').value = data.direccion || '';
-                    document.getElementById('ubicacion_google_maps').value = data.ubicacion_google_maps || '';
-                    document.getElementById('telefono').value = data.telefono || '';
-                    document.getElementById('horario').value = data.horario || '';
-                    document.getElementById('categoria').value = data.categoria || '';
-                    document.getElementById('otra_categoria').value = data.otra_categoria || '';
-                    document.getElementById('servicios').value = data.servicios || '';
-                    document.getElementById('sitio_web').value = data.sitio_web || '';
-                    document.getElementById('preview-foto').src = data.foto_perfil || '/static/default_profile.png';
+                const response = await fetch(`/user/${viewedUserId}`, { credentials: 'include' });
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        showNotification('Usuario no encontrado', true);
+                        setTimeout(() => { window.location.href = '/inicio.html'; }, 2000);
+                        return;
+                    }
+                    throw new Error(`HTTP error! Status: ${response.status}`);
                 }
+                const userData = await response.json();
+                console.log('Datos del usuario:', userData);
 
-                // Configurar el botón de mensaje
-                document.getElementById('message-btn').onclick = () => {
-                    window.location.href = `/chats.html?to_user_id=${userId}`;
-                };
+                document.getElementById('nombre').textContent = userData.nombre_empresa || 'Sin nombre';
+                document.getElementById('email').textContent = userData.email || 'Sin email';
+
+                if (currentUserId && currentUserId !== viewedUserId) {
+                    document.getElementById('action-buttons').style.display = 'flex';
+                }
             } catch (error) {
                 console.error('Error al cargar datos del usuario:', error);
-                showNotification('Error al cargar datos del perfil', true);
+                showNotification('Error al cargar datos del usuario', true);
+                setTimeout(() => { window.location.href = '/inicio.html'; }, 2000);
             }
         }
 
-        // Cargar publicaciones del usuario
+        // Cargar feed de publicaciones
         async function cargarFeed() {
-            if (isLoading || !hasMore) return;
+            if (isLoading || !hasMore || !viewedUserId) return;
             isLoading = true;
 
-            const userId = viewedUserId || currentUserId; // Usar viewedUserId si existe
             const feedMessage = document.getElementById('feed-message');
             feedMessage.style.display = 'none';
 
             try {
-                const res = await fetch(`/user/${userId}/publicaciones?limit=${limit}&offset=${offset}`, { credentials: 'include' });
-                console.log('Estado de la respuesta /user/{userId}/publicaciones:', res.status);
+                const res = await fetch(`/user/${viewedUserId}/publicaciones?limit=${limit}&offset=${offset}`, { credentials: 'include' });
+                console.log('Estado de la respuesta /user/{user_id}/publicaciones:', res.status);
                 if (!res.ok) {
                     if (res.status === 401) {
                         showNotification('Sesión expirada, por favor inicia sesión', true);
-                        setTimeout(() => { window.location.href = '/login'; }, 2000);
+                        setTimeout(() => { window.location.href = '/login.html'; }, 2000);
                         return;
                     }
                     throw new Error(`HTTP error! Status: ${res.status}`);
@@ -1065,7 +945,7 @@
                 console.log('Publicaciones cargadas:', publicaciones);
 
                 if (!Array.isArray(publicaciones)) {
-                    throw new Error('La respuesta de /user/{userId}/publicaciones no es un arreglo');
+                    throw new Error('La respuesta de /user/{user_id}/publicaciones no es un arreglo');
                 }
 
                 if (publicaciones.length === 0 && offset === 0) {
@@ -1092,9 +972,8 @@
 
                     let postContent = `
                         <div class="post-header">
-                            <img src="${pub.foto_perfil_url || '/static/default_profile.png'}" alt="Foto de perfil" class="post-profile-pic" onerror="this.src='/static/default_profile.png'">
                             <div class="post-user-info">
-                                <span class="company-name" style="cursor: pointer;" onclick="redirectToProfile(${pub.user_id})">${pub.nombre_empresa || 'Usuario'}</span>
+                                <span class="company-name">${pub.nombre_empresa || 'Usuario'}</span>
                             </div>
                         </div>
                     `;
@@ -1150,86 +1029,10 @@
             }
         }
 
-        // Función para redirigir al perfil
-        async function redirectToProfile(userId) {
-            try {
-                const response = await fetch(`/user/${userId}`, { credentials: 'include' });
-                if (!response.ok) throw new Error('Usuario no encontrado');
-                const data = await response.json();
-                const profileUrl = data.tipo === 'emprendedor' ? `/perfil.html?user_id=${userId}` : `/perfil-especifico.html?user_id=${userId}`;
-                window.location.href = profileUrl;
-            } catch (error) {
-                console.error('Error al obtener tipo de usuario:', error);
-                showNotification('Error al cargar perfil', true);
-            }
-        }
-
-        // Eliminar publicación
-        async function borrarPublicacion(postId, postElement) {
-            showConfirmModal(async () => {
-                try {
-                    const response = await fetch(`/borrar_publicacion/${postId}`, {
-                        method: 'DELETE',
-                        credentials: 'include'
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        console.log(`Publicación ID: ${postId} eliminada exitosamente`, data);
-                        postElement.style.transition = 'opacity 0.3s';
-                        postElement.style.opacity = '0';
-                        setTimeout(() => {
-                            postElement.remove();
-                            loadedPostIds.delete(postId);
-                        }, 300);
-                        showNotification('Publicación eliminada correctamente');
-                    } else {
-                        const data = await response.json();
-                        console.error(`Error al eliminar publicación ID: ${postId}`, data);
-                        showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
-                    }
-                } catch (error) {
-                    console.error(`Error en la solicitud para eliminar publicación ID: ${postId}`, error);
-                    showNotification('Ocurrió un error al eliminar la publicación', true);
-                }
-            }, 'publicación');
-        }
-
-        // Eliminar reseña
-        async function borrarResena(reviewId, reviewElement) {
-            showConfirmModal(async () => {
-                try {
-                    const response = await fetch(`/api/perfil/${viewedUserId || currentUserId}/resenas/${reviewId}`, {
-                        method: 'DELETE',
-                        credentials: 'include'
-                    });
-
-                    if (response.ok) {
-                        console.log(`Reseña ID: ${reviewId} eliminada exitosamente`);
-                        reviewElement.style.transition = 'opacity 0.3s';
-                        reviewElement.style.opacity = '0';
-                        setTimeout(() => {
-                            reviewElement.remove();
-                            showNotification('Reseña eliminada correctamente');
-                            cargarResenas();
-                        }, 300);
-                    } else {
-                        const data = await response.json();
-                        console.error(`Error al eliminar reseña ID: ${reviewId}`, data);
-                        showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
-                    }
-                } catch (error) {
-                    console.error(`Error en la solicitud para eliminar reseña ID: ${reviewId}`, error);
-                    showNotification('Ocurrió un error al eliminar la reseña', true);
-                }
-            }, 'reseña');
-        }
-
         // Cargar reseñas
         async function cargarResenas() {
-            const userId = viewedUserId || currentUserId;
-            if (!userId) {
-                console.error('No se puede cargar reseñas sin userId');
+            if (!viewedUserId) {
+                console.error('No se puede cargar reseñas sin viewedUserId');
                 showNotification('No se puede cargar reseñas sin identificar al usuario', true);
                 return;
             }
@@ -1240,15 +1043,15 @@
             // Si reviews-container no existe, intentar recrearlo
             if (!reviewsContainer) {
                 console.warn('reviews-container no encontrado, intentando recrearlo');
-                const columnRight = document.querySelector('.column-right');
-                if (columnRight) {
+                const reviewsSection = document.querySelector('.reviews');
+                if (reviewsSection) {
                     reviewsContainer = document.createElement('div');
                     reviewsContainer.id = 'reviews-container';
                     reviewsContainer.className = 'reviews';
-                    columnRight.appendChild(reviewsContainer);
+                    reviewsSection.appendChild(reviewsContainer);
                     console.log('reviews-container recreado:', reviewsContainer);
                 } else {
-                    console.error('No se pudo recrear reviews-container: column-right no encontrado');
+                    console.error('No se pudo recrear reviews-container: reviews section no encontrada');
                     showNotification('Error: No se encontró la sección de reseñas', true);
                     return;
                 }
@@ -1268,15 +1071,15 @@
             }
 
             try {
-                console.log(`Solicitando reseñas para userId: ${userId}`);
-                const response = await fetch(`/api/perfil/${userId}/resenas`, { credentials: 'include' });
-                console.log(`Respuesta de /api/perfil/${userId}/resenas: ${response.status}`);
+                console.log(`Solicitando reseñas para userId: ${viewedUserId}`);
+                const response = await fetch(`/api/perfil/${viewedUserId}/resenas`, { credentials: 'include' });
+                console.log(`Respuesta de /api/perfil/${viewedUserId}/resenas: ${response.status}`);
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
                     console.error('Error en la respuesta:', errorData);
                     if (response.status === 401) {
                         showNotification('Sesión expirada, por favor inicia sesión', true);
-                        setTimeout(() => { window.location.href = '/login'; }, 2000);
+                        setTimeout(() => { window.location.href = '/login.html'; }, 2000);
                         return;
                     }
                     throw new Error(`HTTP error! Status: ${response.status}, Detail: ${errorData.detail || 'Desconocido'}`);
@@ -1327,8 +1130,17 @@
             }
         }
 
-        // Enviar reseña
-        document.getElementById('review-btn').addEventListener('click', () => {
+        // Enviar mensaje
+        function openChat() {
+            if (!viewedUserId) {
+                showNotification('No se puede iniciar un chat sin un usuario objetivo', true);
+                return;
+            }
+            window.location.href = `/chats.html?recipient_id=${viewedUserId}`;
+        }
+
+        // Modal para reseñas
+        function openReviewModal() {
             if (!currentUserId) {
                 showNotification('Debes iniciar sesión para dejar una reseña', true);
                 setTimeout(() => { window.location.href = '/login.html'; }, 2000);
@@ -1340,7 +1152,7 @@
             document.getElementById('review-rating').value = '0';
             const stars = document.querySelectorAll('#star-rating .star');
             stars.forEach(star => star.classList.remove('active')); // Resetear estrellas
-        });
+        }
 
         // Manejo de estrellas interactivas
         const stars = document.querySelectorAll('#star-rating .star');
@@ -1379,20 +1191,13 @@
             });
         });
 
+        // Enviar reseña
         document.getElementById('review-form').addEventListener('submit', async (event) => {
             event.preventDefault();
-            const userId = viewedUserId || currentUserId;
-            if (!userId) {
-                console.error('No se puede enviar reseña sin userId');
-                showNotification('No se pudo enviar la reseña: usuario no identificado', true);
-                return;
-            }
-
             const texto = document.getElementById('review-text').value.trim();
             const calificacion = parseInt(document.getElementById('review-rating').value);
 
             if (!texto) {
-                console.error('Intento de enviar reseña con texto vacío');
                 showNotification('El comentario no puede estar vacío', true);
                 return;
             }
@@ -1402,18 +1207,16 @@
             }
 
             try {
-                console.log(`Enviando reseña para userId: ${userId}`, { texto, calificacion });
-                const response = await fetch(`/api/perfil/${userId}/resenas`, {
+                console.log(`Enviando reseña para userId: ${viewedUserId}`, { texto, calificacion });
+                const response = await fetch(`/api/perfil/${viewedUserId}/resenas`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ texto, calificacion }),
-                    credentials: 'include'
+                    credentials: 'include',
+                    body: JSON.stringify({ texto, calificacion })
                 });
 
-                console.log(`Respuesta de POST /api/perfil/${userId}/resenas: ${response.status}`);
+                console.log(`Respuesta de POST /api/perfil/${viewedUserId}/resenas: ${response.status}`);
                 if (response.ok) {
-                    const newReview = await response.json();
-                    console.log('Reseña enviada exitosamente:', newReview);
                     showNotification('Reseña enviada correctamente');
                     document.getElementById('review-modal').style.display = 'none';
                     document.getElementById('review-form').reset();
@@ -1423,9 +1226,9 @@
                     // Agregar retraso para asegurar que el DOM esté listo
                     setTimeout(() => cargarResenas(), 100);
                 } else {
-                    const error = await response.json().catch(() => ({}));
-                    console.error('Error al enviar reseña:', error);
-                    showNotification(`Error: ${error.detail || 'No se pudo enviar la reseña'}`, true);
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Error al enviar reseña:', errorData);
+                    showNotification(`Error: ${errorData.detail || 'No se pudo enviar la reseña'}`, true);
                 }
             } catch (error) {
                 console.error('Error al conectar con el servidor al enviar reseña:', error);
@@ -1433,92 +1236,71 @@
             }
         });
 
-        // Edición del perfil
-        document.getElementById('edit-profile-btn').addEventListener('click', () => {
-            document.getElementById('profile-view').style.display = 'none';
-            document.getElementById('profile-edit-form').style.display = 'block';
-        });
+        // Borrar reseña
+        async function borrarResena(reviewId, reviewElement) {
+            showConfirmModal(async () => {
+                try {
+                    const response = await fetch(`/api/perfil/${viewedUserId}/resenas/${reviewId}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
 
-        function cancelarEdicion() {
-            document.getElementById('profile-edit-form').style.display = 'none';
-            document.getElementById('profile-view').style.display = 'block';
-            document.getElementById('profile-edit-form').reset();
-            loadUserData(); // Recargar datos para restaurar la vista
+                    if (response.ok) {
+                        console.log(`Reseña ID: ${reviewId} eliminada exitosamente`);
+                        reviewElement.style.transition = 'opacity 0.3s';
+                        reviewElement.style.opacity = '0';
+                        setTimeout(() => {
+                            reviewElement.remove();
+                            showNotification('Reseña eliminada correctamente');
+                            cargarResenas();
+                        }, 300);
+                    } else {
+                        const data = await response.json();
+                        console.error(`Error al eliminar reseña ID: ${reviewId}`, data);
+                        showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
+                    }
+                } catch (error) {
+                    console.error(`Error en la solicitud para eliminar reseña ID: ${reviewId}`, error);
+                    showNotification('Ocurrió un error al eliminar la reseña', true);
+                }
+            }, 'reseña');
         }
 
-        // Vista previa de la foto de perfil
-        document.getElementById('foto_perfil').addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.getElementById('preview-foto').src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
+        // Borrar publicación
+        async function borrarPublicacion(postId, postElement) {
+            showConfirmModal(async () => {
+                try {
+                    const response = await fetch(`/borrar_publicacion/${postId}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
 
-        // Guardar cambios
-        document.getElementById('profile-edit-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const formData = new FormData();
-            const foto = document.getElementById('foto_perfil').files[0];
-            if (foto) {
-                formData.append('foto', foto);
-            }
-
-            const fields = [
-                { id: 'nombre_empresa', key: 'nombre_empresa' },
-                { id: 'direccion', key: 'direccion' },
-                { id: 'ubicacion_google_maps', key: 'ubicacion_google_maps' },
-                { id: 'telefono', key: 'telefono' },
-                { id: 'horario', key: 'horario' },
-                { id: 'categoria', key: 'categoria' },
-                { id: 'otra_categoria', key: 'otra_categoria' },
-                { id: 'servicios', key: 'servicios' },
-                { id: 'sitio_web', key: 'sitio_web' }
-            ];
-
-            for (const field of fields) {
-                const element = document.getElementById(field.id);
-                if (!element) {
-                    console.error(`Elemento con ID '${field.id}' no encontrado`);
-                    showNotification(`Error: Campo '${field.id}' no encontrado`, true);
-                    return;
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log(`Publicación ID: ${postId} eliminada exitosamente`, data);
+                        postElement.style.transition = 'opacity 0.3s';
+                        postElement.style.opacity = '0';
+                        setTimeout(() => {
+                            postElement.remove();
+                            loadedPostIds.delete(postId);
+                        }, 300);
+                        showNotification('Publicación eliminada correctamente');
+                    } else {
+                        const data = await response.json();
+                        console.error(`Error al eliminar publicación ID: ${postId}`, data);
+                        showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
+                    }
+                } catch (error) {
+                    console.error(`Error en la solicitud para eliminar publicación ID: ${postId}`, error);
+                    showNotification('Ocurrió un error al eliminar la publicación', true);
                 }
-                formData.append(field.key, element.value || '');
-            }
-
-            try {
-                const response = await fetch('/perfil/actualizar', {
-                    method: 'PUT',
-                    body: formData,
-                    credentials: 'include'
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('Datos actualizados:', data);
-                    document.getElementById('profile-edit-form').style.display = 'none';
-                    document.getElementById('profile-view').style.display = 'block';
-                    document.getElementById('profile-edit-form').reset();
-                    showNotification('Perfil actualizado correctamente');
-                    loadUserData(); // Recargar datos después de actualizar
-                } else {
-                    const error = await response.json();
-                    console.error('Error al actualizar:', error);
-                    showNotification(`Error: ${error.detail || 'No se pudo actualizar el perfil'}`, true);
-                }
-            } catch (error) {
-                console.error('Error en la solicitud:', error);
-                showNotification('Ocurrió un error al conectar con el servidor', true);
-            }
-        });
+            }, 'publicación');
+        }
 
         // Funciones de los botones
         function irAInicio() {
             console.log("user antes de ir a inicio:", localStorage.getItem("user"));
-            window.location.href = "/inicio.html";
+            window.location.href = '/inicio.html';
         }
 
         function cerrarSesion() {
@@ -1540,12 +1322,12 @@
             console.log('reviews-container:', document.getElementById('reviews-container'));
             console.log('reviews-message:', document.getElementById('reviews-message'));
 
-            // Observador del DOM para detectar cambios en column-right
-            const columnRight = document.querySelector('.column-right');
-            if (columnRight) {
+            // Observador del DOM para detectar cambios en column-left
+            const columnLeft = document.querySelector('.column-left');
+            if (columnLeft) {
                 const observer = new MutationObserver((mutations) => {
                     mutations.forEach((mutation) => {
-                        console.log('Mutación detectada en column-right:', {
+                        console.log('Mutación detectada en column-left:', {
                             type: mutation.type,
                             addedNodes: Array.from(mutation.addedNodes).map(node => ({
                                 nodeName: node.nodeName,
@@ -1580,38 +1362,32 @@
                         }
                     });
                 });
-                observer.observe(columnRight, { childList: true, subtree: true });
+                observer.observe(columnLeft, { childList: true, subtree: true });
             } else {
-                console.error('column-right no encontrado al iniciar el observador');
+                console.error('column-left no encontrado al iniciar el observador');
             }
 
-            // Obtener viewedUserId de la URL
-            const urlParams = new URLSearchParams(window.location.search);
-            viewedUserId = Number(urlParams.get('user_id')) || null;
-
+            viewedUserId = getViewedUserId();
             await fetchCurrentUserId();
 
             if (!viewedUserId && currentUserId) {
                 console.log('No se proporcionó user_id en la URL, usando currentUserId:', currentUserId);
                 viewedUserId = currentUserId;
-                window.history.replaceState(null, '', `/perfil.html?user_id=${currentUserId}`);
+                window.history.replaceState(null, '', `/perfil-especifico.html?user_id=${currentUserId}`);
             }
 
-            if (!hasLoaded && (viewedUserId || currentUserId)) {
+            if (!hasLoaded && viewedUserId && !isNaN(viewedUserId)) {
                 hasLoaded = true;
                 console.log('Iniciando carga de datos. viewedUserId:', viewedUserId, 'currentUserId:', currentUserId);
-                await loadUserData();
+                await cargarDatosUsuario();
                 await cargarFeed();
                 await cargarResenas();
             } else {
-                console.error('No se puede cargar el perfil sin userId');
-                const feedMessage = document.getElementById('feed-message');
-                if (feedMessage) {
-                    feedMessage.textContent = 'Por favor, inicia sesión para ver el perfil';
-                    feedMessage.style.display = 'block';
-                }
+                console.error('No se puede cargar el perfil sin un viewedUserId válido');
+                document.getElementById('feed-message').textContent = 'Por favor inicia sesión o proporciona un ID de usuario válido';
+                document.getElementById('feed-message').style.display = 'block';
                 showNotification('No se puede cargar el perfil sin un usuario válido', true);
-                setTimeout(() => { window.location.href = '/login'; }, 2000);
+                setTimeout(() => { window.location.href = '/login.html'; }, 2000);
             }
         });
 
