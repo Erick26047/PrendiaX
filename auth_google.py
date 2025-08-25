@@ -48,7 +48,7 @@ async def show_login(request: Request):
         return HTMLResponse(f.read())
 
 
-# 🔁 Ruta de autenticación con Google
+# 🔁 Ruta de autenticación con GoogleA
 @router.get("/auth/google")
 async def login_via_google(request: Request):
     tipo = request.query_params.get("tipo", request.session.get("tipo", "explorador"))

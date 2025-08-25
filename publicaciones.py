@@ -238,8 +238,8 @@ async def inicio(request: Request, limit: int = 10, offset: int = 0):
                 "id": row[0],
                 "user_id": int(row[1]),
                 "contenido": row[2] if row[2] else "",
-                "imagen_url": f"/media/{row[0]}" if row[6] == 'emprendedor' and row[7] else "",
-                "video_url": f"/media/{row[0]}" if row[6] == 'emprendedor' and row[8] else "",
+                "imagen_url": f"/media/{row[0]}" if row[7] else "",
+                "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] if row[3] else [],
                 "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
@@ -400,11 +400,11 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
                 "id": row[0],
                 "user_id": int(row[1]),
                 "contenido": row[2] if row[2] else "",
-                "imagen_url": f"/media/{row[0]}" if row[7] else "",  # Solo verificar has_imagen
-                "video_url": f"/media/{row[0]}" if row[8] else "",   # Solo verificar has_video
+                "imagen_url": f"/media/{row[0]}" if row[7] else "",
+                "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] if row[3] else [],
                 "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
-                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",  # Mantener restricción para foto de perfil
+                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
                 "nombre_empresa": row[5],
                 "tipo_usuario": row[6],
                 "interesados_count": int(row[9]),
@@ -486,8 +486,8 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
                 "id": row[0],
                 "user_id": int(row[1]),
                 "contenido": row[2] if row[2] else "",
-                "imagen_url": f"/media/{row[0]}" if row[6] == 'emprendedor' and row[7] else "",
-                "video_url": f"/media/{row[0]}" if row[6] == 'emprendedor' and row[8] else "",
+                "imagen_url": f"/media/{row[0]}" if row[7] else "",
+                "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] if row[3] else [],
                 "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
@@ -564,8 +564,8 @@ async def perfil_feed(request: Request, limit: int = 10, offset: int = 0):
                 "id": row[0],
                 "user_id": int(row[1]),
                 "contenido": row[2] if row[2] else "",
-                "imagen_url": f"/media/{row[0]}" if row[6] == 'emprendedor' and row[7] else "",
-                "video_url": f"/media/{row[0]}" if row[6] == 'emprendedor' and row[8] else "",
+                "imagen_url": f"/media/{row[0]}" if row[7] else "",
+                "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] if row[3] else [],
                 "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
@@ -634,8 +634,8 @@ async def get_publicacion(post_id: int, request: Request):
                 "id": row[0],
                 "user_id": int(row[1]),
                 "contenido": row[2] if row[2] else "",
-                "imagen_url": f"/media/{row[0]}" if row[7] else "",  # Solo verificar has_imagen
-                "video_url": f"/media/{row[0]}" if row[8] else "",   # Solo verificar has_video
+                "imagen_url": f"/media/{row[0]}" if row[7] else "",
+                "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] if row[3] else [],
                 "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
@@ -771,8 +771,8 @@ async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0,
                 "id": row[0],
                 "user_id": int(row[1]),
                 "contenido": row[2] if row[2] else "",
-                "imagen_url": f"/media/{row[0]}" if row[6] == 'emprendedor' and row[7] else "",
-                "video_url": f"/media/{row[0]}" if row[6] == 'emprendedor' and row[8] else "",
+                "imagen_url": f"/media/{row[0]}" if row[7] else "",
+                "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] if row[3] else [],
                 "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
@@ -1371,7 +1371,6 @@ async def delete_review(perfil_id: int, resena_id: int, request: Request):
             conn.close()
             logging.debug("Conexión a la base de datos cerrada")
 
-            # Ruta para crear notificación (interno, no expuesto directamente)
 # Ruta para crear notificación (interno, no expuesto directamente)
 async def crear_notificacion(user_id: int, publicacion_id: int, tipo: str, actor_id: int, mensaje: str = None):
     try:

@@ -52,8 +52,7 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
-app.mount("/static", StaticFiles(directory="."), name="static")
-app.mount("/uploads", StaticFiles(directory="."), name="uploads")
+
 
 # --- Routers ---
 app.include_router(datos_usuario_router)

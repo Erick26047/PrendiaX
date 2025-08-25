@@ -41,11 +41,11 @@ oauth.register(
 
 def get_db_connection():
     return psycopg2.connect(
-        host=os.getenv('DB_HOST', 'localhost'),
-        database=os.getenv('DB_NAME', 'prendia_db'),
-        user=os.getenv('DB_USER', 'postgres'),
-        password=os.getenv('DB_PASSWORD', 'Elbicho7'),
-        port=os.getenv('DB_PORT', '5432'),
+        database="prendia_db",
+        user="prendiax_user",
+        password="Elbicho7",  # ⚠️ Usar variables de entorno en producción
+        host="localhost",
+        port="5432",
         cursor_factory=RealDictCursor
     )
 

@@ -55,8 +55,10 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: relative;
-            z-index: 1;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
         }
 
         header h1 {
@@ -118,6 +120,7 @@
             display: grid;
             grid-template-columns: 1fr 2fr 1fr;
             gap: 30px;
+            padding-top: 100px;
         }
 
         @media (max-width: 768px) {
@@ -125,6 +128,7 @@
                 grid-template-columns: 1fr;
                 padding: 20px;
                 gap: 20px;
+                padding-top: 80px;
             }
         }
 
@@ -135,6 +139,14 @@
             border: 1px solid #ccc;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .column-left {
+            height: fit-content;
+        }
+
+        .column-right {
+            height: fit-content;
         }
 
         .profile-data {
@@ -303,9 +315,12 @@
         }
 
         .post-media img, .post-media video {
-            max-width: 100%;
+            max-width: 25%;
+            width: 25%;
+            height: auto;
             border-radius: 8px;
             display: block;
+            cursor: pointer;
         }
 
         .post-meta p {
@@ -575,6 +590,98 @@
             background: #bbb;
         }
 
+        .media-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2500;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        .media-modal-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            background: transparent;
+            text-align: center;
+        }
+
+        .media-modal-content img {
+            max-width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+            transform-origin: center;
+            transition: transform 0.2s ease;
+            cursor: grab;
+            z-index: 1;
+        }
+
+        .media-modal-content video {
+            max-width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+            z-index: 1;
+        }
+
+        .media-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 3;
+        }
+
+        .media-controls button {
+            background: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .media-controls button:hover {
+            background: #e0e0e0;
+        }
+
+        .close-media-btn {
+            position: fixed; /* Cambiado a fixed para alinear con la ventana */
+            top: 10px; /* Cerca de la esquina superior */
+            right: 10px; /* Cerca de la orilla derecha */
+            background: rgba(244, 67, 54, 0.9); /* Fondo rojo con opacidad */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            padding: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            z-index: 2600; /* Muy alto para estar encima de todo */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); /* Sombra más pronunciada */
+            width: 40px; /* Tamaño mayor para mejor interacción */
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-media-btn:hover {
+            background: rgba(211, 47, 47, 1);
+            transform: scale(1.1);
+        }
+
         body.dark-mode {
             background-color: #000;
             color: #fff;
@@ -656,6 +763,27 @@
 
         body.dark-mode .modal-content h3 {
             color: #fff;
+        }
+
+        body.dark-mode .media-modal-content {
+            background: transparent;
+        }
+
+        body.dark-mode .media-controls button {
+            background: #333;
+            color: #fff;
+        }
+
+        body.dark-mode .media-controls button:hover {
+            background: #555;
+        }
+
+        body.dark-mode .close-media-btn {
+            background: rgba(211, 47, 47, 0.9);
+        }
+
+        body.dark-mode .close-media-btn:hover {
+            background: rgba(183, 28, 28, 1);
         }
 
         .message-btn {
@@ -862,6 +990,18 @@
         </div>
     </div>
 
+    <div class="media-modal" id="media-modal">
+        <div class="media-modal-content" id="media-modal-content">
+            <button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>
+            <div class="media-controls" id="media-controls" style="display: none;">
+                <button id="zoom-in-btn"><i class="fas fa-search-plus"></i></button>
+                <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
+                <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
+                <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Estrellas para modo oscuro
         const starsContainer = document.querySelector('.stars');
@@ -945,12 +1085,15 @@
         let currentUserId = null;
         let viewedUserId = null;
         const urlParams = new URLSearchParams(window.location.search);
-        viewedUserId = Number(urlParams.get('user_id')); // Obtener user_id de la URL
+        viewedUserId = Number(urlParams.get('user_id'));
         let offset = 0;
         const limit = 10;
         let isLoading = false;
         let hasMore = true;
         let loadedPostIds = new Set();
+        let currentScale = 1;
+        let isDragging = false;
+        let startX, startY, translateX = 0, translateY = 0;
 
         // Obtener ID del usuario autenticado
         async function fetchCurrentUserId() {
@@ -969,7 +1112,6 @@
                 if (data.user_id !== null && data.user_id !== undefined) {
                     currentUserId = Number(data.user_id);
                     console.log('Current User ID:', currentUserId, 'Type:', typeof currentUserId);
-                    // Mostrar botón de edición y mensaje/reseña según el usuario
                     if (!viewedUserId || viewedUserId === currentUserId) {
                         document.getElementById('edit-profile-btn').style.display = 'block';
                         document.getElementById('message-btn').style.display = 'none';
@@ -992,7 +1134,7 @@
 
         // Cargar datos del usuario
         async function loadUserData() {
-            const userId = viewedUserId || currentUserId; // Usar viewedUserId si existe, si no, currentUserId
+            const userId = viewedUserId || currentUserId;
             if (!userId) {
                 showNotification('No se pudo cargar el perfil.', true);
                 return;
@@ -1003,7 +1145,6 @@
                 const data = await response.json();
                 console.log('Datos del usuario cargados:', data);
 
-                // Actualizar la sección de perfil
                 document.getElementById('profile-pic').src = data.foto_perfil || '/static/default_profile.png';
                 document.getElementById('profile-name').textContent = data.nombre_empresa || 'Usuario';
                 document.getElementById('profile-direccion').textContent = data.direccion || 'Sin dirección';
@@ -1017,7 +1158,6 @@
                 document.getElementById('profile-servicios').textContent = data.servicios || 'Sin servicios';
                 document.getElementById('profile-sitio-web').textContent = data.sitio_web || 'Sin sitio web';
 
-                // Actualizar el formulario de edición (si es el usuario autenticado)
                 if (!viewedUserId || viewedUserId === currentUserId) {
                     document.getElementById('nombre_empresa').value = data.nombre_empresa || '';
                     document.getElementById('direccion').value = data.direccion || '';
@@ -1031,7 +1171,6 @@
                     document.getElementById('preview-foto').src = data.foto_perfil || '/static/default_profile.png';
                 }
 
-                // Configurar el botón de mensaje
                 document.getElementById('message-btn').onclick = () => {
                     window.location.href = `/chats.html?to_user_id=${userId}`;
                 };
@@ -1046,7 +1185,7 @@
             if (isLoading || !hasMore) return;
             isLoading = true;
 
-            const userId = viewedUserId || currentUserId; // Usar viewedUserId si existe
+            const userId = viewedUserId || currentUserId;
             const feedMessage = document.getElementById('feed-message');
             feedMessage.style.display = 'none';
 
@@ -1120,10 +1259,10 @@
 
                     postContent += '<div class="post-media">';
                     if (pub.imagen_url && pub.imagen_url.trim() !== '') {
-                        postContent += `<img src="${pub.imagen_url}" alt="Imagen">`;
+                        postContent += `<img src="${pub.imagen_url}" alt="Imagen" class="media-item" data-type="image" data-src="${pub.imagen_url}">`;
                     }
                     if (pub.video_url && pub.video_url.trim() !== '') {
-                        postContent += `<video controls src="${pub.video_url}"></video>`;
+                        postContent += `<video controls src="${pub.video_url}" class="media-item" data-type="video" data-src="${pub.video_url}"></video>`;
                     }
                     postContent += '</div>';
 
@@ -1237,7 +1376,6 @@
             let reviewsContainer = document.getElementById('reviews-container');
             let reviewsMessage = document.getElementById('reviews-message');
 
-            // Si reviews-container no existe, intentar recrearlo
             if (!reviewsContainer) {
                 console.warn('reviews-container no encontrado, intentando recrearlo');
                 const columnRight = document.querySelector('.column-right');
@@ -1254,7 +1392,6 @@
                 }
             }
 
-            // Si reviews-message no existe, recrearlo
             if (!reviewsMessage) {
                 console.warn('reviews-message no encontrado, recreándolo');
                 reviewsMessage = document.createElement('p');
@@ -1284,8 +1421,8 @@
                 const resenas = await response.json();
                 console.log('Reseñas cargadas:', resenas);
 
-                reviewsContainer.innerHTML = ''; // Limpiar contenido existente
-                reviewsContainer.appendChild(reviewsMessage); // Reinsertar reviews-message
+                reviewsContainer.innerHTML = '';
+                reviewsContainer.appendChild(reviewsMessage);
                 reviewsMessage.style.display = 'none';
 
                 if (!Array.isArray(resenas) || resenas.length === 0) {
@@ -1339,7 +1476,7 @@
             document.getElementById('review-text').value = '';
             document.getElementById('review-rating').value = '0';
             const stars = document.querySelectorAll('#star-rating .star');
-            stars.forEach(star => star.classList.remove('active')); // Resetear estrellas
+            stars.forEach(star => star.classList.remove('active'));
         });
 
         // Manejo de estrellas interactivas
@@ -1348,9 +1485,9 @@
             star.addEventListener('mouseover', () => {
                 const value = parseInt(star.dataset.value);
                 stars.forEach(s => {
-                    s.classList.remove('active'); // Limpiar estado previo
+                    s.classList.remove('active');
                     if (parseInt(s.dataset.value) <= value) {
-                        s.classList.add('active'); // Resaltar hasta la estrella actual
+                        s.classList.add('active');
                     }
                 });
             });
@@ -1360,7 +1497,7 @@
                 document.getElementById('review-rating').value = value;
                 stars.forEach(s => {
                     if (parseInt(s.dataset.value) <= value) {
-                        s.classList.add('active'); // Fijar estrellas seleccionadas
+                        s.classList.add('active');
                     } else {
                         s.classList.remove('active');
                     }
@@ -1368,13 +1505,12 @@
             });
         });
 
-        // Restaurar estrellas al salir del contenedor
         document.getElementById('star-rating').addEventListener('mouseleave', () => {
             const currentValue = parseInt(document.getElementById('review-rating').value) || 0;
             stars.forEach(s => {
-                s.classList.remove('active'); // Limpiar estado
+                s.classList.remove('active');
                 if (parseInt(s.dataset.value) <= currentValue) {
-                    s.classList.add('active'); // Mantener solo las seleccionadas
+                    s.classList.add('active');
                 }
             });
         });
@@ -1419,8 +1555,7 @@
                     document.getElementById('review-form').reset();
                     document.getElementById('review-rating').value = '0';
                     const stars = document.querySelectorAll('#star-rating .star');
-                    stars.forEach(star => star.classList.remove('active')); // Resetear estrellas
-                    // Agregar retraso para asegurar que el DOM esté listo
+                    stars.forEach(star => star.classList.remove('active'));
                     setTimeout(() => cargarResenas(), 100);
                 } else {
                     const error = await response.json().catch(() => ({}));
@@ -1443,7 +1578,7 @@
             document.getElementById('profile-edit-form').style.display = 'none';
             document.getElementById('profile-view').style.display = 'block';
             document.getElementById('profile-edit-form').reset();
-            loadUserData(); // Recargar datos para restaurar la vista
+            loadUserData();
         }
 
         // Vista previa de la foto de perfil
@@ -1503,7 +1638,7 @@
                     document.getElementById('profile-view').style.display = 'block';
                     document.getElementById('profile-edit-form').reset();
                     showNotification('Perfil actualizado correctamente');
-                    loadUserData(); // Recargar datos después de actualizar
+                    loadUserData();
                 } else {
                     const error = await response.json();
                     console.error('Error al actualizar:', error);
@@ -1532,15 +1667,148 @@
             });
         }
 
+        // Funcionalidad para el modal de multimedia
+        function openMediaModal(type, src) {
+            const modal = document.getElementById('media-modal');
+            const content = document.getElementById('media-modal-content');
+            const controls = document.getElementById('media-controls');
+            const zoomInBtn = document.getElementById('zoom-in-btn');
+            const zoomOutBtn = document.getElementById('zoom-out-btn');
+            const volumeUpBtn = document.getElementById('volume-up-btn');
+            const volumeDownBtn = document.getElementById('volume-down-btn');
+
+            // Limpiar contenido, pero mantener el botón de cierre y controles
+            content.innerHTML = `
+                <button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>
+                <div class="media-controls" id="media-controls" style="display: none;">
+                    <button id="zoom-in-btn"><i class="fas fa-search-plus"></i></button>
+                    <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
+                    <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
+                    <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
+                </div>
+            `;
+            // Reasignar referencias después de recrear el contenido
+            const newControls = document.getElementById('media-controls');
+            const newZoomInBtn = document.getElementById('zoom-in-btn');
+            const newZoomOutBtn = document.getElementById('zoom-out-btn');
+            const newVolumeUpBtn = document.getElementById('volume-up-btn');
+            const newVolumeDownBtn = document.getElementById('volume-down-btn');
+
+            if (type === 'image') {
+                const img = document.createElement('img');
+                img.src = src;
+                img.alt = 'Imagen ampliada';
+                content.insertBefore(img, newControls);
+                newControls.style.display = 'flex';
+                newZoomInBtn.style.display = 'inline-block';
+                newZoomOutBtn.style.display = 'inline-block';
+                newVolumeUpBtn.style.display = 'none';
+                newVolumeDownBtn.style.display = 'none';
+
+                currentScale = 1;
+                translateX = 0;
+                translateY = 0;
+                img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
+
+                newZoomInBtn.onclick = () => {
+                    currentScale = Math.min(currentScale + 0.2, 3);
+                    img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
+                };
+                newZoomOutBtn.onclick = () => {
+                    currentScale = Math.max(currentScale - 0.2, 0.5);
+                    img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
+                };
+
+                img.onmousedown = (e) => {
+                    if (currentScale <= 1) return;
+                    isDragging = true;
+                    startX = e.clientX - translateX;
+                    startY = e.clientY - translateY;
+                    img.style.cursor = 'grabbing';
+                };
+
+                img.onmousemove = (e) => {
+                    if (!isDragging) return;
+                    translateX = e.clientX - startX;
+                    translateY = e.clientY - startY;
+                    img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
+                };
+
+                img.onmouseup = () => {
+                    isDragging = false;
+                    img.style.cursor = 'grab';
+                };
+
+                img.onmouseleave = () => {
+                    isDragging = false;
+                    img.style.cursor = 'grab';
+                };
+
+                img.onwheel = (e) => {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                    currentScale = Math.max(0.5, Math.min(currentScale + delta, 3));
+                    img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
+                };
+            } else if (type === 'video') {
+                const video = document.createElement('video');
+                video.src = src;
+                video.controls = true;
+                content.insertBefore(video, newControls);
+                newControls.style.display = 'flex';
+                newZoomInBtn.style.display = 'none';
+                newZoomOutBtn.style.display = 'none';
+                newVolumeUpBtn.style.display = 'inline-block';
+                newVolumeDownBtn.style.display = 'inline-block';
+
+                newVolumeUpBtn.onclick = () => {
+                    video.volume = Math.min(video.volume + 0.1, 1);
+                };
+                newVolumeDownBtn.onclick = () => {
+                    video.volume = Math.max(video.volume - 0.1, 0);
+                };
+            }
+
+            modal.style.display = 'flex';
+            // Reasignar evento de cierre
+            document.getElementById('close-media-btn').onclick = closeMediaModal;
+        }
+
+        // Función para cerrar el modal de multimedia
+        function closeMediaModal() {
+            const modal = document.getElementById('media-modal');
+            const content = document.getElementById('media-modal-content');
+            modal.style.display = 'none';
+            content.innerHTML = `
+                <button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>
+                <div class="media-controls" id="media-controls" style="display: none;">
+                    <button id="zoom-in-btn"><i class="fas fa-search-plus"></i></button>
+                    <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
+                    <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
+                    <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
+                </div>
+            `;
+            // Reasignar evento de cierre al nuevo botón
+            document.getElementById('close-media-btn').onclick = closeMediaModal;
+        }
+
+        // Delegación de eventos para multimedia
+        document.getElementById('feed').addEventListener('click', (event) => {
+            const target = event.target;
+            if (target.classList.contains('media-item')) {
+                const type = target.dataset.type;
+                const src = target.dataset.src;
+                openMediaModal(type, src);
+            }
+        });
+
         // Inicialización
         let hasLoaded = false;
         window.addEventListener('load', async () => {
-            // Depuración: Verificar que el DOM está completamente cargado
             console.log('Evento load disparado. Estado del DOM:', document.readyState);
             console.log('reviews-container:', document.getElementById('reviews-container'));
             console.log('reviews-message:', document.getElementById('reviews-message'));
 
-            // Observador del DOM para detectar cambios en column-right
             const columnRight = document.querySelector('.column-right');
             if (columnRight) {
                 const observer = new MutationObserver((mutations) => {
@@ -1565,7 +1833,6 @@
                         });
                         if (!document.getElementById('reviews-container') || !document.getElementById('reviews-message')) {
                             console.error('Elementos reviews-container o reviews-message eliminados o modificados');
-                            // Intentar recrear reviews-message si falta
                             let reviewsContainer = document.getElementById('reviews-container');
                             if (reviewsContainer && !document.getElementById('reviews-message')) {
                                 const newReviewsMessage = document.createElement('p');
@@ -1585,7 +1852,6 @@
                 console.error('column-right no encontrado al iniciar el observador');
             }
 
-            // Obtener viewedUserId de la URL
             const urlParams = new URLSearchParams(window.location.search);
             viewedUserId = Number(urlParams.get('user_id')) || null;
 
