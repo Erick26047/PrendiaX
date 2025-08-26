@@ -1,6 +1,5 @@
 # Ignorar archivos no necesarios
 *.jpg
-*.png
 *.zip
 node_modules/
 venv/
