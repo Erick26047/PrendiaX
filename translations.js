@@ -56,11 +56,13 @@ const translations = {
       feed_error: "Error al cargar el feed",
       comments_error: "Error al cargar los comentarios",
       notifications_error: "Error al cargar las notificaciones",
+      filter_title: "Filtrar feed por categoría",
       remove_preview_title: "Eliminar vista previa",
       remove_tag_title: "Eliminar etiqueta",
       notification_comment: "{user} comentó en tu publicación {post}",
       notification_interest: "{user} mostró interés en tu publicación {post}",
       unknown_error: "Error desconocido"
+      
     },
 
     chat: {
@@ -173,6 +175,7 @@ const translations = {
       comments_error: "Error loading comments",
       notifications_error: "Error loading notifications",
       remove_preview_title: "Remove preview",
+       filter_title: "Filter feed by category",
       remove_tag_title: "Remove tag",
       notification_comment: "{user} commented on your post {post}",
       notification_interest: "{user} showed interest in your post {post}",

@@ -64,14 +64,22 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: relative;
-  z-index: 5000; /* Aumentar para que esté por encima del container */
+  position: fixed; /* Cambiar de relative a fixed */
+  top: 0; /* Asegura que esté en la parte superior */
+  width: 100%; /* Ocupa todo el ancho */
+  box-sizing: border-box; /* Evita desbordamiento por padding */
+  z-index: 5000; /* Mantener alto para que esté por encima de todo */
 }
 
 .logo {
   font-size: 32px;
   font-weight: bold;
   color: #fff;
+  text-decoration: none; /* Elimina el subrayado típico de los enlaces */
+  cursor: pointer; /* Indica que es clicable */
+}
+.logo:hover {
+  color: #e0e0e0; /* Efecto hover para mejor UX */
 }
 
 .header-icons {
@@ -292,10 +300,10 @@ header {
 
 .container {
   max-width: 1200px;
-  margin: 40px auto;
+  margin: 100px auto 40px auto; /* Agregar margen superior (100px es un estimado de la altura del header) */
   padding: 20px;
   position: relative;
-  z-index: 0; /* Reducir a 0 para que esté por debajo del header y sus elementos absolutos */
+  z-index: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
@@ -1281,6 +1289,18 @@ body.dark-mode .modal-content {
   background: #222;
   color: #fff;
 }
+.filter-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 15px 0;
+  text-align: center;
+  color: #000;
+  transition: color 0.3s ease;
+}
+
+body.dark-mode .filter-title {
+  color: #fff; /* Asegura que el título sea visible en modo oscuro */
+}
 </style>
 
 </head>
@@ -1288,7 +1308,7 @@ body.dark-mode .modal-content {
   <div class="stars"></div>
 
   <header>
-    <div class="logo" data-translate="inicio.logo">PrendiaX</div>
+    <a href="/inicio.html" class="logo" data-translate="inicio.logo" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); window.location.reload();">PrendiaX</a>
     <div class="header-icons">
       <input type="text" placeholder="Buscar en PrendiaX" id="buscador" oninput="search()" data-translate="inicio.search_placeholder" />
       <button class="icon-button" id="notifications-toggle" title="Notificaciones">
@@ -1439,6 +1459,7 @@ body.dark-mode .modal-content {
       </form>
     </div>
 <div class="filtros-categorias">
+  <h3 class="filter-title" data-translate="inicio.filter_title">Filtrar feed por categoría</h3>
   <div class="categoria-buttons">
     <button class="icon-button categoria-filter" data-categoria="Restaurantes y comida rápida" title="Restaurantes y comida rápida">
       <i class="fas fa-utensils"></i>
