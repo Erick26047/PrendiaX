@@ -6,57 +6,79 @@ import time
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 apple_router = APIRouter()
 
+# 🔧 Conexión a la base de datos
+def get_db_connection():
+    try:
+        conn = psycopg2.connect(
+            database=os.getenv("DB_NAME", "prendia_db"),
+            user=os.getenv("DB_USER", "postgres"),  # Corregido a postgres según .env
+            password=os.getenv("DB_PASSWORD", "Elbicho7"),
+            host=os.getenv("DB_HOST", "localhost"),
+            port=os.getenv("DB_PORT", "5432"),
+            cursor_factory=RealDictCursor
+        )
+        print("[DEBUG] Conexión a la base de datos exitosa")
+        return conn
+    except Exception as e:
+        print(f"[ERROR] Error al conectar a la base de datos: {e}")
+        raise HTTPException(status_code=500, detail="Error al conectar a la base de datos")
+
+# 🔐 Generar client_secret para Apple
 def generate_apple_client_secret():
     try:
-        with open(os.getenv('APPLE_PRIVATE_KEY_PATH', 'AuthKey_4MYALFP5DD.p8'), 'r') as key_file:
+        private_key_path = os.getenv("APPLE_PRIVATE_KEY_PATH", "AuthKey_YFNS7NW42N.p8")
+        if not os.path.exists(private_key_path):
+            print(f"[ERROR] /apple_auth: No se encontró el archivo .p8 en {private_key_path}")
+            raise HTTPException(status_code=500, detail="Archivo de clave privada no encontrado")
+        
+        with open(private_key_path, "r") as key_file:
             private_key = key_file.read()
+        
         now = int(time.time())
         payload = {
-            'iss': os.getenv('APPLE_TEAM_ID', 'ZRTLHL9GXR'),
-            'iat': now,
-            'exp': now + 3600,
-            'aud': 'https://appleid.apple.com',
-            'sub': os.getenv('APPLE_CLIENT_ID', 'com.prendiax.web')
+            "iss": os.getenv("APPLE_TEAM_ID", "ZRTLHL9GXR"),
+            "iat": now,
+            "exp": now + 3600,  # 1 hora de validez
+            "aud": "https://appleid.apple.com",
+            "sub": os.getenv("APPLE_CLIENT_ID", "com.prendiax.web.service")
         }
-        headers = {'kid': os.getenv('APPLE_KEY_ID', '4MYALFP5DD')}
-        client_secret = jwt.encode(payload, private_key, algorithm='ES256', headers=headers)
+        headers = {"kid": os.getenv("APPLE_KEY_ID", "YFNS7NW42N")}
+        client_secret = jwt.encode(payload, private_key, algorithm="ES256", headers=headers)
         print("[DEBUG] /apple_auth: Client secret generado")
         return client_secret
     except Exception as e:
-        print(f"[ERROR] /apple_auth: Error client_secret: {e}")
-        raise HTTPException(status_code=500, detail="Error client_secret")
+        print(f"[ERROR] /apple_auth: Error al generar client_secret: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al generar client_secret: {str(e)}")
 
+# 🔐 Configurar OAuth con Apple
 oauth = OAuth()
 oauth.register(
-    name='apple',
-    client_id=os.getenv('APPLE_CLIENT_ID', 'com.prendiax.web'),
+    name="apple",
+    client_id=os.getenv("APPLE_CLIENT_ID", "com.prendiax.web.service"),
     client_secret=generate_apple_client_secret,
-    authorize_url='https://appleid.apple.com/auth/authorize',
-    token_url='https://appleid.apple.com/auth/token',
-    client_kwargs={'scope': 'name email', 'response_type': 'code', 'response_mode': 'form_post', 'prompt': 'select_account'}
+    server_metadata_url="https://appleid.apple.com/.well-known/openid-configuration",
+    client_kwargs={
+        "scope": "name email",
+        "response_type": "code id_token",
+        "response_mode": "form_post",
+        "prompt": "select_account"
+    }
 )
 
-def get_db_connection():
-    return psycopg2.connect(
-        database="prendia_db",
-        user="prendiax_user",
-        password="Elbicho7",  # ⚠️ Usar variables de entorno en producción
-        host="localhost",
-        port="5432",
-        cursor_factory=RealDictCursor
-    )
-
+# 🔁 Ruta de autenticación con Apple
 @apple_router.get("/auth/apple")
 async def login_via_apple(request: Request):
     try:
-        print("[DEBUG] /auth/apple: Sesión existente: {request.session}")
-        # Respetar el tipo de la sesión, igual que Google
-        tipo = request.query_params.get("tipo", request.session.get("tipo", "emprendedor"))
+        print(f"[DEBUG] /auth/apple: Sesión existente: {request.session}")
+        tipo = request.query_params.get("tipo", request.session.get("tipo", "explorador"))
         target = request.query_params.get("target", "perfil-especifico" if tipo == "explorador" else "perfil")
-        redirect_uri = os.getenv('APPLE_REDIRECT_URI', 'https://81f0-2806-2f0-a140-e734-911b-444b-bd18-ccc4.ngrok-free.app/auth/apple/callback')
+        redirect_uri = os.getenv("APPLE_REDIRECT_URI", "https://prendiax.com/auth/apple/callback")
         request.session.update({"tipo": tipo, "target": target})
         print(f"[DEBUG] /auth/apple: tipo={tipo}, target={target}, redirect_uri={redirect_uri}")
         return await oauth.apple.authorize_redirect(request, redirect_uri)
@@ -64,7 +86,8 @@ async def login_via_apple(request: Request):
         print(f"[ERROR] /auth/apple: Error: {e}")
         return RedirectResponse(url=f"/login?tipo={tipo}&target={target}", status_code=302)
 
-@apple_router.get("/auth/apple/callback")
+# ✅ Callback de Apple
+@apple_router.post("/auth/apple/callback")  # Cambiado a POST
 async def auth_apple_callback(request: Request):
     try:
         print("[DEBUG] /auth/apple/callback: Iniciando callback")
@@ -72,7 +95,7 @@ async def auth_apple_callback(request: Request):
         decoded = jwt.decode(token.get("id_token"), options={"verify_signature": False})
         print(f"[DEBUG] /auth/apple/callback: id_token decodificado: {decoded}")
         email = decoded.get("email")
-        name = decoded.get("name", email.split('@')[0] if email else "Usuario Apple")
+        name = decoded.get("name", email.split("@")[0] if email else "Usuario Apple")
 
         if not email:
             print("[ERROR] /auth/apple/callback: No se proporcionó un correo electrónico")
@@ -113,8 +136,8 @@ async def auth_apple_callback(request: Request):
 
             conn.commit()
             # Guardar datos de sesión
-            tipo = request.session.get("tipo", "emprendedor")
-            request.session['user'] = {'id': user_id, 'email': email, 'name': name, 'tipo': tipo}
+            tipo = request.session.get("tipo", "explorador")
+            request.session["user"] = {"id": user_id, "email": email, "name": name, "tipo": tipo}
             print(f"[DEBUG] /auth/apple/callback: Sesión: {request.session}")
 
             # Verificar datos existentes en datos_usuario antes de redirigir
