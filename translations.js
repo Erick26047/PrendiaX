@@ -8,7 +8,11 @@ const translations = {
       upload_button: "Sube tu negocio",
       about_title: "¿Qué es PrendiaX?",
       about_text: "PrendiaX es una plataforma diseñada para conectar emprendedores y negocios locales con clientes potenciales. Aquí puedes descubrir nuevos productos y servicios, así como promocionar tu propio negocio.",
-      footer: "© 2025 PrendiaX. Todos los derechos reservados."
+      footer: "© 2025 PrendiaX. Todos los derechos reservados.",
+      // Nuevas traducciones para el modal
+      explore_warning: "Una vez que inicie sesión con una cuenta, no puede ingresar con esa misma a Sube tu negocio.",
+      upload_warning: "Una vez que inicie sesión con una cuenta, no puede ingresar con esa misma a Explorar negocios.",
+      continue_button: "Continuar"
     },
     inicio: {
       logo: "PrendiaX",
@@ -62,9 +66,7 @@ const translations = {
       notification_comment: "{user} comentó en tu publicación {post}",
       notification_interest: "{user} mostró interés en tu publicación {post}",
       unknown_error: "Error desconocido"
-      
     },
-
     chat: {
       search_placeholder: "Buscar chats...",
       input_placeholder: "Escribe un mensaje...",
@@ -105,7 +107,6 @@ const translations = {
       media_error: "Error al cargar el medio",
       voice_note_error: "Error al cargar la nota de voz",
       delete_chat: "Eliminar chat",
-      // Nuevas traducciones
       you: "Tú",
       sent_image: "Tú: enviaste una imagen",
       received_image: "envió una imagen",
@@ -126,7 +127,11 @@ const translations = {
       upload_button: "Upload your business",
       about_title: "What is PrendiaX?",
       about_text: "PrendiaX is a platform designed to connect entrepreneurs and local businesses with potential customers. Here you can discover new products and services, as well as promote your own business.",
-      footer: "© 2025 PrendiaX. All rights reserved."
+      footer: "© 2025 PrendiaX. All rights reserved.",
+      // Nuevas traducciones para el modal
+      explore_warning: "Once you log in with an account, you cannot use the same account for Upload your business.",
+      upload_warning: "Once you log in with an account, you cannot use the same account for Explore businesses.",
+      continue_button: "Continue"
     },
     inicio: {
       logo: "PrendiaX",
@@ -174,8 +179,8 @@ const translations = {
       feed_error: "Error loading the feed",
       comments_error: "Error loading comments",
       notifications_error: "Error loading notifications",
+      filter_title: "Filter feed by category",
       remove_preview_title: "Remove preview",
-       filter_title: "Filter feed by category",
       remove_tag_title: "Remove tag",
       notification_comment: "{user} commented on your post {post}",
       notification_interest: "{user} showed interest in your post {post}",
@@ -221,7 +226,6 @@ const translations = {
       media_error: "Error loading media",
       voice_note_error: "Error loading voice note",
       delete_chat: "Delete chat",
-      // Nuevas traducciones
       you: "You",
       sent_image: "You: sent an image",
       received_image: "sent an image",

@@ -242,7 +242,7 @@
       <h1 class="logo" data-translate="index.logo">PrendiaX</h1>
       <div class="language-menu">
         <button class="icon-button" id="language-toggle" title="Cambiar idioma">
-          <i class="fas fa-globe"></i> <span data-translate="index.language">
+          <i class="fas fa-globe"></i> <span data-translate="index.language"></span>
         </button>
         <div class="menu-desplegable language-desplegable" id="language-menu">
           <button data-lang="es"><i class="fas fa-language"></i> Español</button>
@@ -273,10 +273,10 @@
   <!-- Modal para el aviso -->
   <div class="modal" id="account-warning-modal">
     <div class="modal-content">
-      <p id="modal-message"></p>
+      <p id="modal-message" data-translate="index.explore_warning"></p>
       <div class="modal-buttons">
-        <button class="modal-btn cancel" id="modal-cancel">Regresar</button>
-        <button class="modal-btn continue" id="modal-continue">Continuar</button>
+        <button class="modal-btn cancel" id="modal-cancel" data-translate="inicio.cancel_button">Regresar</button>
+        <button class="modal-btn continue" id="modal-continue" data-translate="index.continue_button">Continuar</button>
       </div>
     </div>
   </div>
@@ -341,11 +341,13 @@
         const action = button.getAttribute('data-action');
         currentUrl = button.getAttribute('href');
 
-        if (action === 'explore') {
-          modalMessage.textContent = 'Una vez que inicie sesión con una cuenta, no puede ingresar con esa misma a Sube tu negocio.';
-        } else if (action === 'upload') {
-          modalMessage.textContent = 'Una vez que inicie sesión con una cuenta, no puede ingresar con esa misma a Explorar negocios.';
-        }
+        // Obtener el idioma actual
+        const lang = localStorage.getItem('language') || 'es';
+        // Seleccionar la traducción según la acción
+        const translationKey = action === 'explore' ? 'index.explore_warning' : 'index.upload_warning';
+        const translation = translations[lang][translationKey.split('.')[0]][translationKey.split('.')[1]];
+        modalMessage.textContent = translation;
+        modalMessage.setAttribute('data-translate', translationKey);
 
         modal.style.display = 'flex';
       });
