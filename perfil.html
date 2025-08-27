@@ -1135,52 +1135,60 @@
 
         // Cargar datos del usuario
         async function loadUserData() {
-            const userId = viewedUserId || currentUserId;
-            if (!userId) {
-                showNotification('No se pudo cargar el perfil.', true);
-                return;
+    const userId = viewedUserId || currentUserId;
+    if (!userId) {
+        showNotification('No se pudo cargar el perfil.', true);
+        return;
+    }
+    try {
+        const response = await fetch(`/user/${userId}`, { credentials: 'include' });
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        const data = await response.json();
+        console.log('Datos del usuario cargados:', data);
+
+        document.getElementById('profile-pic').src = data.foto_perfil || '/static/default_profile.png';
+        document.getElementById('profile-name').textContent = data.nombre_empresa || 'Usuario';
+        document.getElementById('profile-direccion').textContent = data.direccion || 'Sin dirección';
+        document.getElementById('profile-ubicacion').innerHTML = data.ubicacion_google_maps
+            ? `<a href="${data.ubicacion_google_maps}" target="_blank" class="google-maps-link">${data.ubicacion_google_maps}</a>`
+            : 'Sin ubicación';
+        document.getElementById('profile-telefono').textContent = data.telefono || 'Sin teléfono';
+        document.getElementById('profile-horario').textContent = data.horario || 'Sin horario';
+        document.getElementById('profile-categoria').textContent = data.categoria || 'Sin categoría';
+        document.getElementById('profile-otra-categoria').textContent = data.otra_categoria || 'Ninguna';
+        document.getElementById('profile-servicios').textContent = data.servicios || 'Sin servicios';
+        const sitioWebElement = document.getElementById('profile-sitio-web');
+        if (data.sitio_web && data.sitio_web.trim() !== '') {
+            let url = data.sitio_web;
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
             }
-            try {
-                const response = await fetch(`/user/${userId}`, { credentials: 'include' });
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                const data = await response.json();
-                console.log('Datos del usuario cargados:', data);
-
-                document.getElementById('profile-pic').src = data.foto_perfil || '/static/default_profile.png';
-                document.getElementById('profile-name').textContent = data.nombre_empresa || 'Usuario';
-                document.getElementById('profile-direccion').textContent = data.direccion || 'Sin dirección';
-                document.getElementById('profile-ubicacion').innerHTML = data.ubicacion_google_maps
-                    ? `<a href="${data.ubicacion_google_maps}" target="_blank" class="google-maps-link">${data.ubicacion_google_maps}</a>`
-                    : 'Sin ubicación';
-                document.getElementById('profile-telefono').textContent = data.telefono || 'Sin teléfono';
-                document.getElementById('profile-horario').textContent = data.horario || 'Sin horario';
-                document.getElementById('profile-categoria').textContent = data.categoria || 'Sin categoría';
-                document.getElementById('profile-otra-categoria').textContent = data.otra_categoria || 'Ninguna';
-                document.getElementById('profile-servicios').textContent = data.servicios || 'Sin servicios';
-                document.getElementById('profile-sitio-web').textContent = data.sitio_web || 'Sin sitio web';
-
-                if (!viewedUserId || viewedUserId === currentUserId) {
-                    document.getElementById('nombre_empresa').value = data.nombre_empresa || '';
-                    document.getElementById('direccion').value = data.direccion || '';
-                    document.getElementById('ubicacion_google_maps').value = data.ubicacion_google_maps || '';
-                    document.getElementById('telefono').value = data.telefono || '';
-                    document.getElementById('horario').value = data.horario || '';
-                    document.getElementById('categoria').value = data.categoria || '';
-                    document.getElementById('otra_categoria').value = data.otra_categoria || '';
-                    document.getElementById('servicios').value = data.servicios || '';
-                    document.getElementById('sitio_web').value = data.sitio_web || '';
-                    document.getElementById('preview-foto').src = data.foto_perfil || '/static/default_profile.png';
-                }
-
-                document.getElementById('message-btn').onclick = () => {
-                    window.location.href = `/chats.html?to_user_id=${userId}`;
-                };
-            } catch (error) {
-                console.error('Error al cargar datos del usuario:', error);
-                showNotification('Error al cargar datos del perfil', true);
-            }
+            sitioWebElement.innerHTML = `<a href="${url}" target="_blank" class="google-maps-link">${data.sitio_web}</a>`;
+        } else {
+            sitioWebElement.textContent = 'Sin sitio web';
         }
 
+        if (!viewedUserId || viewedUserId === currentUserId) {
+            document.getElementById('nombre_empresa').value = data.nombre_empresa || '';
+            document.getElementById('direccion').value = data.direccion || '';
+            document.getElementById('ubicacion_google_maps').value = data.ubicacion_google_maps || '';
+            document.getElementById('telefono').value = data.telefono || '';
+            document.getElementById('horario').value = data.horario || '';
+            document.getElementById('categoria').value = data.categoria || '';
+            document.getElementById('otra_categoria').value = data.otra_categoria || '';
+            document.getElementById('servicios').value = data.servicios || '';
+            document.getElementById('sitio_web').value = data.sitio_web || '';
+            document.getElementById('preview-foto').src = data.foto_perfil || '/static/default_profile.png';
+        }
+
+        document.getElementById('message-btn').onclick = () => {
+            window.location.href = `/chats.html?to_user_id=${userId}`;
+        };
+    } catch (error) {
+        console.error('Error al cargar datos del usuario:', error);
+        showNotification('Error al cargar datos del perfil', true);
+    }
+}
         // Cargar publicaciones del usuario
         async function cargarFeed() {
             if (isLoading || !hasMore) return;
