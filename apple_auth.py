@@ -17,7 +17,7 @@ def get_db_connection():
     try:
         conn = psycopg2.connect(
             database=os.getenv("DB_NAME", "prendia_db"),
-            user=os.getenv("DB_USER", "postgres"),  # Corregido a postgres
+            user=os.getenv("DB_USER", "postgres"),
             password=os.getenv("DB_PASSWORD", "Elbicho7"),
             host=os.getenv("DB_HOST", "localhost"),
             port=os.getenv("DB_PORT", "5432"),
@@ -95,17 +95,23 @@ async def auth_apple_callback(request: Request):
         form_data = await request.form()
         print(f"[DEBUG] /auth/apple/callback: Form data recibido: {dict(form_data)}")
         
-        token = await oauth.apple.authorize_access_token(request)
-        print(f"[DEBUG] /auth/apple/callback: Token recibido: {token}")
+        try:
+            token = await oauth.apple.authorize_access_token(request)
+            print(f"[DEBUG] /auth/apple/callback: Token recibido: {token}")
+        except Exception as e:
+            print(f"[ERROR] /auth/apple/callback: Error en authorize_access_token: {e}")
+            raise
+
         decoded = jwt.decode(token.get("id_token"), options={"verify_signature": False})
         print(f"[DEBUG] /auth/apple/callback: id_token decodificado: {decoded}")
         
         email = decoded.get("email")
         name = decoded.get("name", email.split("@")[0] if email else "Usuario Apple")
 
+        # Manejar caso donde el email no está disponible
         if not email:
             print("[ERROR] /auth/apple/callback: No se proporcionó un correo electrónico")
-            return RedirectResponse(url="/login?tipo=emprendedor&target=perfil", status_code=302)
+            return RedirectResponse(url="/login?tipo=emprendedor&target=perfil&error=no_email", status_code=302)
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -179,4 +185,4 @@ async def auth_apple_callback(request: Request):
 
     except Exception as e:
         print(f"[ERROR] /auth/apple/callback: Error en la autenticación: {e}")
-        return RedirectResponse(url="/login?tipo=emprendedor&target=perfil", status_code=302)
+        return RedirectResponse(url="/login?tipo=emprendedor&target=perfil&error=auth_failed", status_code=302)
