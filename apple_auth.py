@@ -17,7 +17,7 @@ def get_db_connection():
     try:
         conn = psycopg2.connect(
             database=os.getenv("DB_NAME", "prendia_db"),
-            user=os.getenv("DB_USER", "postgres"),  # Corregido a postgres según .env
+            user=os.getenv("DB_USER", "postgres"),  # Corregido a postgres
             password=os.getenv("DB_PASSWORD", "Elbicho7"),
             host=os.getenv("DB_HOST", "localhost"),
             port=os.getenv("DB_PORT", "5432"),
@@ -87,13 +87,19 @@ async def login_via_apple(request: Request):
         return RedirectResponse(url=f"/login?tipo={tipo}&target={target}", status_code=302)
 
 # ✅ Callback de Apple
-@apple_router.post("/auth/apple/callback")  # Cambiado a POST
+@apple_router.post("/auth/apple/callback")
 async def auth_apple_callback(request: Request):
     try:
         print("[DEBUG] /auth/apple/callback: Iniciando callback")
+        # Verificar el contenido del form-data recibido
+        form_data = await request.form()
+        print(f"[DEBUG] /auth/apple/callback: Form data recibido: {dict(form_data)}")
+        
         token = await oauth.apple.authorize_access_token(request)
+        print(f"[DEBUG] /auth/apple/callback: Token recibido: {token}")
         decoded = jwt.decode(token.get("id_token"), options={"verify_signature": False})
         print(f"[DEBUG] /auth/apple/callback: id_token decodificado: {decoded}")
+        
         email = decoded.get("email")
         name = decoded.get("name", email.split("@")[0] if email else "Usuario Apple")
 
@@ -138,7 +144,7 @@ async def auth_apple_callback(request: Request):
             # Guardar datos de sesión
             tipo = request.session.get("tipo", "explorador")
             request.session["user"] = {"id": user_id, "email": email, "name": name, "tipo": tipo}
-            print(f"[DEBUG] /auth/apple/callback: Sesión: {request.session}")
+            print(f"[DEBUG] /auth/apple/callback: Sesión creada: {request.session}")
 
             # Verificar datos existentes en datos_usuario antes de redirigir
             cursor.execute("SELECT nombre_empresa, descripcion FROM datos_usuario WHERE user_id = %s", (user_id,))
@@ -148,7 +154,7 @@ async def auth_apple_callback(request: Request):
             # Redirección según tipo
             if tipo == "explorador":
                 print("[DEBUG] /auth/apple/callback: Tipo explorador detectado")
-                # Solo eliminar datos_usuario si el usuario cambió de emprendedor a explorador
+                # Eliminar datos_usuario si existen
                 cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s", (user_id,))
                 if cursor.fetchone():
                     print("[DEBUG] /auth/apple/callback: Datos existentes, eliminando para explorador")
@@ -172,5 +178,5 @@ async def auth_apple_callback(request: Request):
             conn.close()
 
     except Exception as e:
-        print(f"[ERROR] /auth/apple/callback: Error: {e}")
+        print(f"[ERROR] /auth/apple/callback: Error en la autenticación: {e}")
         return RedirectResponse(url="/login?tipo=emprendedor&target=perfil", status_code=302)
