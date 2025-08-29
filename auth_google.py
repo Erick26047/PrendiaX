@@ -1,118 +1,78 @@
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 from authlib.integrations.starlette_client import OAuth
-import jwt
-import time
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
-
-apple_router = APIRouter()
+router = APIRouter()
 
 # 🔧 Conexión a la base de datos
 def get_db_connection():
-    try:
-        conn = psycopg2.connect(
-            database=os.getenv("DB_NAME", "prendia_db"),
-            user=os.getenv("DB_USER", "postgres"),
-            password=os.getenv("DB_PASSWORD", "Elbicho7"),
-            host=os.getenv("DB_HOST", "localhost"),
-            port=os.getenv("DB_PORT", "5432"),
-            cursor_factory=RealDictCursor
-        )
-        print("[DEBUG] Conexión a la base de datos exitosa")
-        return conn
-    except Exception as e:
-        print(f"[ERROR] Error al conectar a la base de datos: {e}")
-        raise HTTPException(status_code=500, detail="Error al conectar a la base de datos")
+    return psycopg2.connect(
+        database="prendia_db",
+        user="postgres",
+        password="Elbicho7",  # ⚠️ Usar variables de entorno en producción
+        host="localhost",
+        port="5432",
+        cursor_factory=RealDictCursor
+    )
 
-# 🔐 Generar client_secret para Apple
-def generate_apple_client_secret():
-    try:
-        private_key_path = os.getenv("APPLE_PRIVATE_KEY_PATH", "/root/PrendiaX/AuthKey_YFNS7NW42N.p8")
-        if not os.path.exists(private_key_path):
-            print(f"[ERROR] /apple_auth: No se encontró el archivo .p8 en {private_key_path}")
-            raise HTTPException(status_code=500, detail="Archivo de clave privada no encontrado")
-        
-        with open(private_key_path, "r") as key_file:
-            private_key = key_file.read()
-        
-        now = int(time.time())
-        payload = {
-            "iss": os.getenv("APPLE_TEAM_ID", "ZRTLHL9GXR"),
-            "iat": now,
-            "exp": now + 3600,  # 1 hora de validez
-            "aud": "https://appleid.apple.com",
-            "sub": os.getenv("APPLE_CLIENT_ID", "com.prendiax.web.service")
-        }
-        headers = {"kid": os.getenv("APPLE_KEY_ID", "YFNS7NW42N")}
-        client_secret = jwt.encode(payload, private_key, algorithm="ES256", headers=headers)
-        print("[DEBUG] /apple_auth: Client secret generado")
-        return client_secret
-    except Exception as e:
-        print(f"[ERROR] /apple_auth: Error al generar client_secret: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al generar client_secret: {str(e)}")
-
-# 🔐 Configurar OAuth con Apple
+# 🔐 Configurar OAuth con Google
 oauth = OAuth()
 oauth.register(
-    name="apple",
-    client_id=os.getenv("APPLE_CLIENT_ID", "com.prendiax.web.service"),
-    client_secret=generate_apple_client_secret,
-    server_metadata_url="https://appleid.apple.com/.well-known/openid-configuration",
+    name='google',
+    client_id='88827775174-dj7lv3km63vlm6nht817m5qv1utg466b.apps.googleusercontent.com',
+    client_secret='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',
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={
-        "scope": "name email",
-        "response_type": "code id_token",
-        "response_mode": "form_post",
-        "prompt": "select_account"
+        'scope': 'openid email profile',
+        'prompt': 'select_account'
     }
 )
 
-# 🔁 Ruta de autenticación con Apple
-@apple_router.get("/auth/apple")
-async def login_via_apple(request: Request):
-    try:
-        print(f"[DEBUG] /auth/apple: Sesión existente: {request.session}")
-        tipo = request.query_params.get("tipo", request.session.get("tipo", "explorador"))
-        target = request.query_params.get("target", "perfil-especifico" if tipo == "explorador" else "perfil")
-        redirect_uri = request.url_for("auth_apple_callback")  # Usar nombre de ruta como en Google
+# 🟡 Mostrar login.html y guardar tipo/target sin forzar valores por defecto
+@router.get("/login", response_class=HTMLResponse)
+async def show_login(request: Request):
+    tipo = request.query_params.get("tipo")  # No se fuerza "emprendedor"
+    target = request.query_params.get("target")
+
+    # Guardar solo si el usuario lo mandó explícitamente en la URL
+    if tipo:
         request.session["tipo"] = tipo
+    if target:
         request.session["target"] = target
-        print(f"[DEBUG] /auth/apple: tipo={tipo}, target={target}, redirect_uri={redirect_uri}")
-        return await oauth.apple.authorize_redirect(request, redirect_uri)
-    except Exception as e:
-        print(f"[ERROR] /auth/apple: Error: {e}")
-        return RedirectResponse(url=f"/login?tipo={tipo}&target={target}", status_code=302)
 
-# ✅ Callback de Apple
-@apple_router.post("/auth/apple/callback")
-async def auth_apple_callback(request: Request):
+    print(f"[DEBUG] /login: tipo={tipo}, target={target}, sesión={request.session}")
+
+    with open("login.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(f.read())
+
+
+# 🔁 Ruta de autenticación con GoogleA
+@router.get("/auth/google")
+async def login_via_google(request: Request):
+    tipo = request.query_params.get("tipo", request.session.get("tipo", "explorador"))
+    target = request.query_params.get("target", request.session.get("target", "perfil"))
+    redirect_uri = request.url_for("auth_google_callback")
+    request.session["tipo"] = tipo
+    request.session["target"] = target
+    print(f"[DEBUG] /auth/google: tipo={tipo}, target={target}, redirect_uri={redirect_uri}")
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+# ✅ Callback luego de iniciar sesión
+@router.get("/auth/google/callback")
+async def auth_google_callback(request: Request):
     try:
-        print("[DEBUG] /auth/apple/callback: Iniciando callback")
-        # Verificar el contenido del form-data recibido
-        form_data = await request.form()
-        print(f"[DEBUG] /auth/apple/callback: Form data recibido: {dict(form_data)}")
-        
-        try:
-            token = await oauth.apple.authorize_access_token(request)
-            print(f"[DEBUG] /auth/apple/callback: Token recibido: {token}")
-        except Exception as e:
-            print(f"[ERROR] /auth/apple/callback: Error en authorize_access_token: {e}")
-            return RedirectResponse(url="/login?tipo=emprendedor&target=perfil&error=auth_failed", status_code=302)
+        token = await oauth.google.authorize_access_token(request)
+        user = await oauth.google.get("https://www.googleapis.com/oauth2/v3/userinfo", token=token)
+        user_info = user.json()
 
-        decoded = jwt.decode(token.get("id_token"), options={"verify_signature": False})
-        print(f"[DEBUG] /auth/apple/callback: id_token decodificado: {decoded}")
-        
-        email = decoded.get("email")
-        name = decoded.get("name", email.split("@")[0] if email else "Usuario Apple")
+        email = user_info.get("email")
+        name = user_info.get("name") or "Usuario"
 
-        # Manejar caso donde el email no está disponible
         if not email:
-            print("[ERROR] /auth/apple/callback: No se proporcionó un correo electrónico")
-            return RedirectResponse(url="/login?tipo=emprendedor&target=perfil&error=no_email", status_code=302)
+            print("[ERROR] /auth/google/callback: No se proporcionó un correo electrónico")
+            return RedirectResponse(url="/login?tipo=emprendedor&target=perfil", status_code=302)
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -124,7 +84,6 @@ async def auth_apple_callback(request: Request):
             if user:
                 # Email ya registrado, usar el id existente
                 user_id = user["id"]
-                print(f"[DEBUG] /auth/apple/callback: Email existente, user_id={user_id}")
                 # Actualizar nombre si cambió
                 cursor.execute(
                     """
@@ -145,17 +104,21 @@ async def auth_apple_callback(request: Request):
                     (name, email)
                 )
                 user_id = cursor.fetchone()["id"]
-                print(f"[DEBUG] /auth/apple/callback: Nuevo usuario creado, user_id={user_id}")
 
             conn.commit()
             # Guardar datos de sesión
-            tipo = request.session.get("tipo", "explorador")
-            request.session["user"] = {"id": user_id, "email": email, "name": name, "tipo": tipo}
-            print(f"[DEBUG] /auth/apple/callback: Sesión creada: {request.session}")
+            tipo = request.session.get("tipo", "emprendedor")
+            request.session['user'] = {
+                "id": user_id,
+                "email": email,
+                "name": name,
+                "tipo": tipo
+            }
+            print(f"[DEBUG] /auth/google/callback: Sesión creada: {request.session}")
 
-            # Redirección según tipo
+            # 🎯 Redirección según tipo
             if tipo == "explorador":
-                print("[DEBUG] /auth/apple/callback: Redirigiendo a /perfil-especifico por tipo=explorador")
+                print("[DEBUG] /auth/google/callback: Redirigiendo a /perfil-especifico por tipo=explorador")
                 cursor.execute("DELETE FROM datos_usuario WHERE user_id = %s;", (user_id,))
                 conn.commit()
                 return RedirectResponse(url="/perfil-especifico", status_code=302)
@@ -163,23 +126,195 @@ async def auth_apple_callback(request: Request):
             # Para emprendedores, verificar si ya tienen datos
             cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s;", (user_id,))
             ya_tiene_datos = cursor.fetchone()
-            print(f"[DEBUG] /auth/apple/callback: ¿Usuario tiene datos?: {ya_tiene_datos is not None}")
+            print(f"[DEBUG] /auth/google/callback: ¿Usuario tiene datos?: {ya_tiene_datos is not None}")
 
             if ya_tiene_datos:
-                print("[DEBUG] /auth/apple/callback: Redirigiendo a /perfil (datos existentes)")
+                print("[DEBUG] /auth/google/callback: Redirigiendo a /perfil (datos existentes)")
                 return RedirectResponse(url="/perfil", status_code=302)
             else:
-                print("[DEBUG] /auth/apple/callback: Redirigiendo a /dashboard (sin datos)")
+                print("[DEBUG] /auth/google/callback: Redirigiendo a /dashboard (sin datos)")
                 return RedirectResponse(url="/dashboard", status_code=302)
 
         except Exception as e:
             conn.rollback()
-            print(f"[ERROR] /auth/apple/callback: Error en la base de datos: {e}")
+            print(f"[ERROR] /auth/google/callback: Error en la base de datos: {e}")
             raise HTTPException(status_code=500, detail=f"Error en la base de datos: {str(e)}")
         finally:
             cursor.close()
             conn.close()
 
     except Exception as e:
-        print(f"[ERROR] /auth/apple/callback: Error en la autenticación: {e}")
-        return RedirectResponse(url="/login?tipo=emprendedor&target=perfil&error=auth_failed", status_code=302)
+        print(f"[ERROR] /auth/google/callback: Error en la autenticación: {e}")
+        return RedirectResponse(url="/login?tipo=emprendedor&target=perfil", status_code=302)
+
+# ✅ Ruta protegida para perfil
+@router.get("/perfil", response_class=HTMLResponse)
+async def redireccionar_a_perfil(request: Request):
+    print(f"[DEBUG] /perfil: Sesión completa: {request.session}")
+    if "user" not in request.session:
+        tipo = request.query_params.get("tipo", "emprendedor")
+        target = "perfil-especifico" if tipo == "explorador" else "perfil"
+        print(f"[DEBUG] /perfil: No hay sesión, redirigiendo a /login?tipo={tipo}&target={target}")
+        return RedirectResponse(url=f"/login?tipo={tipo}&target={target}")
+
+    tipo = request.session["user"].get("tipo", "emprendedor")
+    user_id = request.session["user"]["id"]
+    print(f"[DEBUG] /perfil: Tipo={tipo}, User ID={user_id}")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        if tipo == "explorador":
+            print("[DEBUG] /perfil: Redirigiendo a /perfil-especifico por tipo=explorador")
+            cursor.execute("DELETE FROM datos_usuario WHERE user_id = %s;", (user_id,))
+            conn.commit()
+            return RedirectResponse(url="/perfil-especifico", status_code=302)
+
+        # Para emprendedores, verificar si tienen datos
+        cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s;", (user_id,))
+        ya_tiene_datos = cursor.fetchone()
+        print(f"[DEBUG] /perfil: ¿Usuario tiene datos?: {ya_tiene_datos is not None}")
+
+        if ya_tiene_datos:
+            # Servir el contenido de perfil.html
+            cursor.execute("SELECT nombre, email FROM usuarios WHERE id = %s;", (user_id,))
+            user_data = cursor.fetchone()
+            if user_data is None:
+                print(f"[ERROR] /perfil: Usuario no encontrado: user_id={user_id}")
+                return {"error": "Usuario no encontrado"}
+            print(f"[DEBUG] /perfil: Mostrando perfil.html para user_id={user_id}, nombre={user_data['nombre']}")
+            with open("perfil.html", "r", encoding="utf-8") as f:
+                html = f.read().replace("{nombre}", user_data["nombre"]).replace("{email}", user_data["email"])
+            return HTMLResponse(content=html)
+        else:
+            print("[DEBUG] /perfil: Redirigiendo a /dashboard (sin datos)")
+            return RedirectResponse(url="/dashboard", status_code=302)
+    except Exception as e:
+        print(f"[ERROR] /perfil: Error al cargar perfil.html: {e}")
+        return {"error": "Error al cargar el perfil"}
+    finally:
+        cursor.close()
+        conn.close()
+
+# 🔍 Obtener información del usuario actual
+@router.get("/current_user")
+async def get_current_user(request: Request):
+    if "user" not in request.session:
+        print("[DEBUG] /current_user: No hay sesión activa")
+        return {"user_id": None, "tipo": ""}
+    print(f"[DEBUG] /current_user: user_id={request.session['user']['id']}, tipo={request.session['user'].get('tipo', '')}")
+    return {
+        "user_id": request.session["user"]["id"],
+        "tipo": request.session["user"].get("tipo", "")
+    }
+
+# 🔎 Ruta para perfil específico
+@router.get("/perfil-especifico", response_class=HTMLResponse)
+async def perfil_especifico(request: Request):
+    if 'user' not in request.session:
+        print("[DEBUG] /perfil-especifico: No hay sesión, redirigiendo a login")
+        return RedirectResponse(url="/login?tipo=explorador&target=perfil-especifico", status_code=302)
+    user_id = request.session['user']['id']
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT nombre, email FROM usuarios WHERE id = %s;", (user_id,))
+        user_data = cursor.fetchone()
+        if user_data is None:
+            print(f"[ERROR] /perfil-especifico: Usuario no encontrado: user_id={user_id}")
+            return {"error": "Usuario no encontrado"}
+        print(f"[DEBUG] /perfil-especifico: Mostrando datos para user_id={user_id}, nombre={user_data['nombre']}")
+        with open("perfil-especifico.html", "r", encoding="utf-8") as f:
+            html = f.read().replace("{nombre}", user_data["nombre"]).replace("{email}", user_data["email"])
+        return HTMLResponse(content=html)
+    except Exception as e:
+        print(f"[ERROR] /perfil-especifico: Error al obtener datos del usuario: {e}")
+        return {"error": "Error al obtener datos del usuario"}
+    finally:
+        cursor.close()
+        conn.close()
+
+# 🛠 Ruta para dashboard
+@router.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    if "user" not in request.session:
+        print("[DEBUG] /dashboard: No hay sesión, redirigiendo a /login")
+        return RedirectResponse(url="/login?tipo=emprendedor&target=perfil", status_code=302)
+    
+    tipo = request.session["user"].get("tipo", "emprendedor")
+    user_id = request.session["user"]["id"]
+    print(f"[DEBUG] /dashboard: Tipo={tipo}, User ID={user_id}")
+
+    if tipo == "explorador":
+        print("[DEBUG] /dashboard: Acceso denegado para explorador, redirigiendo a /perfil-especifico")
+        return RedirectResponse(url="/perfil-especifico", status_code=302)
+
+    try:
+        with open("dashboard.html", "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    except Exception as e:
+        print(f"[ERROR] /dashboard: Error al cargar dashboard.html: {e}")
+        return {"error": "Error al cargar el dashboard"}
+
+# 🛠 Ruta para guardar datos del dashboard
+@router.post("/dashboard")
+async def save_dashboard(request: Request):
+    if "user" not in request.session:
+        print("[DEBUG] /dashboard POST: No hay sesión, redirigiendo a /login")
+        return RedirectResponse(url="/login?tipo=emprendedor&target=perfil", status_code=302)
+    
+    tipo = request.session["user"].get("tipo", "emprendedor")
+    user_id = request.session["user"]["id"]
+    print(f"[DEBUG] /dashboard POST: Tipo={tipo}, User ID={user_id}")
+
+    if tipo == "explorador":
+        print("[DEBUG] /dashboard POST: Acceso denegado para explorador, redirigiendo a /perfil-especifico")
+        return RedirectResponse(url="/perfil-especifico", status_code=302)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        form_data = await request.form()
+        nombre_empresa = form_data.get("nombre_empresa")
+        descripcion = form_data.get("descripcion")
+        
+        cursor.execute(
+            """
+            INSERT INTO datos_usuario (user_id, nombre_empresa, descripcion)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (user_id) DO UPDATE SET
+                nombre_empresa = EXCLUDED.nombre_empresa,
+                descripcion = EXCLUDED.descripcion;
+            """,
+            (user_id, nombre_empresa, descripcion)
+        )
+        conn.commit()
+        print(f"[DEBUG] /dashboard POST: Datos guardados para user_id={user_id}")
+        return RedirectResponse(url="/perfil", status_code=303)
+    except Exception as e:
+        conn.rollback()
+        print(f"[ERROR] /dashboard POST: Error al guardar datos: {e}")
+        return {"error": "Error al guardar datos"}
+    finally:
+        cursor.close()
+        conn.close()
+
+# 🔚 Ruta para cerrar sesión
+@router.post("/logout")
+@router.get("/logout")
+async def logout(request: Request):
+    print(f"[DEBUG] /logout: Método={request.method}, Sesión antes de cerrar: {request.session}")
+    
+    # Detectar tipo antes de limpiar la sesión
+    tipo_actual = request.session.get("tipo", "")
+    target = request.session.get("target", "perfil")
+
+    # Borrar la sesión
+    request.session.clear()
+    print("[DEBUG] /logout: Sesión cerrada")
+
+    # Redirigir según el tipo que tenía antes de cerrar
+    if tipo_actual == "explorador":
+        return RedirectResponse(url="/login?tipo=explorador&target=perfil-especifico", status_code=303)
+    else:
+        return RedirectResponse(url="/login?tipo=emprendedor&target=perfil", status_code=303)

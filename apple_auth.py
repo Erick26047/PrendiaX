@@ -32,7 +32,7 @@ def get_db_connection():
 # 🔐 Generar client_secret para Apple
 def generate_apple_client_secret():
     try:
-        private_key_path = os.getenv("APPLE_PRIVATE_KEY_PATH", "AuthKey_YFNS7NW42N.p8")
+        private_key_path = os.getenv("APPLE_PRIVATE_KEY_PATH", "/root/PrendiaX/AuthKey_YFNS7NW42N.p8")
         if not os.path.exists(private_key_path):
             print(f"[ERROR] /apple_auth: No se encontró el archivo .p8 en {private_key_path}")
             raise HTTPException(status_code=500, detail="Archivo de clave privada no encontrado")
@@ -78,101 +78,108 @@ async def login_via_apple(request: Request):
         print(f"[DEBUG] /auth/apple: Sesión existente: {request.session}")
         tipo = request.query_params.get("tipo", request.session.get("tipo", "explorador"))
         target = request.query_params.get("target", "perfil-especifico" if tipo == "explorador" else "perfil")
-        redirect_uri = os.getenv("APPLE_REDIRECT_URI", "https://prendiax.com/auth/apple/callback")
-        request.session.update({"tipo": tipo, "target": target})
+        redirect_uri = request.url_for("auth_apple_callback")  # Usar nombre de ruta como en Google
+        request.session["tipo"] = tipo
+        request.session["target"] = target
         print(f"[DEBUG] /auth/apple: tipo={tipo}, target={target}, redirect_uri={redirect_uri}")
         return await oauth.apple.authorize_redirect(request, redirect_uri)
     except Exception as e:
         print(f"[ERROR] /auth/apple: Error: {e}")
         return RedirectResponse(url=f"/login?tipo={tipo}&target={target}", status_code=302)
 
-# ✅ Callback de Apple final
-@apple_router.api_route("/auth/apple/callback", methods=["GET", "POST"])
+# ✅ Callback de Apple
+@apple_router.post("/auth/apple/callback")
 async def auth_apple_callback(request: Request):
     try:
         print("[DEBUG] /auth/apple/callback: Iniciando callback")
-        print(f"[DEBUG] /auth/apple/callback: Method={request.method}")
-        print(f"[DEBUG] /auth/apple/callback: Headers={dict(request.headers)}")
-
-        try:
-            form_data = await request.form()
-            print(f"[DEBUG] /auth/apple/callback: Form data recibido: {dict(form_data)}")
-        except Exception as e:
-            body = await request.body()
-            print(f"[DEBUG] /auth/apple/callback: Error leyendo form: {e}, Raw body={body}")
-
+        # Verificar el contenido del form-data recibido
+        form_data = await request.form()
+        print(f"[DEBUG] /auth/apple/callback: Form data recibido: {dict(form_data)}")
+        
         try:
             token = await oauth.apple.authorize_access_token(request)
             print(f"[DEBUG] /auth/apple/callback: Token recibido: {token}")
         except Exception as e:
-            print(f"[ERROR] /auth/apple/callback: authorize_access_token falló: {e}")
-            return RedirectResponse(url="/login?error=auth_failed", status_code=302)
+            print(f"[ERROR] /auth/apple/callback: Error en authorize_access_token: {e}")
+            return RedirectResponse(url="/login?tipo=emprendedor&target=perfil&error=auth_failed", status_code=302)
 
         decoded = jwt.decode(token.get("id_token"), options={"verify_signature": False})
         print(f"[DEBUG] /auth/apple/callback: id_token decodificado: {decoded}")
-
+        
         email = decoded.get("email")
-        sub = decoded.get("sub")
-        name = decoded.get("name") or (email.split("@")[0] if email else f"AppleUser_{sub[:6]}")
+        name = decoded.get("name", email.split("@")[0] if email else "Usuario Apple")
+
+        # Manejar caso donde el email no está disponible
+        if not email:
+            print("[ERROR] /auth/apple/callback: No se proporcionó un correo electrónico")
+            return RedirectResponse(url="/login?tipo=emprendedor&target=perfil&error=no_email", status_code=302)
 
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            user_id = None
+            # Verificar si el email ya existe
+            cursor.execute("SELECT id FROM usuarios WHERE email = %s", (email,))
+            user = cursor.fetchone()
 
-            if email:
-                cursor.execute("SELECT id FROM usuarios WHERE email = %s", (email,))
-                user = cursor.fetchone()
-                if user:
-                    user_id = user["id"]
-                    print(f"[DEBUG] /auth/apple/callback: Usuario encontrado con email {email}, id={user_id}")
-                    cursor.execute("UPDATE usuarios SET nombre = %s WHERE id = %s", (name, user_id))
-                else:
-                    cursor.execute(
-                        "INSERT INTO usuarios (nombre, email) VALUES (%s, %s) RETURNING id",
-                        (name, email)
-                    )
-                    user_id = cursor.fetchone()["id"]
-                    print(f"[DEBUG] /auth/apple/callback: Nuevo usuario creado con email {email}, id={user_id}")
+            if user:
+                # Email ya registrado, usar el id existente
+                user_id = user["id"]
+                print(f"[DEBUG] /auth/apple/callback: Email existente, user_id={user_id}")
+                # Actualizar nombre si cambió
+                cursor.execute(
+                    """
+                    UPDATE usuarios
+                    SET nombre = %s
+                    WHERE id = %s
+                    """,
+                    (name, user_id)
+                )
             else:
-                cursor.execute("SELECT id FROM usuarios WHERE email = %s", (sub + "@appleid.apple.com",))
-                user = cursor.fetchone()
-                if user:
-                    user_id = user["id"]
-                    print(f"[DEBUG] /auth/apple/callback: Usuario encontrado con sub {sub}, id={user_id}")
-                else:
-                    cursor.execute(
-                        "INSERT INTO usuarios (nombre, email) VALUES (%s, %s) RETURNING id",
-                        (name, sub + "@appleid.apple.com")
-                    )
-                    user_id = cursor.fetchone()["id"]
-                    print(f"[DEBUG] /auth/apple/callback: Nuevo usuario creado con sub {sub}, id={user_id}")
+                # Crear nuevo usuario
+                cursor.execute(
+                    """
+                    INSERT INTO usuarios (nombre, email)
+                    VALUES (%s, %s)
+                    RETURNING id
+                    """,
+                    (name, email)
+                )
+                user_id = cursor.fetchone()["id"]
+                print(f"[DEBUG] /auth/apple/callback: Nuevo usuario creado, user_id={user_id}")
 
             conn.commit()
-
+            # Guardar datos de sesión
             tipo = request.session.get("tipo", "explorador")
-            request.session["user"] = {"id": user_id, "email": email or (sub + "@appleid.apple.com"), "name": name, "tipo": tipo}
+            request.session["user"] = {"id": user_id, "email": email, "name": name, "tipo": tipo}
             print(f"[DEBUG] /auth/apple/callback: Sesión creada: {request.session}")
 
-            cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s", (user_id,))
-            tiene_datos = cursor.fetchone()
-
+            # Redirección según tipo
             if tipo == "explorador":
-                cursor.execute("DELETE FROM datos_usuario WHERE user_id = %s", (user_id,))
+                print("[DEBUG] /auth/apple/callback: Redirigiendo a /perfil-especifico por tipo=explorador")
+                cursor.execute("DELETE FROM datos_usuario WHERE user_id = %s;", (user_id,))
                 conn.commit()
                 return RedirectResponse(url="/perfil-especifico", status_code=302)
+
+            # Para emprendedores, verificar si ya tienen datos
+            cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s;", (user_id,))
+            ya_tiene_datos = cursor.fetchone()
+            print(f"[DEBUG] /auth/apple/callback: ¿Usuario tiene datos?: {ya_tiene_datos is not None}")
+
+            if ya_tiene_datos:
+                print("[DEBUG] /auth/apple/callback: Redirigiendo a /perfil (datos existentes)")
+                return RedirectResponse(url="/perfil", status_code=302)
             else:
-                url = "/perfil" if tiene_datos else "/dashboard"
-                return RedirectResponse(url=url, status_code=302)
+                print("[DEBUG] /auth/apple/callback: Redirigiendo a /dashboard (sin datos)")
+                return RedirectResponse(url="/dashboard", status_code=302)
 
         except Exception as e:
             conn.rollback()
-            print(f"[ERROR] /auth/apple/callback: Error en DB: {e}")
+            print(f"[ERROR] /auth/apple/callback: Error en la base de datos: {e}")
             raise HTTPException(status_code=500, detail=f"Error en la base de datos: {str(e)}")
         finally:
             cursor.close()
             conn.close()
 
     except Exception as e:
-        print(f"[ERROR] /auth/apple/callback: Error en autenticación: {e}")
-        return RedirectResponse(url="/login?error=auth_failed", status_code=302)
+        print(f"[ERROR] /auth/apple/callback: Error en la autenticación: {e}")
+        return RedirectResponse(url="/login?tipo=emprendedor&target=perfil&error=auth_failed", status_code=302)
