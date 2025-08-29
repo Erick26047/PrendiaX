@@ -11,11 +11,6 @@ import json
 import re
 from typing import Dict, List
 import io
-import os
-from dotenv import load_dotenv
-
-# Cargar variables de entorno desde .env
-load_dotenv()
 
 # Configurar el logger
 logging.basicConfig(
@@ -23,7 +18,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('app.log')
+        logging.FileHandler('app.log') 
     ]
 )
 
@@ -37,38 +32,26 @@ templates = Jinja2Templates(directory=".")
 from fastapi import FastAPI
 app = FastAPI()
 
-# Configurar CORS para producción y pruebas locales
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://prendiax.com",
-        "http://localhost:5500",
-        "http://localhost:8000",
-        "http://127.0.0.1:5500",
-        "http://127.0.0.1:8000",
-    ],
+    allow_origins=["http://localhost:5500", "http://127.0.0.1", "http://localhost:8000", "http://127.0.0.1:8000", "https://prendiax.com/chats.html"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configurar middleware de sesiones con SameSite=None; Secure para producción
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=os.getenv("SESSION_SECRET_KEY", "my-secure-secret-key-12345"),
-    same_site="None",
-    https_only=True
-)
+# Configurar middleware de sesiones
+app.add_middleware(SessionMiddleware, secret_key="my-secure-secret-key-12345")
 
-# Conexión a la base de datos usando variables de entorno
+# Conexión a la base de datos
 def get_db_connection():
     """Establece una conexión a la base de datos PostgreSQL."""
     try:
         conn = psycopg2.connect(
-            host=os.getenv("DB_HOST", "localhost"),
-            database=os.getenv("DB_NAME", "prendia_db"),
-            user=os.getenv("DB_USER", "postgres"),
-            password=os.getenv("DB_PASSWORD", "Elbicho7"),
+            host="localhost",
+            database="prendia_db",
+            user="postgres",
+            password="Elbicho7",
         )
         logging.debug("Conexión a la base de datos establecida correctamente")
         return conn
@@ -79,11 +62,8 @@ def get_db_connection():
 # Tamaño máximo de archivo (10 MB)
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB en bytes
 
-# Diccionario para almacenar conexiones WebSocket activas (para pruebas locales)
+# Diccionario para almacenar conexiones WebSocket activas
 websocket_connections: Dict[int, WebSocket] = {}
-# Nota: En producción, considera usar Redis para manejar conexiones WebSocket
-# Ejemplo: from redis.asyncio import Redis
-# redis = Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
 
 # Función para limpiar nombres de archivo
 def sanitize_filename(filename: str) -> str:
@@ -862,6 +842,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, token: str = No
             # Implementa lógica para validar el token (por ejemplo, contra una tabla de sesiones)
             logging.debug(f"Validando token para user_id {user_id}: {token}")
             # Ejemplo: cur.execute("SELECT user_id FROM sessions WHERE token = %s", (token,))
+            # Asegúrate de tener una tabla de sesiones si usas tokens
 
         websocket_connections[user_id] = websocket
         logging.debug(f"WebSocket conectado para user_id: {user_id}")
@@ -905,17 +886,13 @@ async def get_user_profile_picture(user_id: int, requesting_user_id: int = Depen
 
         if not result or result[0] != 'emprendedor' or not result[1]:
             logging.debug(f"No se encontró foto de perfil para user_id {user_id} o no es emprendedor, sirviendo foto predeterminada")
-            try:
-                with open("default_profile.jpg", "rb") as f:
-                    default_foto = f.read()
-                return StreamingResponse(
-                    content=io.BytesIO(default_foto),
-                    media_type="image/jpeg",
-                    headers={"Content-Disposition": f"inline; filename=foto_perfil_default.jpg"}
-                )
-            except FileNotFoundError:
-                logging.error("Archivo default_profile.jpg no encontrado")
-                raise HTTPException(status_code=500, detail="Foto de perfil predeterminada no encontrada")
+            with open("default_profile.jpg", "rb") as f:
+                default_foto = f.read()
+            return StreamingResponse(
+                content=io.BytesIO(default_foto),
+                media_type="image/jpeg",
+                headers={"Content-Disposition": f"inline; filename=foto_perfil_default.jpg"}
+            )
 
         foto = result[1]
         logging.debug(f"Foto de perfil encontrada para user_id: {user_id}, tamaño: {len(foto)} bytes")
@@ -928,7 +905,6 @@ async def get_user_profile_picture(user_id: int, requesting_user_id: int = Depen
         logging.error(f"Error al servir foto de perfil para user_id {user_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Error al servir foto de perfil: {str(e)}")
 
-# Ruta para obtener el conteo de mensajes no leídos
 @router.get("/unread_count")
 async def get_unread_count(user_id: int = Depends(get_session)):
     """Devuelve el número total de mensajes no leídos para el usuario."""
