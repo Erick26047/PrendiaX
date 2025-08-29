@@ -44,7 +44,7 @@ def generate_apple_client_secret():
         payload = {
             "iss": os.getenv("APPLE_TEAM_ID", "ZRTLHL9GXR"),
             "iat": now,
-            "exp": now + 3600,  # 1 hora de validez
+            "exp": now + 3600,  # 1 hora
             "aud": "https://appleid.apple.com",
             "sub": os.getenv("APPLE_CLIENT_ID", "com.prendiax.web.service")
         }
@@ -86,28 +86,35 @@ async def login_via_apple(request: Request):
         print(f"[ERROR] /auth/apple: Error: {e}")
         return RedirectResponse(url=f"/login?tipo={tipo}&target={target}", status_code=302)
 
-# ✅ Callback de Apple (arreglado)
-@apple_router.post("/auth/apple/callback")
+# ✅ Callback de Apple (acepta GET y POST, log completo)
+@apple_router.api_route("/auth/apple/callback", methods=["GET", "POST"])
 async def auth_apple_callback(request: Request):
     try:
         print("[DEBUG] /auth/apple/callback: Iniciando callback")
+        print(f"[DEBUG] Método HTTP: {request.method}")
+        print(f"[DEBUG] Query params: {dict(request.query_params)}")
+        print(f"[DEBUG] Headers: {dict(request.headers)}")
 
-        form_data = await request.form()
-        print(f"[DEBUG] /auth/apple/callback: Form data recibido: {dict(form_data)}")
+        form_data = {}
+        try:
+            form_data = await request.form()
+            print(f"[DEBUG] Form data recibido: {dict(form_data)}")
+        except Exception:
+            print("[DEBUG] No se pudo parsear form_data (probablemente GET sin body)")
 
         try:
             token = await oauth.apple.authorize_access_token(request)
-            print(f"[DEBUG] /auth/apple/callback: Token recibido: {token}")
+            print(f"[DEBUG] Token recibido: {token}")
         except Exception as e:
             print(f"[ERROR] /auth/apple/callback: Error en authorize_access_token: {e}")
             return RedirectResponse(url="/login?error=auth_failed", status_code=302)
 
         decoded = jwt.decode(token.get("id_token"), options={"verify_signature": False})
-        print(f"[DEBUG] /auth/apple/callback: id_token decodificado: {decoded}")
+        print(f"[DEBUG] id_token decodificado: {decoded}")
 
         # Extraer datos
         email = decoded.get("email")
-        sub = decoded.get("sub")  # identificador único de Apple
+        sub = decoded.get("sub")
         name = decoded.get("name") or (email.split("@")[0] if email else f"AppleUser_{sub[:6]}")
 
         conn = get_db_connection()
@@ -116,43 +123,34 @@ async def auth_apple_callback(request: Request):
             user_id = None
 
             if email:
-                # Buscar por correo
                 cursor.execute("SELECT id FROM usuarios WHERE email = %s", (email,))
                 user = cursor.fetchone()
                 if user:
                     user_id = user["id"]
-                    print(f"[DEBUG] /auth/apple/callback: Usuario encontrado con email {email}, id={user_id}")
                     cursor.execute("UPDATE usuarios SET nombre = %s WHERE id = %s", (name, user_id))
+                    print(f"[DEBUG] Usuario encontrado con email {email}, id={user_id}")
                 else:
-                    cursor.execute(
-                        "INSERT INTO usuarios (nombre, email) VALUES (%s, %s) RETURNING id",
-                        (name, email)
-                    )
+                    cursor.execute("INSERT INTO usuarios (nombre, email) VALUES (%s, %s) RETURNING id", (name, email))
                     user_id = cursor.fetchone()["id"]
-                    print(f"[DEBUG] /auth/apple/callback: Nuevo usuario creado con email {email}, id={user_id}")
+                    print(f"[DEBUG] Nuevo usuario creado con email {email}, id={user_id}")
             else:
-                # Manejo si no hay email (usar sub de Apple como identificador único)
-                cursor.execute("SELECT id FROM usuarios WHERE email = %s", (sub + "@appleid.apple.com",))
+                fake_email = sub + "@appleid.apple.com"
+                cursor.execute("SELECT id FROM usuarios WHERE email = %s", (fake_email,))
                 user = cursor.fetchone()
                 if user:
                     user_id = user["id"]
-                    print(f"[DEBUG] /auth/apple/callback: Usuario encontrado con sub {sub}, id={user_id}")
+                    print(f"[DEBUG] Usuario encontrado con sub {sub}, id={user_id}")
                 else:
-                    cursor.execute(
-                        "INSERT INTO usuarios (nombre, email) VALUES (%s, %s) RETURNING id",
-                        (name, sub + "@appleid.apple.com")
-                    )
+                    cursor.execute("INSERT INTO usuarios (nombre, email) VALUES (%s, %s) RETURNING id", (name, fake_email))
                     user_id = cursor.fetchone()["id"]
-                    print(f"[DEBUG] /auth/apple/callback: Nuevo usuario creado con sub {sub}, id={user_id}")
+                    print(f"[DEBUG] Nuevo usuario creado con sub {sub}, id={user_id}")
 
             conn.commit()
 
-            # Guardar en sesión
             tipo = request.session.get("tipo", "explorador")
-            request.session["user"] = {"id": user_id, "email": email or (sub + "@appleid.apple.com"), "name": name, "tipo": tipo}
-            print(f"[DEBUG] /auth/apple/callback: Sesión creada: {request.session}")
+            request.session["user"] = {"id": user_id, "email": email or fake_email, "name": name, "tipo": tipo}
+            print(f"[DEBUG] Sesión creada: {request.session}")
 
-            # Redirecciones
             cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s", (user_id,))
             tiene_datos = cursor.fetchone()
 
@@ -166,12 +164,12 @@ async def auth_apple_callback(request: Request):
 
         except Exception as e:
             conn.rollback()
-            print(f"[ERROR] /auth/apple/callback: Error en la base de datos: {e}")
+            print(f"[ERROR] DB: {e}")
             raise HTTPException(status_code=500, detail=f"Error en la base de datos: {str(e)}")
         finally:
             cursor.close()
             conn.close()
 
     except Exception as e:
-        print(f"[ERROR] /auth/apple/callback: Error en la autenticación: {e}")
+        print(f"[ERROR] Auth Apple Callback: {e}")
         return RedirectResponse(url="/login?error=auth_failed", status_code=302)
