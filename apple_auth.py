@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse
-from authlib.integrations.starlette_client import OAuth
+from authlib.integrations.starlette_client import OAuth, OAuthError
 import jwt
 import time
 import psycopg2
@@ -44,7 +44,7 @@ def generate_apple_client_secret():
         payload = {
             "iss": os.getenv("APPLE_TEAM_ID", "ZRTLHL9GXR"),
             "iat": now,
-            "exp": now + 3600,  # 1 hora de validez
+            "exp": now + 3600,
             "aud": "https://appleid.apple.com",
             "sub": os.getenv("APPLE_CLIENT_ID", "com.prendiax.web.service")
         }
@@ -78,30 +78,29 @@ async def login_via_apple(request: Request):
         print(f"[DEBUG] /auth/apple: Sesión existente: {request.session}")
         tipo = request.query_params.get("tipo", request.session.get("tipo", "explorador"))
         target = request.query_params.get("target", "perfil-especifico" if tipo == "explorador" else "perfil")
-        redirect_uri = request.url_for("auth_apple_callback")  # Usar nombre de ruta como en Google
+        redirect_uri = request.url_for("auth_apple_callback")
         request.session["tipo"] = tipo
         request.session["target"] = target
         print(f"[DEBUG] /auth/apple: tipo={tipo}, target={target}, redirect_uri={redirect_uri}")
         return await oauth.apple.authorize_redirect(request, redirect_uri)
     except Exception as e:
         print(f"[ERROR] /auth/apple: Error: {e}")
-        return RedirectResponse(url=f"/login?tipo={tipo}&target={target}", status_code=302)
+        return RedirectResponse(url=f"/login?tipo={tipo}&target={target}&error=auth_init_failed", status_code=302)
 
 # ✅ Callback de Apple
-@apple_router.post("/auth/apple/callback")
+@apple_router.post("/auth/apple/callback", name="auth_apple_callback")
 async def auth_apple_callback(request: Request):
     try:
         print("[DEBUG] /auth/apple/callback: Iniciando callback")
-        # Verificar el contenido del form-data recibido
         form_data = await request.form()
         print(f"[DEBUG] /auth/apple/callback: Form data recibido: {dict(form_data)}")
         
         try:
             token = await oauth.apple.authorize_access_token(request)
             print(f"[DEBUG] /auth/apple/callback: Token recibido: {token}")
-        except Exception as e:
-            print(f"[ERROR] /auth/apple/callback: Error en authorize_access_token: {e}")
-            return RedirectResponse(url="/login?tipo=emprendedor&target=perfil&error=auth_failed", status_code=302)
+        except OAuthError as e:
+            print(f"[ERROR] /auth/apple/callback: Error en authorize_access_token: {e.error} - {e.description}")
+            return RedirectResponse(url=f"/login?tipo=emprendedor&target=perfil&error=auth_failed&details={e.error}", status_code=302)
 
         decoded = jwt.decode(token.get("id_token"), options={"verify_signature": False})
         print(f"[DEBUG] /auth/apple/callback: id_token decodificado: {decoded}")
@@ -109,7 +108,6 @@ async def auth_apple_callback(request: Request):
         email = decoded.get("email")
         name = decoded.get("name", email.split("@")[0] if email else "Usuario Apple")
 
-        # Manejar caso donde el email no está disponible
         if not email:
             print("[ERROR] /auth/apple/callback: No se proporcionó un correo electrónico")
             return RedirectResponse(url="/login?tipo=emprendedor&target=perfil&error=no_email", status_code=302)
@@ -117,15 +115,12 @@ async def auth_apple_callback(request: Request):
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            # Verificar si el email ya existe
             cursor.execute("SELECT id FROM usuarios WHERE email = %s", (email,))
             user = cursor.fetchone()
 
             if user:
-                # Email ya registrado, usar el id existente
                 user_id = user["id"]
                 print(f"[DEBUG] /auth/apple/callback: Email existente, user_id={user_id}")
-                # Actualizar nombre si cambió
                 cursor.execute(
                     """
                     UPDATE usuarios
@@ -135,7 +130,6 @@ async def auth_apple_callback(request: Request):
                     (name, user_id)
                 )
             else:
-                # Crear nuevo usuario
                 cursor.execute(
                     """
                     INSERT INTO usuarios (nombre, email)
@@ -148,19 +142,16 @@ async def auth_apple_callback(request: Request):
                 print(f"[DEBUG] /auth/apple/callback: Nuevo usuario creado, user_id={user_id}")
 
             conn.commit()
-            # Guardar datos de sesión
             tipo = request.session.get("tipo", "explorador")
             request.session["user"] = {"id": user_id, "email": email, "name": name, "tipo": tipo}
             print(f"[DEBUG] /auth/apple/callback: Sesión creada: {request.session}")
 
-            # Redirección según tipo
             if tipo == "explorador":
                 print("[DEBUG] /auth/apple/callback: Redirigiendo a /perfil-especifico por tipo=explorador")
                 cursor.execute("DELETE FROM datos_usuario WHERE user_id = %s;", (user_id,))
                 conn.commit()
                 return RedirectResponse(url="/perfil-especifico", status_code=302)
 
-            # Para emprendedores, verificar si ya tienen datos
             cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s;", (user_id,))
             ya_tiene_datos = cursor.fetchone()
             print(f"[DEBUG] /auth/apple/callback: ¿Usuario tiene datos?: {ya_tiene_datos is not None}")
@@ -182,4 +173,4 @@ async def auth_apple_callback(request: Request):
 
     except Exception as e:
         print(f"[ERROR] /auth/apple/callback: Error en la autenticación: {e}")
-        return RedirectResponse(url="/login?tipo=emprendedor&target=perfil&error=auth_failed", status_code=302)
+        return RedirectResponse(url=f"/login?tipo=emprendedor&target=perfil&error=auth_failed&details=general_error", status_code=302)
