@@ -90,8 +90,11 @@ async def login_via_apple(request: Request):
         redirect_uri = request.url_for("auth_apple_callback")
         request.session["tipo"] = tipo
         request.session["target"] = target
-        print(f"[DEBUG] /auth/apple: tipo={tipo}, target={target}, redirect_uri={redirect_uri}")
-        return await oauth.apple.authorize_redirect(request, redirect_uri)
+        # Generar y guardar state manualmente para depuración
+        state = os.urandom(16).hex()
+        request.session["oauth_state"] = state
+        print(f"[DEBUG] /auth/apple: tipo={tipo}, target={target}, redirect_uri={redirect_uri}, state={state}")
+        return await oauth.apple.authorize_redirect(request, redirect_uri, state=state)
     except Exception as e:
         print(f"[ERROR] /auth/apple: Error al iniciar autenticación: {e}")
         return RedirectResponse(url=f"/login?tipo={tipo}&target={target}&error=auth_init_failed", status_code=302)
@@ -101,8 +104,12 @@ async def login_via_apple(request: Request):
 async def auth_apple_callback(request: Request):
     try:
         print("[DEBUG] /auth/apple/callback: Iniciando callback")
+        print(f"[DEBUG] /auth/apple/callback: Sesión antes del callback: {request.session}")
         form_data = await request.form()
         print(f"[DEBUG] /auth/apple/callback: Form data recibido: {dict(form_data)}")
+        state_from_form = form_data.get("state")
+        state_from_session = request.session.get("oauth_state")
+        print(f"[DEBUG] /auth/apple/callback: state (form)={state_from_form}, state (session)={state_from_session}")
         
         try:
             token = await oauth.apple.authorize_access_token(request)
