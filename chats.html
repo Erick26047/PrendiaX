@@ -1054,6 +1054,8 @@ body.dark-mode .audio-speed-select {
   let currentLanguage = localStorage.getItem('language') || 'es';
   let selectedFiles = [];
   let chatDataCache = {}; // Caché para almacenar datos de los chats
+  let reconnectAttempts = 0; // Definida fuera para evitar ReferenceError
+  const maxReconnectAttempts = 5;
 
   function toggleMenu(menuId, toggleId) {
     const menu = document.getElementById(menuId);
@@ -1181,6 +1183,13 @@ body.dark-mode .audio-speed-select {
   }
 
   function connectWebSocket(currentUserId) {
+    // Validar que currentUserId no sea undefined
+    if (!currentUserId) {
+        console.error('Error: currentUserId no está definido');
+        showNotification('No se pudo conectar al servidor: usuario no identificado', 'error');
+        return;
+    }
+
     const wsProtocol = window.location.hostname === 'localhost' ? 'ws' : 'wss';
     const wsHost = window.location.hostname === 'localhost' ? '127.0.0.1:8000' : 'prendiax.com';
     const wsUrl = `${wsProtocol}://${wsHost}/chats/ws/${currentUserId}`;
@@ -1189,7 +1198,7 @@ body.dark-mode .audio-speed-select {
 
     ws.onopen = () => {
         console.log('WebSocket conectado');
-        reconnectAttempts = 0;
+        reconnectAttempts = 0; // Reiniciar intentos al conectar
     };
 
     ws.onmessage = (event) => {
