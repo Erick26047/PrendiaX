@@ -49,27 +49,36 @@ def generate_apple_client_secret():
             "sub": os.getenv("APPLE_CLIENT_ID", "com.prendiax.web.service")
         }
         headers = {"kid": os.getenv("APPLE_KEY_ID", "YFNS7NW42N")}
-        client_secret = jwt.encode(payload, private_key, algorithm="ES256", headers=headers)
-        print("[DEBUG] /apple_auth: Client secret generado")
-        return client_secret
+        try:
+            client_secret = jwt.encode(payload, private_key, algorithm="ES256", headers=headers)
+            print("[DEBUG] /apple_auth: Client secret generado exitosamente")
+            return client_secret
+        except Exception as e:
+            print(f"[ERROR] /apple_auth: Error al codificar el JWT: {e}")
+            raise HTTPException(status_code=500, detail=f"Error al codificar el JWT: {str(e)}")
     except Exception as e:
         print(f"[ERROR] /apple_auth: Error al generar client_secret: {e}")
         raise HTTPException(status_code=500, detail=f"Error al generar client_secret: {str(e)}")
 
 # 🔐 Configurar OAuth con Apple
-oauth = OAuth()
-oauth.register(
-    name="apple",
-    client_id=os.getenv("APPLE_CLIENT_ID", "com.prendiax.web.service"),
-    client_secret=generate_apple_client_secret,
-    server_metadata_url="https://appleid.apple.com/.well-known/openid-configuration",
-    client_kwargs={
-        "scope": "name email",
-        "response_type": "code id_token",
-        "response_mode": "form_post",
-        "prompt": "select_account"
-    }
-)
+try:
+    oauth = OAuth()
+    oauth.register(
+        name="apple",
+        client_id=os.getenv("APPLE_CLIENT_ID", "com.prendiax.web.service"),
+        client_secret=generate_apple_client_secret,
+        server_metadata_url="https://appleid.apple.com/.well-known/openid-configuration",
+        client_kwargs={
+            "scope": "name email",
+            "response_type": "code id_token",
+            "response_mode": "form_post",
+            "prompt": "select_account"
+        }
+    )
+    print("[DEBUG] OAuth para Apple configurado correctamente")
+except Exception as e:
+    print(f"[ERROR] Error al configurar OAuth para Apple: {e}")
+    raise
 
 # 🔁 Ruta de autenticación con Apple
 @apple_router.get("/auth/apple")
@@ -84,7 +93,7 @@ async def login_via_apple(request: Request):
         print(f"[DEBUG] /auth/apple: tipo={tipo}, target={target}, redirect_uri={redirect_uri}")
         return await oauth.apple.authorize_redirect(request, redirect_uri)
     except Exception as e:
-        print(f"[ERROR] /auth/apple: Error: {e}")
+        print(f"[ERROR] /auth/apple: Error al iniciar autenticación: {e}")
         return RedirectResponse(url=f"/login?tipo={tipo}&target={target}&error=auth_init_failed", status_code=302)
 
 # ✅ Callback de Apple
@@ -101,6 +110,9 @@ async def auth_apple_callback(request: Request):
         except OAuthError as e:
             print(f"[ERROR] /auth/apple/callback: Error en authorize_access_token: {e.error} - {e.description}")
             return RedirectResponse(url=f"/login?tipo=emprendedor&target=perfil&error=auth_failed&details={e.error}", status_code=302)
+        except Exception as e:
+            print(f"[ERROR] /auth/apple/callback: Error inesperado en authorize_access_token: {e}")
+            return RedirectResponse(url=f"/login?tipo=emprendedor&target=perfil&error=auth_failed&details=unexpected_error", status_code=302)
 
         decoded = jwt.decode(token.get("id_token"), options={"verify_signature": False})
         print(f"[DEBUG] /auth/apple/callback: id_token decodificado: {decoded}")
@@ -172,5 +184,5 @@ async def auth_apple_callback(request: Request):
             conn.close()
 
     except Exception as e:
-        print(f"[ERROR] /auth/apple/callback: Error en la autenticación: {e}")
+        print(f"[ERROR] /auth/apple/callback: Error general en la autenticación: {e}")
         return RedirectResponse(url=f"/login?tipo=emprendedor&target=perfil&error=auth_failed&details=general_error", status_code=302)
