@@ -7,7 +7,6 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 from dotenv import load_dotenv
-import secrets
 
 load_dotenv()
 
@@ -50,13 +49,9 @@ def generate_apple_client_secret():
             "sub": os.getenv("APPLE_CLIENT_ID", "com.prendiax.web.service")
         }
         headers = {"kid": os.getenv("APPLE_KEY_ID", "YFNS7NW42N")}
-        try:
-            client_secret = jwt.encode(payload, private_key, algorithm="ES256", headers=headers)
-            print("[DEBUG] /apple_auth: Client secret generado exitosamente")
-            return client_secret
-        except Exception as e:
-            print(f"[ERROR] /apple_auth: Error al codificar el JWT: {e}")
-            raise HTTPException(status_code=500, detail=f"Error al codificar el JWT: {str(e)}")
+        client_secret = jwt.encode(payload, private_key, algorithm="ES256", headers=headers)
+        print("[DEBUG] /apple_auth: Client secret generado exitosamente")
+        return client_secret
     except Exception as e:
         print(f"[ERROR] /apple_auth: Error al generar client_secret: {e}")
         raise HTTPException(status_code=500, detail=f"Error al generar client_secret: {str(e)}")
@@ -86,15 +81,18 @@ except Exception as e:
 async def login_via_apple(request: Request):
     try:
         print(f"[DEBUG] /auth/apple: Sesión existente: {request.session}")
-        tipo = request.query_params.get("tipo", request.session.get("tipo", "explorador"))
+        tipo = request.query_params.get("tipo", "explorador")
         target = request.query_params.get("target", "perfil-especifico" if tipo == "explorador" else "perfil")
+
         redirect_uri = request.url_for("auth_apple_callback")
-        state = secrets.token_urlsafe(16)
-        request.session["oauth_state"] = state
+
+        # 🔹 Authlib ya maneja el "state", no lo guardamos nosotros
         request.session["tipo"] = tipo
         request.session["target"] = target
-        print(f"[DEBUG] /auth/apple: tipo={tipo}, target={target}, redirect_uri={redirect_uri}, state={state}")
-        return await oauth.apple.authorize_redirect(request, redirect_uri, state=state)
+
+        print(f"[DEBUG] /auth/apple: tipo={tipo}, target={target}, redirect_uri={redirect_uri}")
+        return await oauth.apple.authorize_redirect(request, redirect_uri)
+
     except Exception as e:
         print(f"[ERROR] /auth/apple: Error al iniciar autenticación: {e}")
         return RedirectResponse(url=f"/login?tipo={tipo}&target={target}&error=auth_init_failed", status_code=302)
@@ -107,10 +105,7 @@ async def auth_apple_callback(request: Request):
         print(f"[DEBUG] /auth/apple/callback: Sesión antes del callback: {request.session}")
         form_data = await request.form()
         print(f"[DEBUG] /auth/apple/callback: Form data recibido: {dict(form_data)}")
-        state_from_form = form_data.get("state")
-        state_from_session = request.session.get("oauth_state")
-        print(f"[DEBUG] /auth/apple/callback: state (form)={state_from_form}, state (session)={state_from_session}")
-        
+
         try:
             token = await oauth.apple.authorize_access_token(request)
             print(f"[DEBUG] /auth/apple/callback: Token recibido: {token}")
