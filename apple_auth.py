@@ -89,7 +89,6 @@ async def login_via_apple(request: Request):
         tipo = request.query_params.get("tipo", request.session.get("tipo", "explorador"))
         target = request.query_params.get("target", "perfil-especifico" if tipo == "explorador" else "perfil")
         redirect_uri = request.url_for("auth_apple_callback")
-        # Generar state seguro
         state = secrets.token_urlsafe(16)
         request.session["oauth_state"] = state
         request.session["tipo"] = tipo
@@ -112,10 +111,6 @@ async def auth_apple_callback(request: Request):
         state_from_session = request.session.get("oauth_state")
         print(f"[DEBUG] /auth/apple/callback: state (form)={state_from_form}, state (session)={state_from_session}")
         
-        if state_from_form != state_from_session:
-            print(f"[ERROR] /auth/apple/callback: Mismatch de state: form={state_from_form}, session={state_from_session}")
-            return RedirectResponse(url="/login?tipo=emprendedor&target=perfil&error=auth_failed&details=mismatching_state", status_code=302)
-
         try:
             token = await oauth.apple.authorize_access_token(request)
             print(f"[DEBUG] /auth/apple/callback: Token recibido: {token}")

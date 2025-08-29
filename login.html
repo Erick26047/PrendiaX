@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Iniciar Sesión - PrendiaX</title>
-   <link rel="icon" type="image/png" href="PRENDIAX.png" />
+  <link rel="icon" type="image/png" href="PRENDIAX.png" />
   <link rel="stylesheet" href="style.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
 </head>
@@ -25,11 +25,12 @@
     <a href="/" class="back-link">← Volver al inicio</a>
   </div>
 
-  <!-- Script para insertar tipo y target automáticamente -->
   <script>
     const params = new URLSearchParams(window.location.search);
     const tipo = params.get("tipo") || "emprendedor";
     const target = params.get("target") || "perfil";
+    const error = params.get("error");
+    const details = params.get("details");
 
     const googleBtn = document.querySelector('a.google');
     const appleBtn = document.querySelector('a.apple');
@@ -40,6 +41,14 @@
 
     if (appleBtn) {
       appleBtn.href = `/auth/apple?tipo=${tipo}&target=${target}`;
+    }
+
+    if (error === 'no_email') {
+      alert('Por favor, permite compartir tu correo electrónico para iniciar sesión con Apple.');
+    } else if (error === 'auth_failed') {
+      alert(`Error al autenticar con Apple: ${details || 'Intenta de nuevo.'}`);
+    } else if (error === 'auth_init_failed') {
+      alert('Error al iniciar la autenticación con Apple. Contacta al soporte.');
     }
   </script>
 </body>
