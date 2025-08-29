@@ -1183,10 +1183,10 @@ body.dark-mode .audio-speed-select {
   }
 
   function connectWebSocket(currentUserId) {
-    // Validar que currentUserId no sea undefined
-    if (!currentUserId) {
-        console.error('Error: currentUserId no está definido');
-        showNotification('No se pudo conectar al servidor: usuario no identificado', 'error');
+    // Validar que currentUserId no sea undefined o null
+    if (!currentUserId || isNaN(currentUserId)) {
+        console.error('Error: currentUserId no está definido o no es válido:', currentUserId);
+        showNotification(translations[document.documentElement.lang].chat.user_not_identified, true);
         return;
     }
 
@@ -1226,7 +1226,7 @@ body.dark-mode .audio-speed-select {
             }, 3000);
         } else {
             console.error('Máximo de intentos de reconexión alcanzado');
-            showNotification('Error de conexión con el servidor', 'error');
+            showNotification(translations[document.documentElement.lang].chat.connection_error, true);
         }
     };
 
@@ -1536,7 +1536,10 @@ body.dark-mode .audio-speed-select {
       const docClass = ['pdf', 'docx', 'doc', 'txt'].includes(extension) ? extension : '';
       content = `<a href="${mediaUrl}" target="_blank" class="document-link ${docClass}" title="${fileName}"><i class="fas fa-file-${extension === 'pdf' ? 'pdf' : extension === 'txt' ? 'alt' : 'word'}"></i> ${fileName}</a>`;
     }
-    messageEl.innerHTML = `${content}<div class="time">${new Date(msg.fecha_envio).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div>`;
+    const date = new Date(msg.fecha_envio);
+    const cstOffset = -6 * 60; // CST es UTC-6
+    date.setMinutes(date.getMinutes() + date.getTimezoneOffset() + cstOffset);
+    messageEl.innerHTML = `${content}<div class="time">${date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div>`;
     messagesContainer.appendChild(messageEl);
     scrollToBottom();
   }
@@ -2090,17 +2093,21 @@ body.dark-mode .audio-speed-select {
   });
 
   window.addEventListener('load', async () => {
-    await fetchCurrentUserId();
-    if (currentUserId) {
-      await connectWebSocket();
-      const recipientId = getRecipientId();
-      if (recipientId) {
-        await startChatWithRecipient(recipientId);
-      } else {
-        await loadChats();
-      }
+    const userId = await fetchCurrentUserId();
+    if (userId) {
+        connectWebSocket(userId); // Pasa userId explícitamente
+        const recipientId = getRecipientId();
+        if (recipientId) {
+            await startChatWithRecipient(recipientId);
+        } else {
+            await loadChats();
+        }
+    } else {
+        console.error('No se pudo obtener currentUserId, no se inicia WebSocket');
+        showNotification(translations[document.documentElement.lang].chat.user_not_identified, true);
+        setTimeout(() => { window.location.href = '/login.html'; }, 2000);
     }
-  });
+});
 </script>
 </body>
 </html>
