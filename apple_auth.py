@@ -7,6 +7,8 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 import secrets
+import base64
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -121,18 +123,27 @@ async def auth_apple_callback(request: Request):
             )
 
         try:
+            state_data = json.loads(base64.b64decode(received_state).decode('utf-8'))
+            tipo = state_data.get("tipo", "emprendedor")
+            target = state_data.get("target", "perfil")
+        except Exception as e:
+            print(f"[ERROR] /auth/apple/callback: Error al decodificar state: {e}")
+            tipo = request.session.get("tipo", "emprendedor")
+            target = request.session.get("target", "perfil")
+
+        try:
             token = await oauth.apple.authorize_access_token(request)
             print(f"[DEBUG] /auth/apple/callback: Token recibido: {token}")
         except OAuthError as e:
             print(f"[ERROR] /auth/apple/callback: OAuthError: {e.error} - {e.description}")
             return RedirectResponse(
-                url=f"/login?tipo=emprendedor&target=perfil&error=auth_failed&details={e.error}:{e.description}",
+                url=f"/login?tipo={tipo}&target={target}&error=auth_failed&details={e.error}:{e.description}",
                 status_code=302
             )
         except Exception as e:
             print(f"[ERROR] /auth/apple/callback: Error inesperado en authorize_access_token: {str(e)}")
             return RedirectResponse(
-                url=f"/login?tipo=emprendedor&target=perfil&error=auth_failed&details=unexpected_error:{str(e)}",
+                url=f"/login?tipo={tipo}&target={target}&error=auth_failed&details=unexpected_error:{str(e)}",
                 status_code=302
             )
 
@@ -144,7 +155,7 @@ async def auth_apple_callback(request: Request):
 
         if not email:
             print("[ERROR] /auth/apple/callback: No se proporcionó un correo electrónico")
-            return RedirectResponse(url="/login?tipo=emprendedor&target=perfil&error=no_email", status_code=302)
+            return RedirectResponse(url=f"/login?tipo={tipo}&target={target}&error=no_email", status_code=302)
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -176,7 +187,6 @@ async def auth_apple_callback(request: Request):
                 print(f"[DEBUG] /auth/apple/callback: Nuevo usuario creado, user_id={user_id}")
 
             conn.commit()
-            tipo = request.session.get("tipo", "explorador")
             request.session["user"] = {"id": user_id, "email": email, "name": name, "tipo": tipo}
             print(f"[DEBUG] /auth/apple/callback: Sesión creada: {request.session}")
 
