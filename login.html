@@ -14,59 +14,85 @@
       padding: 20px;
       text-align: center;
       font-family: 'Poppins', sans-serif;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     }
     .login-buttons {
-      margin: 20px 0;
+      margin: 10px 0; /* Reducido */
     }
     .login-btn {
       display: block;
       width: 100%;
-      padding: 10px;
-      margin: 10px 0;
+      max-width: 340px; /* Mismo tamaño */
+      margin: 5px auto; /* Más compacto */
+      padding: 14px; /* Botones más grandes */
       border-radius: 5px;
       text-decoration: none;
-      font-size: 16px;
+      font-size: 18px; /* Texto más grande */
       font-weight: 500;
-      color: white;
-      background-color: #007bff;
-      border: none;
+      border: 1px solid #ccc;
       cursor: pointer;
       transition: background-color 0.3s;
+      box-sizing: border-box;
     }
     .login-btn.google {
-      background-color: #4285F4;
+      background-color: #fff;
+      color: #000;
     }
     .login-btn.google:hover {
-      background-color: #3578e5;
+      background-color: #f5f5f5;
     }
-    .login-btn.email, .login-btn.register {
-      background-color: #28a745;
+    .login-btn.email {
+      background-color: #000;
+      color: #fff;
+      border: none;
     }
-    .login-btn.email:hover, .login-btn.register:hover {
-      background-color: #218838;
+    .login-btn.email:hover {
+      background-color: #333;
     }
     .login-icon {
-      width: 20px;
+      width: 24px; /* Ícono más grande */
       vertical-align: middle;
       margin-right: 10px;
     }
+    .separator {
+      margin: 5px 0; /* Más compacto */
+      color: #666;
+      font-size: 14px;
+    }
+    .register-link {
+      display: block;
+      margin: 5px 0; /* Más compacto */
+      color: #007bff;
+      font-size: 16px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .register-link:hover {
+      text-decoration: underline;
+    }
     .email-form, .register-form {
       display: none;
-      margin-top: 20px;
+      margin-top: 10px; /* Más compacto */
+      max-width: 340px;
+      margin-left: auto;
+      margin-right: auto;
     }
     .email-form input, .register-form input {
       display: block;
       width: 100%;
-      margin: 10px 0;
+      margin: 5px 0; /* Más compacto */
       padding: 10px;
       font-size: 16px;
       border: 1px solid #ccc;
       border-radius: 5px;
+      box-sizing: border-box;
     }
     .email-form button, .register-form button {
       background-color: #007bff;
       color: white;
-      padding: 10px;
+      padding: 12px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
@@ -76,14 +102,23 @@
     .email-form button:hover, .register-form button:hover {
       background-color: #0056b3;
     }
+    .error-message {
+      color: #d32f2f;
+      font-size: 14px;
+      margin: 5px 0; /* Más compacto */
+      display: none;
+      max-width: 340px;
+      margin-left: auto;
+      margin-right: auto;
+    }
     .login-msg {
       font-size: 14px;
       color: #666;
-      margin-top: 20px;
+      margin-top: 10px; /* Más compacto */
     }
     .back-link {
       display: block;
-      margin-top: 20px;
+      margin-top: 10px; /* Más compacto */
       color: #007bff;
       text-decoration: none;
     }
@@ -95,13 +130,15 @@
 <body>
   <div class="login-container">
     <h2>Inicia sesión para continuar</h2>
+    <div class="error-message" id="error-message"></div>
     <div class="login-buttons">
       <a href="#" class="login-btn google">
         <img src="google.png" alt="Google logo" class="login-icon">
         Continuar con Google
       </a>
       <button class="login-btn email" onclick="toggleEmailForm()">Iniciar con Email</button>
-      <button class="login-btn register" onclick="toggleRegisterForm()">Registrarse</button>
+      <div class="separator">– o –</div>
+      <a class="register-link" onclick="toggleRegisterForm()">Registrarse</a>
     </div>
     <form id="email-form" class="email-form" action="/auth/email" method="POST">
       <input type="email" name="email" placeholder="Correo electrónico" required />
@@ -144,33 +181,41 @@
     function toggleEmailForm() {
       const form = document.getElementById('email-form');
       const registerForm = document.getElementById('register-form');
+      const errorMessage = document.getElementById('error-message');
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
       registerForm.style.display = 'none';
+      errorMessage.style.display = 'none';
     }
 
     // Mostrar/ocultar formulario de registro
     function toggleRegisterForm() {
       const form = document.getElementById('register-form');
       const emailForm = document.getElementById('email-form');
+      const errorMessage = document.getElementById('error-message');
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
       emailForm.style.display = 'none';
+      errorMessage.style.display = 'none';
     }
 
     // Manejo de errores
-    if (error === 'no_email') {
-      alert('Por favor, permite compartir tu correo electrónico para iniciar sesión.');
-    } else if (error === 'auth_failed') {
-      alert(`Error al autenticar: ${details || 'Intenta de nuevo.'}`);
-    } else if (error === 'auth_init_failed') {
-      alert('Error al iniciar la autenticación. Contacta al soporte.');
-    } else if (error === 'invalid_credentials') {
-      alert('Correo o contraseña incorrectos. Intenta de nuevo.');
-    } else if (error === 'email_exists') {
-      alert('El correo ya está registrado. Inicia sesión o usa otro correo.');
-    } else if (error === 'invalid_input') {
-      alert('Por favor, completa todos los campos requeridos.');
-    } else if (error === 'google_account') {
-      alert('Este correo está registrado con Google. Por favor, inicia sesión con Google.');
+    const errorMessage = document.getElementById('error-message');
+    if (error) {
+      errorMessage.style.display = 'block';
+      if (error === 'no_email') {
+        errorMessage.textContent = 'Por favor, permite compartir tu correo electrónico para iniciar sesión.';
+      } else if (error === 'auth_failed') {
+        errorMessage.textContent = `Error al autenticar: ${details || 'Intenta de nuevo.'}`;
+      } else if (error === 'auth_init_failed') {
+        errorMessage.textContent = 'Error al iniciar la autenticación. Contacta al soporte.';
+      } else if (error === 'invalid_credentials') {
+        errorMessage.textContent = 'Correo o contraseña incorrectos. Intenta de nuevo.';
+      } else if (error === 'email_exists') {
+        errorMessage.textContent = 'El correo ya está registrado. Inicia sesión o usa otro correo.';
+      } else if (error === 'invalid_input') {
+        errorMessage.textContent = 'Por favor, completa todos los campos requeridos.';
+      } else if (error === 'google_account') {
+        errorMessage.textContent = 'Este correo está registrado con Google. Por favor, inicia sesión con Google.';
+      }
     }
   </script>
 </body>
