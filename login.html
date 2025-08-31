@@ -7,8 +7,90 @@
   <link rel="icon" type="image/png" href="PRENDIAX.png" />
   <link rel="stylesheet" href="style.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
-  <!-- Agrega el SDK de Apple -->
-  <script type="text/javascript" src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
+  <style>
+    .login-container {
+      max-width: 400px;
+      margin: 50px auto;
+      padding: 20px;
+      text-align: center;
+      font-family: 'Poppins', sans-serif;
+    }
+    .login-buttons {
+      margin: 20px 0;
+    }
+    .login-btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+      color: white;
+      background-color: #007bff;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .login-btn.google {
+      background-color: #4285F4;
+    }
+    .login-btn.google:hover {
+      background-color: #3578e5;
+    }
+    .login-btn.email, .login-btn.register {
+      background-color: #28a745;
+    }
+    .login-btn.email:hover, .login-btn.register:hover {
+      background-color: #218838;
+    }
+    .login-icon {
+      width: 20px;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
+    .email-form, .register-form {
+      display: none;
+      margin-top: 20px;
+    }
+    .email-form input, .register-form input {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .email-form button, .register-form button {
+      background-color: #007bff;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+    }
+    .email-form button:hover, .register-form button:hover {
+      background-color: #0056b3;
+    }
+    .login-msg {
+      font-size: 14px;
+      color: #666;
+      margin-top: 20px;
+    }
+    .back-link {
+      display: block;
+      margin-top: 20px;
+      color: #007bff;
+      text-decoration: none;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
   <div class="login-container">
@@ -18,10 +100,25 @@
         <img src="google.png" alt="Google logo" class="login-icon">
         Continuar con Google
       </a>
-      <!-- Botón de Apple usando el SDK -->
-      <div id="appleid-signin" data-color="black" data-border="true" data-type="sign in"></div>
+      <button class="login-btn email" onclick="toggleEmailForm()">Iniciar con Email</button>
+      <button class="login-btn register" onclick="toggleRegisterForm()">Registrarse</button>
     </div>
-    <p class="login-msg">Al iniciar sesión aceptas nuestros términos y condiciones.</p>
+    <form id="email-form" class="email-form" action="/auth/email" method="POST">
+      <input type="email" name="email" placeholder="Correo electrónico" required />
+      <input type="password" name="password" placeholder="Contraseña" required />
+      <input type="hidden" name="tipo" id="tipo" />
+      <input type="hidden" name="target" id="target" />
+      <button type="submit">Iniciar Sesión</button>
+    </form>
+    <form id="register-form" class="register-form" action="/auth/register" method="POST">
+      <input type="text" name="nombre" placeholder="Nombre para mostrar en el perfil" required />
+      <input type="email" name="email" placeholder="Correo electrónico" required />
+      <input type="password" name="password" placeholder="Contraseña" required />
+      <input type="hidden" name="tipo" id="register-tipo" />
+      <input type="hidden" name="target" id="register-target" />
+      <button type="submit">Registrarse</button>
+    </form>
+    <p class="login-msg">Al iniciar sesión o registrarte aceptas nuestros términos y condiciones.</p>
     <a href="/" class="back-link">← Volver al inicio</a>
   </div>
 
@@ -33,30 +130,47 @@
     const details = params.get("details");
 
     const googleBtn = document.querySelector('a.google');
-
     if (googleBtn) {
       googleBtn.href = `/auth/google?tipo=${tipo}&target=${target}`;
     }
 
-    // Configurar Apple Sign-In
-    AppleID.auth.init({
-      clientId: 'com.prendiax.web.service',
-      scope: 'name email',
-      redirectURI: 'https://prendiax.com/auth/apple/callback',
-      responseType: 'code id_token',
-      responseMode: 'form_post',
-      usePopup: false,
-      state: btoa(JSON.stringify({ tipo, target })) // Codificar tipo y target en el state
-    });
+    // Configurar valores de tipo y target
+    document.getElementById('tipo').value = tipo;
+    document.getElementById('target').value = target;
+    document.getElementById('register-tipo').value = tipo;
+    document.getElementById('register-target').value = target;
 
+    // Mostrar/ocultar formulario de login
+    function toggleEmailForm() {
+      const form = document.getElementById('email-form');
+      const registerForm = document.getElementById('register-form');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      registerForm.style.display = 'none';
+    }
+
+    // Mostrar/ocultar formulario de registro
+    function toggleRegisterForm() {
+      const form = document.getElementById('register-form');
+      const emailForm = document.getElementById('email-form');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      emailForm.style.display = 'none';
+    }
+
+    // Manejo de errores
     if (error === 'no_email') {
-      alert('Por favor, permite compartir tu correo electrónico para iniciar sesión con Apple.');
+      alert('Por favor, permite compartir tu correo electrónico para iniciar sesión.');
     } else if (error === 'auth_failed') {
-      alert(`Error al autenticar con Apple: ${details || 'Intenta de nuevo.'}`);
+      alert(`Error al autenticar: ${details || 'Intenta de nuevo.'}`);
     } else if (error === 'auth_init_failed') {
-      alert('Error al iniciar la autenticación con Apple. Contacta al soporte.');
-    } else if (error === 'mismatching_state') {
-      alert('Error de CSRF: El estado no coincide. Intenta de nuevo.');
+      alert('Error al iniciar la autenticación. Contacta al soporte.');
+    } else if (error === 'invalid_credentials') {
+      alert('Correo o contraseña incorrectos. Intenta de nuevo.');
+    } else if (error === 'email_exists') {
+      alert('El correo ya está registrado. Inicia sesión o usa otro correo.');
+    } else if (error === 'invalid_input') {
+      alert('Por favor, completa todos los campos requeridos.');
+    } else if (error === 'google_account') {
+      alert('Este correo está registrado con Google. Por favor, inicia sesión con Google.');
     }
   </script>
 </body>

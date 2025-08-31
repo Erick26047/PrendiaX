@@ -10,9 +10,10 @@ import os
 from auth_google import router as google_router
 from datos_usuario import router as datos_usuario_router
 from publicaciones import router as publicaciones_router
-from apple_auth import apple_router
+from auth_email import email_router
 from chats import router as chats_router
 from resenas import router as resenas_router
+
 
 from pydantic import BaseModel
 from typing import Optional
@@ -58,7 +59,7 @@ app.add_middleware(
 app.include_router(datos_usuario_router)
 app.include_router(google_router)
 app.include_router(publicaciones_router)
-app.include_router(apple_router)
+app.include_router(email_router)
 app.include_router(chats_router)
 app.include_router(resenas_router, prefix="/api")
 
