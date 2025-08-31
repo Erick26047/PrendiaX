@@ -1181,63 +1181,64 @@ body.dark-mode .audio-speed-select {
   }
 
   async function connectWebSocket() {
-    if (!currentUserId) {
-      console.error('No se puede conectar WebSocket: currentUserId no definido');
-      return;
-    }
-    try {
-      ws = new WebSocket(`ws://https://prendiax.com/chats/ws/${currentUserId}`);
-      ws.onopen = () => {
-        console.log('WebSocket conectado para user_id:', currentUserId);
-      };
-      ws.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        console.log('Mensaje WebSocket recibido:', data);
-        if (data.type === 'ping') return;
-        if (data.tipo === 'nuevo_chat') {
-          offset = 0;
-          hasMoreChats = true;
-          document.querySelector('.chat-list').innerHTML = '';
-          await loadChats();
-        } else if (data.tipo === 'chat_deleted') {
-          if (currentChatId === data.chat_id) {
-            currentChatId = null;
-            currentRecipientId = null;
-            document.querySelector('.chat-messages').innerHTML = `<p style="text-align: center; color: #666;">${translations[document.documentElement.lang].chat.no_messages}</p>`;
-            document.querySelector('.chat-header .name').textContent = translations[document.documentElement.lang].chat.select_chat;
-            document.querySelector('.chat-header .avatar-container').innerHTML = '<i class="fas fa-user avatar-icon"></i>';
-          }
-          offset = 0;
-          hasMoreChats = true;
-          document.querySelector('.chat-list').innerHTML = '';
-          await loadChats();
-        } else {
-          if (data.chat_id === currentChatId) {
-            appendMessage(data);
-            scrollToBottom();
-          }
-          offset = 0;
-          hasMoreChats = true;
-          document.querySelector('.chat-list').innerHTML = '';
-          await loadChats();
-        }
-      };
-      ws.onerror = (error) => {
-        console.error('Error en WebSocket:', error);
-        showNotification('Error de conexión WebSocket. Reintentando...', true);
-        setTimeout(connectWebSocket, 5000);
-      };
-      ws.onclose = (event) => {
-        console.log('WebSocket cerrado:', event);
-        showNotification('WebSocket cerrado. Reintentando...', true);
-        setTimeout(connectWebSocket, 5000);
-      };
-    } catch (error) {
-      console.error('Error al conectar WebSocket:', error);
-      showNotification('Error al conectar WebSocket. Reintentando...', true);
-      setTimeout(connectWebSocket, 5000);
-    }
+  if (!currentUserId) {
+    console.error('No se puede conectar WebSocket: currentUserId no definido');
+    return;
   }
+  try {
+    ws = new WebSocket(`wss://prendiax.com/chats/ws/${currentUserId}`);
+    ws.onopen = () => {
+      console.log('WebSocket conectado para user_id:', currentUserId);
+      showNotification(translations[document.documentElement.lang].chat.websocket_connected);
+    };
+    ws.onmessage = async (event) => {
+      const data = JSON.parse(event.data);
+      console.log('Mensaje WebSocket recibido:', data);
+      if (data.type === 'ping') return;
+      if (data.tipo === 'nuevo_chat') {
+        offset = 0;
+        hasMoreChats = true;
+        document.querySelector('.chat-list').innerHTML = '';
+        await loadChats();
+      } else if (data.tipo === 'chat_deleted') {
+        if (currentChatId === data.chat_id) {
+          currentChatId = null;
+          currentRecipientId = null;
+          document.querySelector('.chat-messages').innerHTML = `<p style="text-align: center; color: #666;">${translations[document.documentElement.lang].chat.no_messages}</p>`;
+          document.querySelector('.chat-header .name').textContent = translations[document.documentElement.lang].chat.select_chat;
+          document.querySelector('.chat-header .avatar-container').innerHTML = '<i class="fas fa-user avatar-icon"></i>';
+        }
+        offset = 0;
+        hasMoreChats = true;
+        document.querySelector('.chat-list').innerHTML = '';
+        await loadChats();
+      } else {
+        if (data.chat_id === currentChatId) {
+          appendMessage(data);
+          scrollToBottom();
+        }
+        offset = 0;
+        hasMoreChats = true;
+        document.querySelector('.chat-list').innerHTML = '';
+        await loadChats();
+      }
+    };
+    ws.onerror = (error) => {
+      console.error('Error en WebSocket:', error);
+      showNotification(translations[document.documentElement.lang].chat.websocket_error, true);
+      setTimeout(connectWebSocket, 5000);
+    };
+    ws.onclose = (event) => {
+      console.log('WebSocket cerrado:', event);
+      showNotification(translations[document.documentElement.lang].chat.websocket_closed, true);
+      setTimeout(connectWebSocket, 5000);
+    };
+  } catch (error) {
+    console.error('Error al conectar WebSocket:', error);
+    showNotification(translations[document.documentElement.lang].chat.websocket_error, true);
+    setTimeout(connectWebSocket, 5000);
+  }
+}
 
   async function loadChats() {
     if (!hasMoreChats) return;

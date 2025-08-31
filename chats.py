@@ -41,7 +41,7 @@ app.add_middleware(
 )
 
 # Configurar middleware de sesiones
-app.add_middleware(SessionMiddleware, secret_key="my-secure-secret-key-12345")
+app.add_middleware(SessionMiddleware, secret_key="Elbicho7")
 
 # Conexión a la base de datos
 def get_db_connection():
