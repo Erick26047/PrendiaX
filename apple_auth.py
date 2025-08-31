@@ -6,6 +6,7 @@ import time
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
+import secrets
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -62,7 +63,7 @@ try:
     oauth.register(
         name="apple",
         client_id=os.getenv("APPLE_CLIENT_ID", "com.prendiax.web.service"),
-        client_secret=None,  # Generaremos dinámicamente
+        client_secret=None,
         server_metadata_url="https://appleid.apple.com/.well-known/openid-configuration",
         client_kwargs={
             "scope": "name email",
@@ -80,19 +81,19 @@ except Exception as e:
 @apple_router.get("/auth/apple")
 async def login_via_apple(request: Request):
     try:
-        print(f"[DEBUG] /auth/apple: Sesión existente: {request.session}")
+        session_id = request.session.get("_session_id", "No session ID")
+        print(f"[DEBUG] /auth/apple: Session ID: {session_id}, Sesión: {request.session}")
         tipo = request.query_params.get("tipo", "explorador")
         target = request.query_params.get("target", "perfil-especifico" if tipo == "explorador" else "perfil")
 
         redirect_uri = request.url_for("auth_apple_callback")
         request.session["tipo"] = tipo
         request.session["target"] = target
+        request.session["oauth_state"] = secrets.token_urlsafe(32)
 
-        # Generar client_secret dinámicamente
         oauth.apple.client_secret = generate_apple_client_secret()
-
-        print(f"[DEBUG] /auth/apple: tipo={tipo}, target={target}, redirect_uri={redirect_uri}")
-        return await oauth.apple.authorize_redirect(request, redirect_uri)
+        print(f"[DEBUG] /auth/apple: tipo={tipo}, target={target}, redirect_uri={redirect_uri}, state={request.session['oauth_state']}")
+        return await oauth.apple.authorize_redirect(request, redirect_uri, state=request.session["oauth_state"])
 
     except Exception as e:
         print(f"[ERROR] /auth/apple: Error al iniciar autenticación: {e}")
@@ -102,13 +103,22 @@ async def login_via_apple(request: Request):
 @apple_router.post("/auth/apple/callback", name="auth_apple_callback")
 async def auth_apple_callback(request: Request):
     try:
-        print("[DEBUG] /auth/apple/callback: Iniciando callback")
-        print(f"[DEBUG] /auth/apple/callback: Sesión antes del callback: {request.session}")
+        session_id = request.session.get("_session_id", "No session ID")
+        print(f"[DEBUG] /auth/apple/callback: Session ID: {session_id}, Sesión: {request.session}")
         form_data = await request.form()
         print(f"[DEBUG] /auth/apple/callback: Form data recibido: {dict(form_data)}")
 
-        # Generar client_secret dinámicamente
         oauth.apple.client_secret = generate_apple_client_secret()
+
+        expected_state = request.session.get("oauth_state")
+        received_state = form_data.get("state")
+        print(f"[DEBUG] /auth/apple/callback: Expected state: {expected_state}, Received state: {received_state}")
+        if expected_state != received_state:
+            print("[ERROR] /auth/apple/callback: mismatching_state: CSRF Warning! State not equal in request and response")
+            return RedirectResponse(
+                url=f"/login?tipo=emprendedor&target=perfil&error=mismatching_state&details=state_mismatch",
+                status_code=302
+            )
 
         try:
             token = await oauth.apple.authorize_access_token(request)
