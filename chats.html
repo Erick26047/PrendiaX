@@ -293,9 +293,23 @@
 
     .chat-item .chat-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
     .chat-item .chat-name { font-weight: 500; font-size: 16px; }
-    .chat-item .chat-preview { font-size: 14px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-item .chat-preview {
+  font-size: 14px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px; /* Ajustar según el diseño */
+  display: inline-block;
+}
 
-    .chat-item .chat-time-container { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .chat-time-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 60px; /* Ajustar según el diseño */
+}
     .chat-item .chat-time { font-size: 12px; color: #999; }
     .chat-item .unread-count {
       background-color: #25D366;
@@ -1203,6 +1217,7 @@ async function connectWebSocket() {
       const data = JSON.parse(event.data);
       console.log('Mensaje WebSocket recibido:', data);
       if (data.type === 'ping') return;
+      
       if (data.tipo === 'nuevo_chat') {
         // Nuevo chat creado, recargar la lista completa
         offset = 0;
@@ -1210,6 +1225,7 @@ async function connectWebSocket() {
         document.querySelector('.chat-list').innerHTML = '';
         await loadChats();
       } else if (data.tipo === 'chat_deleted') {
+        // Chat eliminado, actualizar la interfaz
         if (currentChatId === data.chat_id) {
           currentChatId = null;
           currentRecipientId = null;
@@ -1228,7 +1244,7 @@ async function connectWebSocket() {
           scrollToBottom();
         }
         // Actualizar la lista de chats dinámicamente
-        updateChatList(data);
+        await updateChatList(data);
       }
     };
     ws.onerror = (error) => {
@@ -1317,7 +1333,7 @@ async function loadChats() {
       chatItem.className = `chat-item${chat.chat_id === currentChatId ? ' active' : ''}`;
       chatItem.dataset.chatId = chat.chat_id;
       chatItem.dataset.recipientId = chat.otro_usuario_id;
-      chatItem.dataset.fechaEnvio = chat.fecha_envio || ''; // Guardar fecha para ordenamiento
+      chatItem.dataset.fechaEnvio = chat.fecha_envio || '';
 
       let avatarContent;
       if (chat.foto_perfil_url) {
@@ -1463,6 +1479,10 @@ async function selectChat(chatId, recipientId, displayName, fotoPerfilUrl, tipoU
       console.log('Avatar actualizado en el DOM:', avatarContainer.innerHTML);
     }, 0);
 
+    // Limpiar el contenedor de mensajes antes de cargar
+    const messagesContainer = document.querySelector('.chat-messages');
+    messagesContainer.innerHTML = '';
+
     // Cargar los mensajes
     await loadMessages(chatId);
   } catch (error) {
@@ -1489,10 +1509,6 @@ async function loadMessages(chatId) {
     const data = await response.json();
 
     const messagesContainer = document.querySelector('.chat-messages');
-    const existingMessageIds = new Set(
-      Array.from(messagesContainer.querySelectorAll('.message')).map(msg => parseInt(msg.dataset.messageId))
-    );
-
     messagesContainer.innerHTML = '';
     if (data.mensajes.length === 0) {
       messagesContainer.innerHTML = `<p style="text-align: center; color: #666;">${translations[document.documentElement.lang].chat.no_messages}</p>`;
@@ -1503,14 +1519,16 @@ async function loadMessages(chatId) {
     let lastDate = null;
 
     data.mensajes.forEach(msg => {
-      if (existingMessageIds.has(msg.id)) return;
-
       const messageDate = convertToCST(msg.fecha_envio);
       if (!lastDate || !isSameDay(messageDate, lastDate)) {
-        const separator = document.createElement('div');
-        separator.className = 'date-separator';
-        separator.innerHTML = `<span>${formatDateSeparator(messageDate)}</span>`;
-        messagesContainer.appendChild(separator);
+        const existingSeparators = messagesContainer.querySelectorAll('.date-separator');
+        const lastSeparator = existingSeparators[existingSeparators.length - 1];
+        if (!lastSeparator || lastSeparator.innerText !== formatDateSeparator(messageDate)) {
+          const separator = document.createElement('div');
+          separator.className = 'date-separator';
+          separator.innerHTML = `<span>${formatDateSeparator(messageDate)}</span>`;
+          messagesContainer.appendChild(separator);
+        }
         lastDate = messageDate;
       }
       appendMessage(msg);
@@ -1534,21 +1552,24 @@ function appendMessage(msg) {
   }
 
   const messageDate = convertToCST(msg.fecha_envio);
-  const lastMessage = messagesContainer.querySelector('.message:last-child');
-  let lastDate = lastMessage ? convertToCST(lastMessage.dataset.fechaEnvio) : null;
+  const lastSeparator = messagesContainer.querySelector('.date-separator:last-child');
+  let lastDate = lastSeparator ? convertToCST(messagesContainer.querySelector('.message:last-child')?.dataset.fechaEnvio || new Date(0)) : null;
 
   // Añadir separador de fecha si es necesario
   if (!lastDate || !isSameDay(messageDate, lastDate)) {
-    const separator = document.createElement('div');
-    separator.className = 'date-separator';
-    separator.innerHTML = `<span>${formatDateSeparator(messageDate)}</span>`;
-    messagesContainer.appendChild(separator);
+    const separatorText = formatDateSeparator(messageDate);
+    if (!lastSeparator || lastSeparator.innerText !== separatorText) {
+      const separator = document.createElement('div');
+      separator.className = 'date-separator';
+      separator.innerHTML = `<span>${separatorText}</span>`;
+      messagesContainer.appendChild(separator);
+    }
   }
 
   const messageEl = document.createElement('div');
   messageEl.className = `message ${msg.es_mio ? 'sent' : 'received'}`;
   messageEl.dataset.messageId = msg.id;
-  messageEl.dataset.fechaEnvio = msg.fecha_envio; // Guardar fecha original para comparación
+  messageEl.dataset.fechaEnvio = msg.fecha_envio;
 
   let mediaUrl = msg.media_url || '';
   console.log('URL del archivo:', mediaUrl);
@@ -1575,71 +1596,73 @@ function appendMessage(msg) {
   messageEl.innerHTML = `${content}<div class="time">${messageDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div>`;
   messagesContainer.appendChild(messageEl);
   scrollToBottom();
-
-  // Actualizar la lista de chats dinámicamente
-  updateChatList(msg);
 }
 
-// Nueva función para actualizar la lista de chats dinámicamente
 async function updateChatList(msg) {
   const chatId = msg.chat_id;
   const chatItem = document.querySelector(`.chat-item[data-chat-id="${chatId}"]`);
   const messageDate = convertToCST(msg.fecha_envio);
 
-  // Si el chat ya existe, actualizarlo
-  if (chatItem) {
-    let previewIcon = '';
-    let previewText = '';
-    const isMine = msg.es_mio;
+  // Obtener información del remitente si es necesario
+  let displayName = chatDataCache[chatId]?.display_name || 'Usuario';
+  let fotoPerfilUrl = chatDataCache[chatId]?.foto_perfil_url || '';
+  let tipoUsuario = chatDataCache[chatId]?.tipo_usuario || 'explorador';
+  let recipientId = chatDataCache[chatId]?.otro_usuario_id || msg.remitente_id;
 
-    if (msg.tipo === 'imagen') {
-      previewIcon = '<i class="fas fa-image" style="color:#25D366"></i>';
-      previewText = isMine ? translations[document.documentElement.lang].chat.sent_image : translations[document.documentElement.lang].chat.received_image;
-    } else if (msg.tipo === 'video') {
-      previewIcon = '<i class="fas fa-video" style="color:#1976d2"></i>';
-      previewText = isMine ? translations[document.documentElement.lang].chat.sent_video : translations[document.documentElement.lang].chat.received_video;
-    } else if (msg.tipo === 'voz') {
-      previewIcon = '<i class="fas fa-microphone" style="color:#ff9800"></i>';
-      previewText = isMine ? translations[document.documentElement.lang].chat.sent_voice : translations[document.documentElement.lang].chat.received_voice;
-    } else if (msg.tipo === 'document') {
-      previewIcon = '<i class="fas fa-file-alt" style="color:#607d8b"></i>';
-      previewText = isMine ? translations[document.documentElement.lang].chat.sent_document : translations[document.documentElement.lang].chat.received_document;
-    } else {
-      previewText = isMine ? `${translations[document.documentElement.lang].chat.you}: ${msg.contenido}` : msg.contenido || translations[document.documentElement.lang].chat.no_messages;
-    }
-
-    const previewContent = previewIcon ? `<span style="display:inline-flex;align-items:center;gap:6px;">${previewIcon} ${previewText}</span>` : previewText;
-    chatItem.querySelector('.chat-preview').innerHTML = previewContent;
-    chatItem.querySelector('.chat-time').textContent = messageDate.toLocaleString('es-MX', { timeStyle: 'short', dateStyle: 'short' });
-    chatItem.dataset.fechaEnvio = msg.fecha_envio;
-
-    // Si el mensaje es recibido, incrementar el conteo de no leídos
-    if (!isMine && chatId !== currentChatId) {
-      let unreadEl = chatItem.querySelector('.unread-count');
-      let unreadCount = unreadEl ? parseInt(unreadEl.textContent) || 0 : 0;
-      unreadCount++;
-      if (unreadEl) {
-        unreadEl.textContent = unreadCount > 9 ? '9+' : unreadCount;
-      } else {
-        const timeContainer = chatItem.querySelector('.chat-time-container');
-        timeContainer.innerHTML += `<span class="unread-count">${unreadCount > 9 ? '9+' : unreadCount}</span>`;
-      }
-    } else if (chatId === currentChatId) {
-      // Si el chat está seleccionado, limpiar el conteo de no leídos
-      const unreadEl = chatItem.querySelector('.unread-count');
-      if (unreadEl) unreadEl.remove();
-    }
-
-    // Mover el chat al principio de la lista
-    const chatList = document.querySelector('.chat-list');
-    chatList.insertBefore(chatItem, chatList.firstChild);
-  } else {
+  if (!chatItem) {
     // Si el chat no existe, recargar la lista completa
     offset = 0;
     hasMoreChats = true;
     document.querySelector('.chat-list').innerHTML = '';
     await loadChats();
+    return;
   }
+
+  // Actualizar el chat existente
+  let previewIcon = '';
+  let previewText = '';
+  const isMine = msg.es_mio;
+
+  if (msg.tipo === 'imagen') {
+    previewIcon = '<i class="fas fa-image" style="color:#25D366"></i>';
+    previewText = isMine ? translations[document.documentElement.lang].chat.sent_image : translations[document.documentElement.lang].chat.received_image;
+  } else if (msg.tipo === 'video') {
+    previewIcon = '<i class="fas fa-video" style="color:#1976d2"></i>';
+    previewText = isMine ? translations[document.documentElement.lang].chat.sent_video : translations[document.documentElement.lang].chat.received_video;
+  } else if (msg.tipo === 'voz') {
+    previewIcon = '<i class="fas fa-microphone" style="color:#ff9800"></i>';
+    previewText = isMine ? translations[document.documentElement.lang].chat.sent_voice : translations[document.documentElement.lang].chat.received_voice;
+  } else if (msg.tipo === 'document') {
+    previewIcon = '<i class="fas fa-file-alt" style="color:#607d8b"></i>';
+    previewText = isMine ? translations[document.documentElement.lang].chat.sent_document : translations[document.documentElement.lang].chat.received_document;
+  } else {
+    previewText = isMine ? `${translations[document.documentElement.lang].chat.you}: ${msg.contenido}` : msg.contenido || translations[document.documentElement.lang].chat.no_messages;
+  }
+
+  const previewContent = previewIcon ? `<span style="display:inline-flex;align-items:center;gap:6px;">${previewIcon} ${previewText}</span>` : previewText;
+  chatItem.querySelector('.chat-preview').innerHTML = previewContent;
+  chatItem.querySelector('.chat-time').textContent = messageDate.toLocaleString('es-MX', { timeStyle: 'short', dateStyle: 'short' });
+  chatItem.dataset.fechaEnvio = msg.fecha_envio;
+
+  // Actualizar conteo de no leídos
+  if (!isMine && chatId !== currentChatId) {
+    let unreadEl = chatItem.querySelector('.unread-count');
+    let unreadCount = unreadEl ? parseInt(unreadEl.textContent) || 0 : 0;
+    unreadCount++;
+    if (unreadEl) {
+      unreadEl.textContent = unreadCount > 9 ? '9+' : unreadCount;
+    } else {
+      const timeContainer = chatItem.querySelector('.chat-time-container');
+      timeContainer.innerHTML += `<span class="unread-count">${unreadCount > 9 ? '9+' : unreadCount}</span>`;
+    }
+  } else if (chatId === currentChatId) {
+    const unreadEl = chatItem.querySelector('.unread-count');
+    if (unreadEl) unreadEl.remove();
+  }
+
+  // Mover el chat al principio de la lista
+  const chatList = document.querySelector('.chat-list');
+  chatList.insertBefore(chatItem, chatList.firstChild);
 }
 
 function openMedia(url) {
