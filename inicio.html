@@ -2735,7 +2735,7 @@ async function initializeWebSocket() {
     const data = await response.json();
     if (!data.user_id) throw new Error('Usuario no autenticado');
 
-    const ws = new WebSocket(`ws://${window.location.host}/chats/ws/${data.user_id}`);
+   const ws = new WebSocket(`wss://${window.location.host}/chats/ws/${data.user_id}`);
     ws.onopen = () => console.log('WebSocket conectado para chats');
     ws.onmessage = async (event) => {
       const message = JSON.parse(event.data);
