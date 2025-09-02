@@ -9,7 +9,6 @@ const translations = {
       about_title: "¿Qué es PrendiaX?",
       about_text: "PrendiaX es una plataforma diseñada para conectar emprendedores y negocios locales con clientes potenciales. Aquí puedes descubrir nuevos productos y servicios, así como promocionar tu propio negocio.",
       footer: "© 2025 PrendiaX. Todos los derechos reservados.",
-      // Nuevas traducciones para el modal
       explore_warning: "Una vez que inicie sesión con una cuenta, no puede ingresar con esa misma a Sube tu negocio.",
       upload_warning: "Una vez que inicie sesión con una cuenta, no puede ingresar con esa misma a Explorar negocios.",
       continue_button: "Continuar"
@@ -128,7 +127,6 @@ const translations = {
       about_title: "What is PrendiaX?",
       about_text: "PrendiaX is a platform designed to connect entrepreneurs and local businesses with potential customers. Here you can discover new products and services, as well as promote your own business.",
       footer: "© 2025 PrendiaX. All rights reserved.",
-      // Nuevas traducciones para el modal
       explore_warning: "Once you log in with an account, you cannot use the same account for Upload your business.",
       upload_warning: "Once you log in with an account, you cannot use the same account for Explore businesses.",
       continue_button: "Continue"
