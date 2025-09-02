@@ -6,6 +6,7 @@
    <link rel="icon" type="image/png" href="PRENDIAX.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js"></script>
  <style>
 body {
   margin: 0;
@@ -1459,7 +1460,7 @@ body.dark-mode .filter-title {
       </form>
     </div>
 <div class="filtros-categorias">
-  <h3 class="filter-title" data-translate="inicio.filter_title">Filtrar contenido por categoría</h3>
+  <h3 class="filter-title" data-translate="inicio.filter_title">Filtrar feed por categoría</h3>
   <div class="categoria-buttons">
     <button class="icon-button categoria-filter" data-categoria="Restaurantes y comida rápida" title="Restaurantes y comida rápida">
       <i class="fas fa-utensils"></i>
@@ -1569,10 +1570,12 @@ const notificationLimit = 10;
 let notificationCount = 0;
 let wsNotifications = null;
 
-// Formatear fechas según idioma
+// Formatear fechas según idioma y zona horaria CST (UTC-6)
 function formatDate(dateString, lang = 'es') {
-  const date = new Date(dateString);
-  if (isNaN(date)) return 'Fecha inválida';
+  // Validar si la fecha es válida
+  const date = luxon.DateTime.fromISO(dateString, { zone: 'utc' }).setZone('America/Chicago');
+  if (!date.isValid) return translations[lang].inicio.invalid_date || 'Fecha inválida';
+
   const options = {
     year: 'numeric',
     month: '2-digit',
@@ -1581,6 +1584,7 @@ function formatDate(dateString, lang = 'es') {
     minute: '2-digit',
     hour12: lang === 'en',
   };
+
   return date.toLocaleString(lang === 'es' ? 'es-ES' : 'en-US', options);
 }
 
