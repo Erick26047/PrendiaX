@@ -6,7 +6,7 @@
    <link rel="icon" type="image/png" href="PRENDIAX.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="style.css" />
- <style>
+<style>
 body {
   margin: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -15,11 +15,6 @@ body {
   position: relative;
   overflow-x: hidden;
   transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-body.dark-mode {
-  background-color: #121212;
-  color: #e0e0e0;
 }
 
 .stars {
@@ -32,10 +27,6 @@ body.dark-mode {
   z-index: -1;
   pointer-events: none;
   display: none;
-}
-
-body.dark-mode .stars {
-  display: block;
 }
 
 .star {
@@ -80,10 +71,6 @@ header {
   z-index: 5000;
 }
 
-body.dark-mode header {
-  background-color: #1c2526;
-}
-
 .logo {
   font-size: 32px;
   font-weight: bold;
@@ -117,18 +104,9 @@ body.dark-mode header {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-body.dark-mode .header-icons input {
-  background-color: #2c2c2c;
-  color: #e0e0e0;
-  border: 1px solid #444;
-}
-
 .header-icons input::placeholder {
-  color: #999;
-}
-
-body.dark-mode .header-icons input::placeholder {
-  color: #888;
+  color: #000;
+  opacity: 0.7;
 }
 
 .icon-button {
@@ -146,18 +124,8 @@ body.dark-mode .header-icons input::placeholder {
   position: relative;
 }
 
-body.dark-mode .icon-button {
-  background-color: #2c2c2c;
-  color: #e0e0e0;
-  border: 1px solid #444;
-}
-
 .icon-button:hover {
   background-color: #e0e0e0;
-}
-
-body.dark-mode .icon-button:hover {
-  background-color: #3c3c3c;
 }
 
 #theme-toggle {
@@ -175,21 +143,11 @@ body.dark-mode .icon-button:hover {
   z-index: 2;
 }
 
-body.dark-mode #theme-toggle {
-  background-color: #2c2c2c;
-  color: #e0e0e0;
-  border: 1px solid #444;
-}
-
 #theme-toggle:hover {
   background-color: #e0e0e0;
 }
 
-body.dark-mode #theme-toggle:hover {
-  background-color: #3c3c3c;
-}
-
-.perfil-menu, .language-menu, .categorias-menu, .notifications-menu {
+.perfil-menu, .language-menu, .categorias-menu {
   position: relative;
   display: inline-block;
 }
@@ -211,15 +169,6 @@ body.dark-mode #theme-toggle:hover {
   transition: background-color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
 }
 
-body.dark-mode .menu-desplegable,
-body.dark-mode .language-desplegable,
-body.dark-mode .categorias-desplegable,
-body.dark-mode .notifications-desplegable {
-  background-color: #2c2c2c;
-  border-color: #444;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-}
-
 .language-desplegable {
   min-width: 150px;
   top: 40px;
@@ -231,18 +180,7 @@ body.dark-mode .notifications-desplegable {
   width: 250px;
 }
 
-.notifications-desplegable {
-  right: 0;
-  top: 50px;
-  width: 300px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.menu-desplegable::before,
-.language-desplegable::before,
-.categorias-desplegable::before,
-.notifications-desplegable::before {
+.menu-desplegable::before, .language-desplegable::before, .categorias-desplegable::before, .notifications-desplegable::before {
   content: '';
   position: absolute;
   top: -10px;
@@ -253,22 +191,11 @@ body.dark-mode .notifications-desplegable {
   transition: border-color 0.3s ease;
 }
 
-body.dark-mode .menu-desplegable::before,
-body.dark-mode .language-desplegable::before,
-body.dark-mode .categorias-desplegable::before,
-body.dark-mode .notifications-desplegable::before {
-  border-color: transparent transparent #2c2c2c transparent;
-}
-
 .categorias-desplegable::before {
   left: 14px;
 }
 
-.menu-desplegable a,
-.menu-desplegable button,
-.language-desplegable button,
-.categorias-desplegable button,
-.notifications-desplegable button {
+.menu-desplegable a, .menu-desplegable button, .language-desplegable button, .categorias-desplegable button, .notifications-desplegable button {
   color: #333333;
   padding: 12px 16px;
   text-decoration: none;
@@ -285,81 +212,24 @@ body.dark-mode .notifications-desplegable::before {
   cursor: pointer;
 }
 
-body.dark-mode .menu-desplegable a,
-body.dark-mode .menu-desplegable button,
-body.dark-mode .language-desplegable button,
-body.dark-mode .categorias-desplegable button,
-body.dark-mode .notifications-desplegable button {
-  color: #e0e0e0;
-}
-
-.menu-desplegable a:hover,
-.menu-desplegable button:hover,
-.language-desplegable button:hover,
-.categorias-desplegable button:hover,
-.notifications-desplegable button:hover {
+.menu-desplegable a:hover, .menu-desplegable button:hover, .language-desplegable button:hover, .categorias-desplegable button:hover, .notifications-desplegable button:hover {
   background-color: #e3f2fd;
   color: #1976d2;
   transform: translateX(4px);
 }
 
-body.dark-mode .menu-desplegable a:hover,
-body.dark-mode .menu-desplegable button:hover,
-body.dark-mode .language-desplegable button:hover,
-body.dark-mode .categorias-desplegable button:hover,
-body.dark-mode .notifications-desplegable button:hover {
-  background-color: #3c3c3c;
-  color: #bbdefb;
-}
-
-.menu-desplegable a i,
-.menu-desplegable button i,
-.language-desplegable button i,
-.categorias-desplegable button i,
-.notifications-desplegable button i {
+.menu-desplegable a i, .menu-desplegable button i, .language-desplegable button i, .categorias-desplegable button i, .notifications-desplegable button i {
   font-size: 16px;
   color: #555555;
   transition: color 0.2s ease;
 }
 
-body.dark-mode .menu-desplegable a i,
-body.dark-mode .menu-desplegable button i,
-body.dark-mode .language-desplegable button i,
-body.dark-mode .categorias-desplegable button i,
-body.dark-mode .notifications-desplegable button i {
-  color: #e0e0e0;
-}
-
-.menu-desplegable a:hover i,
-.menu-desplegable button:hover i,
-.language-desplegable button:hover i,
-.categorias-desplegable button:hover i,
-.notifications-desplegable button:hover i {
+.menu-desplegable a:hover i, .menu-desplegable button:hover i, .language-desplegable button:hover i, .categorias-desplegable button:hover i, .notifications-desplegable button:hover i {
   color: #1976d2;
 }
 
-body.dark-mode .menu-desplegable a:hover i,
-body.dark-mode .menu-desplegable button:hover i,
-body.dark-mode .language-desplegable button:hover i,
-body.dark-mode .categorias-desplegable button:hover i,
-body.dark-mode .notifications-desplegable button:hover i {
-  color: #bbdefb;
-}
-
-.menu-desplegable a:not(:last-child),
-.menu-desplegable button:not(:last-child),
-.language-desplegable button:not(:last-child),
-.categorias-desplegable button:not(:last-child),
-.notifications-desplegable button:not(:last-child) {
+.menu-desplegable a:not(:last-child), .menu-desplegable button:not(:last-child), .language-desplegable button:not(:last-child), .categorias-desplegable button:not(:last-child), .notifications-desplegable button:not(:last-child) {
   border-bottom: 1px solid #e0e0e0;
-}
-
-body.dark-mode .menu-desplegable a:not(:last-child),
-body.dark-mode .menu-desplegable button:not(:last-child),
-body.dark-mode .language-desplegable button:not(:last-child),
-body.dark-mode .categorias-desplegable button:not(:last-child),
-body.dark-mode .notifications-desplegable button:not(:last-child) {
-  border-bottom: 1px solid #444;
 }
 
 .logout-form {
@@ -387,18 +257,9 @@ body.dark-mode .notifications-desplegable button:not(:last-child) {
   cursor: pointer;
 }
 
-body.dark-mode .categorias-desplegable li {
-  color: #e0e0e0;
-}
-
 .categorias-desplegable li:hover {
   background-color: #e3f2fd;
   color: #1976d2;
-}
-
-body.dark-mode .categorias-desplegable li:hover {
-  background-color: #3c3c3c;
-  color: #bbdefb;
 }
 
 .categorias-desplegable li input[type="checkbox"] {
@@ -428,19 +289,9 @@ body.dark-mode .categorias-desplegable li:hover {
   transition: border-color 0.3s ease, background-color 0.3s ease;
 }
 
-body.dark-mode #otra-categoria input {
-  background-color: #2c2c2c;
-  color: #e0e0e0;
-  border-color: #444;
-}
-
 #otra-categoria input:focus {
   border-color: #000;
   outline: none;
-}
-
-body.dark-mode #otra-categoria input:focus {
-  border-color: #bbdefb;
 }
 
 @keyframes slideDown {
@@ -471,12 +322,6 @@ body.dark-mode #otra-categoria input:focus {
   min-width: 300px;
 }
 
-body.dark-mode .publicar {
-  background-color: #2c2c2c;
-  border-color: #444;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-}
-
 .filtros-categorias {
   background-color: #fafafa;
   padding: 20px;
@@ -489,12 +334,6 @@ body.dark-mode .publicar {
   height: fit-content;
   position: relative;
   z-index: 1000;
-}
-
-body.dark-mode .filtros-categorias {
-  background-color: #2c2c2c;
-  border-color: #444;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .categoria-buttons {
@@ -544,12 +383,6 @@ body.dark-mode .filtros-categorias {
   word-wrap: break-word;
 }
 
-body.dark-mode .content-input {
-  background-color: #2c2c2c;
-  color: #e0e0e0;
-  border-color: #444;
-}
-
 .content-input:empty:before {
   content: attr(data-placeholder);
   color: #999;
@@ -557,17 +390,9 @@ body.dark-mode .content-input {
   display: block;
 }
 
-body.dark-mode .content-input:empty:before {
-  color: #888;
-}
-
 .content-input:focus {
   outline: none;
   border-color: #000;
-}
-
-body.dark-mode .content-input:focus {
-  border-color: #bbdefb;
 }
 
 .action-buttons {
@@ -584,154 +409,52 @@ body.dark-mode .content-input:focus {
   flex-wrap: wrap;
 }
 
-.preview-wrapper {
-  position: relative;
-  display: inline-block;
-}
-
-.preview-image, .preview-video {
-  width: 50px;
-  height: 50px;
-  object-fit: cover;
-  border-radius: 4px;
-}
-
-.remove-preview {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background: #f44336;
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  font-size: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.3s ease;
-}
-
-.remove-preview:hover {
-  background: #d32f2f;
-}
-
-body.dark-mode .remove-preview {
-  background: #d32f2f;
-}
-
-body.dark-mode .remove-preview:hover {
-  background: #b71c1c;
-}
-
-.etiquetas-preview {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-
-.etiqueta-pill {
-  background-color: #e0e0e0;
-  color: #333;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-body.dark-mode .etiqueta-pill {
-  background-color: #444;
-  color: #e0e0e0;
-}
-
-.remove-etiqueta {
-  background: none;
-  border: none;
-  color: #333;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 0;
-}
-
-body.dark-mode .remove-etiqueta {
-  color: #e0e0e0;
-}
-
-.remove-etiqueta:hover {
-  color: #f44336;
-}
-
-body.dark-mode .remove-etiqueta:hover {
-  color: #ef5350;
-}
-
 .publicar button[type="submit"] {
   margin-top: 10px;
   padding: 10px 20px;
   border: none;
   background-color: #000;
   color: #fff;
+  font-size: 16px;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-body.dark-mode .publicar button[type="submit"] {
-  background-color: #bbdefb;
-  color: #000;
-}
-
-.publicar button[type="submit"]:hover {
-  background-color: #333;
-}
-
-body.dark-mode .publicar button[type="submit"]:hover {
-  background-color: #90caf9;
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
 }
 
 .post {
   background-color: #fafafa;
   padding: 20px;
   border-radius: 10px;
-  margin-bottom: 20px;
   border: 1px solid #ccc;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   position: relative;
-}
-
-body.dark-mode .post {
-  background-color: #2c2c2c;
-  border-color: #444;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .post-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
 .post-profile-pic-container {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  overflow: hidden;
+  border: 1px solid #ccc;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   background-color: #e0e0e0;
-}
-
-body.dark-mode .post-profile-pic-container {
-  background-color: #444;
 }
 
 .post-profile-pic {
@@ -741,137 +464,137 @@ body.dark-mode .post-profile-pic-container {
 }
 
 .post-profile-icon {
-  font-size: 20px;
+  font-size: 24px;
   color: #666;
-}
-
-body.dark-mode .post-profile-icon {
-  color: #e0e0e0;
 }
 
 .post-user-info {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-.company-name {
+.post-user-info .company-name {
+  font-size: 16px;
   font-weight: bold;
-  font-size: 16px;
   color: #000;
+  margin: 0;
+  transition: color 0.3s ease;
 }
 
-body.dark-mode .company-name {
-  color: #e0e0e0;
-}
-
-.delete-button {
-  background: none;
-  border: none;
-  color: #f44336;
-  font-size: 16px;
-  cursor: pointer;
-  position: absolute;
-  top: 10px;
-  right: 10px;
-}
-
-body.dark-mode .delete-button {
-  color: #ef5350;
-}
-
-.delete-button:hover {
-  color: #d32f2f;
-}
-
-body.dark-mode .delete-button:hover {
-  color: #b71c1c;
+.post-content {
+  margin-bottom: 10px;
 }
 
 .post-content p {
-  margin: 0 0 10px 0;
+  margin: 0 0 10px;
   font-size: 16px;
-  color: #333;
+  color: #000;
+  line-height: 1.5;
+  transition: color 0.3s ease;
 }
 
-body.dark-mode .post-content p {
-  color: #e0e0e0;
+.post-media {
+  margin-top: 10px;
 }
 
 .post-media img, .post-media video {
-  max-width: 100%;
+  max-width: 25%;
+  height: auto;
   border-radius: 8px;
-  margin-top: 10px;
+  display: block;
   cursor: pointer;
-}
-
-.post-meta {
-  margin-top: 10px;
-  font-size: 14px;
-  color: #666;
-}
-
-body.dark-mode .post-meta {
-  color: #e0e0e0;
 }
 
 .post-meta p {
-  margin: 5px 0;
-}
-
-.interest-button {
-  background-color: #000;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 12px;
+  margin: 10px 0 0;
   font-size: 14px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  transition: background-color 0.3s ease;
+  color: #666;
+  transition: color 0.3s ease;
 }
 
-body.dark-mode .interest-button {
-  background-color: #bbdefb;
-  color: #000;
-}
-
-.interest-button.interested {
-  background-color: #4caf50;
-}
-
-body.dark-mode .interest-button.interested {
-  background-color: #66bb6a;
-}
-
-.interest-button:hover {
-  background-color: #333;
-}
-
-body.dark-mode .interest-button:hover {
-  background-color: #90caf9;
-}
-
-body.dark-mode .interest-button.interested:hover {
-  background-color: #388e3c;
+.post-meta p:last-child {
+  font-size: 12px;
+  color: #999;
 }
 
 .interested-count {
   margin-left: 10px;
   font-size: 14px;
   color: #666;
+  transition: color 0.3s ease;
+  display: inline-block;
+  vertical-align: middle;
 }
 
-body.dark-mode .interested-count {
-  color: #e0e0e0;
+.delete-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #f44336;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 5px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+}
+
+.delete-button:hover {
+  background-color: #d32f2f;
+}
+
+.delete-button i {
+  margin: 0;
+}
+
+.interest-button {
+  background-color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #000;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  margin-top: 10px;
+}
+
+.interest-button:hover {
+  background-color: #e0e0e0;
+}
+
+.interest-button.interested {
+  background-color: #4caf50;
+  color: #fff;
+}
+
+.interest-button.interested:hover {
+  background-color: #45a049;
+}
+
+.interest-button.interested i {
+  color: #fff;
 }
 
 .comments-section {
   margin-top: 15px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 10px;
+  transition: border-color 0.3s ease;
 }
 
 .comment-form {
   display: flex;
+  align-items: center;
   gap: 10px;
   margin-bottom: 10px;
 }
@@ -885,16 +608,6 @@ body.dark-mode .interested-count {
   background-color: #fff;
   color: #000;
   transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
-  resize: vertical;
-  min-height: 30px;
-  max-height: 100px;
-  overflow-y: auto;
-}
-
-body.dark-mode .comment-input {
-  background-color: #2c2c2c;
-  color: #e0e0e0;
-  border-color: #444;
 }
 
 .comment-input:focus {
@@ -902,58 +615,47 @@ body.dark-mode .comment-input {
   outline: none;
 }
 
-body.dark-mode .comment-input:focus {
-  border-color: #bbdefb;
-}
-
 .comment-submit {
-  padding: 8px 16px;
-  border: none;
   background-color: #000;
   color: #fff;
+  border: none;
   border-radius: 15px;
-  cursor: pointer;
+  padding: 8px 15px;
   font-size: 14px;
-  transition: background-color 0.3s ease;
-}
-
-body.dark-mode .comment-submit {
-  background-color: #bbdefb;
-  color: #000;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .comment-submit:hover {
   background-color: #333;
 }
 
-body.dark-mode .comment-submit:hover {
-  background-color: #90caf9;
-}
-
 .comments-list {
-  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .comment {
   display: flex;
+  align-items: flex-start;
   gap: 10px;
-  margin-bottom: 10px;
   position: relative;
+  padding: 5px 0;
 }
 
 .comment-profile-pic-container {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  overflow: hidden;
+  border: 1px solid #ccc;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   background-color: #e0e0e0;
-}
-
-body.dark-mode .comment-profile-pic-container {
-  background-color: #444;
 }
 
 .comment-profile-pic {
@@ -963,12 +665,8 @@ body.dark-mode .comment-profile-pic-container {
 }
 
 .comment-profile-icon {
-  font-size: 16px;
+  font-size: 18px;
   color: #666;
-}
-
-body.dark-mode .comment-profile-icon {
-  color: #e0e0e0;
 }
 
 .comment-content {
@@ -976,184 +674,137 @@ body.dark-mode .comment-profile-icon {
 }
 
 .comment-user {
-  font-weight: bold;
   font-size: 14px;
+  font-weight: bold;
   color: #000;
-}
-
-body.dark-mode .comment-user {
-  color: #e0e0e0;
+  margin: 0;
+  transition: color 0.3s ease;
 }
 
 .comment-text {
-  margin: 5px 0;
   font-size: 14px;
   color: #333;
-}
-
-body.dark-mode .comment-text {
-  color: #e0e0e0;
+  margin: 2px 0 0;
+  transition: color 0.3s ease;
 }
 
 .comment-meta {
   font-size: 12px;
-  color: #666;
-}
-
-body.dark-mode .comment-meta {
-  color: #e0e0e0;
+  color: #999;
+  margin-top: 2px;
 }
 
 .comment-delete {
-  background: none;
-  border: none;
-  color: #f44336;
-  font-size: 14px;
-  cursor: pointer;
   position: absolute;
-  top: 0;
+  top: 5px;
   right: 0;
-}
-
-body.dark-mode .comment-delete {
-  color: #ef5350;
+  background-color: #f44336;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 2px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
 }
 
 .comment-delete:hover {
-  color: #d32f2f;
-}
-
-body.dark-mode .comment-delete:hover {
-  color: #b71c1c;
+  background-color: #d32f2f;
 }
 
 .load-more-comments {
-  text-align: center;
   font-size: 14px;
   color: #1976d2;
   cursor: pointer;
+  text-align: center;
   margin-top: 10px;
-}
-
-body.dark-mode .load-more-comments {
-  color: #bbdefb;
+  transition: color 0.3s ease;
 }
 
 .load-more-comments:hover {
-  text-decoration: underline;
+  color: #1565c0;
 }
 
 .notification {
   position: fixed;
-  top: 20px;
-  right: -300px;
+  top: 10px;
+  right: 20px;
   background-color: #4caf50;
-  color: #fff;
-  padding: 10px 20px;
+  color: white;
+  padding: 15px 20px;
   border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  z-index: 6000;
   display: none;
   align-items: center;
   gap: 10px;
-  z-index: 5000;
-  transition: right 0.3s ease, opacity 0.3s ease;
-}
-
-.notification.active {
-  right: 20px;
-  opacity: 1;
+  font-size: 16px;
+  border: 1px solid #e0e0e0;
+  transition: background-color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
 }
 
 .notification.error {
   background-color: #f44336;
 }
 
-body.dark-mode .notification {
-  background-color: #66bb6a;
+.notification.active {
+  display: flex;
+  animation: slideDown 0.3s ease-in-out;
 }
 
-body.dark-mode .notification.error {
-  background-color: #ef5350;
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-.notification-counter, .chats-unread-counter {
+@keyframes slideOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(100%); }
+}
+
+.preview-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.preview-image, .preview-video {
+  width: 50px;
+  height: 50px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  object-fit: cover;
+  vertical-align: middle;
+  transition: border-color 0.3s ease;
+}
+
+.remove-preview {
   position: absolute;
   top: -8px;
   right: -8px;
   background-color: #f44336;
   color: #fff;
+  border: none;
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
+  transition: background-color 0.3s ease;
 }
 
-body.dark-mode .notification-counter,
-body.dark-mode .chats-unread-counter {
-  background-color: #ef5350;
+.remove-preview:hover {
+  background-color: #d32f2f;
 }
 
-.notification-item {
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: #333;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-body.dark-mode .notification-item {
-  color: #e0e0e0;
-}
-
-.notification-item.unread {
-  background-color: #e3f2fd;
-}
-
-body.dark-mode .notification-item.unread {
-  background-color: #3c3c3c;
-}
-
-.notification-item:hover {
-  background-color: #e0e0e0;
-}
-
-body.dark-mode .notification-item:hover {
-  background-color: #4c4c4c;
-}
-
-.notification-item i {
-  font-size: 16px;
-  color: #555;
-}
-
-body.dark-mode .notification-item i {
-  color: #e0e0e0;
-}
-
-#load-more-notifications {
-  text-align: center;
-  font-size: 14px;
-  color: #1976d2;
-  cursor: pointer;
-  padding: 10px;
-  display: none;
-}
-
-body.dark-mode #load-more-notifications {
-  color: #bbdefb;
-}
-
-#load-more-notifications:hover {
-  text-decoration: underline;
-}
-
-.confirm-modal {
+.modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -1163,80 +814,498 @@ body.dark-mode #load-more-notifications {
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 3000;
+  z-index: 2000;
   animation: fadeIn 0.2s ease-in-out;
 }
 
-.confirm-modal-content {
-  background-color: #fff;
+.modal-content {
+  background: #fff;
   padding: 20px;
-  border-radius: 8px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   text-align: center;
   max-width: 400px;
   width: 90%;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-  transition: background-color 0.3s ease;
+  color: #000;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-body.dark-mode .confirm-modal-content {
-  background-color: #2c2c2c;
-  color: #e0e0e0;
-}
-
-.confirm-modal-content p {
-  margin: 0 0 20px 0;
+.modal-content p {
+  margin: 0 0 20px;
   font-size: 16px;
 }
 
-.confirm-modal-content button {
+.modal-content button {
   padding: 10px 20px;
   border: none;
-  border-radius: 8px;
+  border-radius: 5px;
+  font-size: 16px;
   cursor: pointer;
-  font-size: 14px;
   margin: 0 10px;
+  transition: background-color 0.3s ease;
 }
 
 #confirm-btn {
-  background-color: #f44336;
-  color: #fff;
-}
-
-body.dark-mode #confirm-btn {
-  background-color: #ef5350;
+  background: #f44336;
+  color: white;
 }
 
 #confirm-btn:hover {
-  background-color: #d32f2f;
-}
-
-body.dark-mode #confirm-btn:hover {
-  background-color: #b71c1c;
+  background: #d32f2f;
 }
 
 #cancel-btn {
-  background-color: #ccc;
-  color: #000;
-}
-
-body.dark-mode #cancel-btn {
-  background-color: #444;
-  color: #e0e0e0;
+  background: #ccc;
+  color: black;
 }
 
 #cancel-btn:hover {
-  background-color: #b0b0b0;
+  background: #bbb;
 }
 
-body.dark-mode #cancel-btn:hover {
+.etiquetas-preview {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: 10px;
+  align-items: center;
+}
+
+.etiqueta-pill {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.etiqueta-pill .remove-etiqueta {
+  background: none;
+  border: none;
+  color: #1976d2;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.etiqueta-pill .remove-etiqueta:hover {
+  color: #d32f2f;
+}
+
+.notification-counter {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #f44336;
+  color: #fff;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+}
+
+.notifications-desplegable {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 50px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 4000;
+  padding: 8px 0;
+  font-family: 'Segoe UI', sans-serif;
+  animation: slideDown 0.3s ease-in-out;
+  border: 1px solid #e0e0e0;
+  transition: background-color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
+}
+
+.notifications-desplegable::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  right: 14px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent transparent #ffffff transparent;
+  transition: border-color 0.3s ease;
+}
+
+.notifications-header {
+  padding: 12px 16px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  border-bottom: 1px solid #e0e0e0;
+  transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.notifications-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #333;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.notification-item.unread {
+  background-color: #e3f2fd;
+  font-weight: 500;
+}
+
+.notification-item:hover {
+  background-color: #f5f5f5;
+}
+
+.notification-item i {
+  font-size: 16px;
+  color: #555;
+}
+
+.notification-item.unread i {
+  color: #1976d2;
+}
+
+.notification-item span {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.load-more-notifications {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: none;
+  color: #1976d2;
+  font-size: 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.load-more-notifications:hover {
+  color: #1565c0;
+}
+
+body.dark-mode {
+  background-color: #000;
+  color: #fff;
+}
+
+body.dark-mode .stars {
+  display: block;
+}
+
+body.dark-mode .header-icons input {
+  background-color: #000;
+  color: #fff;
+}
+
+body.dark-mode .header-icons input::placeholder {
+  color: #fff;
+  opacity: 0.7;
+}
+
+body.dark-mode .icon-button {
+  background-color: #000;
+  color: #fff;
+}
+
+body.dark-mode .icon-button:hover {
+  background-color: #222;
+}
+
+body.dark-mode #theme-toggle {
+  background-color: #000;
+  color: #fff;
+}
+
+body.dark-mode #theme-toggle:hover {
+  background-color: #222;
+}
+
+body.dark-mode .menu-desplegable, body.dark-mode .language-desplegable, body.dark-mode .categorias-desplegable, body.dark-mode .notifications-desplegable {
+  background-color: #2a2a2a;
+  border: 1px solid #444444;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .menu-desplegable::before, body.dark-mode .language-desplegable::before, body.dark-mode .categorias-desplegable::before, body.dark-mode .notifications-desplegable::before {
+  border-color: transparent transparent #2a2a2a transparent;
+}
+
+body.dark-mode .menu-desplegable a, body.dark-mode .menu-desplegable button, body.dark-mode .language-desplegable button, body.dark-mode .categorias-desplegable button, body.dark-mode .notifications-desplegable button {
+  color: #e0e0e0;
+}
+
+body.dark-mode .menu-desplegable a:hover, body.dark-mode .menu-desplegable button:hover, body.dark-mode .language-desplegable button:hover, body.dark-mode .categorias-desplegable button:hover, body.dark-mode .notifications-desplegable button:hover {
+  background-color: #3a3a3a;
+  color: #90caf9;
+}
+
+body.dark-mode .menu-desplegable a i, body.dark-mode .menu-desplegable button i, body.dark-mode .language-desplegable button i, body.dark-mode .categorias-desplegable button i, body.dark-mode .notifications-desplegable button i {
+  color: #aaaaaa;
+}
+
+body.dark-mode .menu-desplegable a:hover i, body.dark-mode .menu-desplegable button:hover i, body.dark-mode .language-desplegable button:hover i, body.dark-mode .categorias-desplegable button:hover i, body.dark-mode .notifications-desplegable button:hover i {
+  color: #90caf9;
+}
+
+body.dark-mode .menu-desplegable a:not(:last-child), body.dark-mode .menu-desplegable button:not(:last-child), body.dark-mode .language-desplegable button:not(:last-child), body.dark-mode .categorias-desplegable button:not(:last-child), body.dark-mode .notifications-desplegable button:not(:last-child) {
+  border-bottom: 1px solid #444444;
+}
+
+body.dark-mode .categorias-desplegable li {
+  color: #e0e0e0;
+}
+
+body.dark-mode .categorias-desplegable li:hover {
+  background-color: #3a3a3a;
+  color: #90caf9;
+}
+
+body.dark-mode #otra-categoria input {
+  background-color: #222;
+  color: #fff;
+  border-color: #444;
+}
+
+body.dark-mode .publicar {
+  background-color: #000;
+  border: 1px solid #333;
+  box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .filtros-categorias {
+  background-color: #000;
+  border: 1px solid #333;
+  box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .content-input {
+  background-color: #fff;
+  color: #000;
+}
+
+body.dark-mode .preview-area {
+  background-color: #000;
+}
+
+body.dark-mode .publicar button {
+  background-color: #000;
+  color: #fff;
+}
+
+body.dark-mode .post {
+  background-color: #000;
+  border: 1px solid #333;
+  box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .post-user-info .company-name {
+  color: #fff;
+}
+
+body.dark-mode .post-content p {
+  color: #fff;
+}
+
+body.dark-mode .post-meta p {
+  color: #bbb;
+}
+
+body.dark-mode .post-meta p:last-child {
+  color: #888;
+}
+
+body.dark-mode .interested-count {
+  color: #bbb;
+}
+
+body.dark-mode .interest-button {
+  background-color: #333;
+  color: #fff;
+}
+
+body.dark-mode .interest-button:hover {
   background-color: #555;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+body.dark-mode .interest-button.interested {
+  background-color: #4caf50;
+  color: #fff;
 }
 
+body.dark-mode .interest-button.interested:hover {
+  background-color: #45a049;
+}
+
+body.dark-mode .comments-section {
+  border-top: 1px solid #444;
+}
+
+body.dark-mode .comment-input {
+  background-color: #222;
+  color: #fff;
+  border-color: #444;
+}
+
+body.dark-mode .comment-submit {
+  background-color: #333;
+  color: #fff;
+}
+
+body.dark-mode .comment-submit:hover {
+  background-color: #555;
+}
+
+body.dark-mode .comment-user {
+  color: #fff;
+}
+
+body.dark-mode .comment-text {
+  color: #e0e0e0;
+}
+
+body.dark-mode .comment-meta {
+  color: #888;
+}
+
+body.dark-mode .comment-profile-pic-container {
+  border-color: #444;
+  background-color: #333;
+}
+
+body.dark-mode .load-more-comments {
+  color: #90caf9;
+}
+
+body.dark-mode .load-more-notifications {
+  color: #90caf9;
+}
+
+body.dark-mode .load-more-notifications:hover {
+  color: #64b5f6;
+}
+
+body.dark-mode .notification-counter {
+  background-color: #d32f2f;
+}
+
+body.dark-mode .notifications-desplegable {
+  background-color: #2a2a2a;
+  border: 1px solid #444444;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .notifications-desplegable::before {
+  border-color: transparent transparent #2a2a2a transparent;
+}
+
+body.dark-mode .notifications-header {
+  color: #e0e0e0;
+  border-bottom: 1px solid #444444;
+}
+
+body.dark-mode .notification-item {
+  color: #e0e0e0;
+  border-bottom: 1px solid #444444;
+}
+
+body.dark-mode .notification-item.unread {
+  background-color: #3a3a3a;
+}
+
+body.dark-mode .notification-item:hover {
+  background-color: #333333;
+}
+
+body.dark-mode .notification-item i {
+  color: #aaaaaa;
+}
+
+body.dark-mode .notification-item.unread i {
+  color: #90caf9;
+}
+
+body.dark-mode .load-more-notifications {
+  color: #90caf9;
+}
+
+body.dark-mode .load-more-notifications:hover {
+  color: #64b5f6;
+}
+
+body.dark-mode .notification {
+  background-color: #4caf50;
+  border: 1px solid #444444;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .notification.error {
+  background-color: #f44336;
+}
+
+body.dark-mode .preview-image, body.dark-mode .preview-video {
+  border-color: #555;
+}
+
+body.dark-mode .etiquetas-preview .etiqueta-pill {
+  background-color: #222;
+  color: #90caf9;
+}
+
+body.dark-mode .etiqueta-pill .remove-etiqueta {
+  color: #90caf9;
+}
+
+body.dark-mode .etiqueta-pill .remove-etiqueta:hover {
+  color: #d32f2f;
+}
+
+body.dark-mode .modal-content {
+  background: #222;
+  color: #fff;
+}
+
+.filter-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 15px 0;
+  text-align: center;
+  color: #000;
+  transition: color 0.3s ease;
+}
+
+body.dark-mode .filter-title {
+  color: #fff;
+}
+
+/* Estilos para el modal de multimedia */
 .media-modal {
   position: fixed;
   top: 0;
@@ -1260,16 +1329,12 @@ body.dark-mode #cancel-btn:hover {
   justify-content: center;
 }
 
-.media-modal-content img,
-.media-modal-content video {
+.media-modal-content img {
   max-width: 100%;
   max-height: 80vh;
   object-fit: contain;
   border-radius: 8px;
-  transition: transform 0.3s ease;
-}
-
-.media-modal-content img {
+  transition: transform 0.2s ease;
   cursor: zoom-in;
 }
 
@@ -1278,17 +1343,23 @@ body.dark-mode #cancel-btn:hover {
   cursor: zoom-out;
 }
 
+.media-modal-content video {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 8px;
+}
+
 .media-modal-close {
   position: absolute;
-  top: -30px;
-  right: -30px;
-  background: #f44336;
+  top: -15px;
+  right: -15px;
+  background-color: #f44336;
   color: #fff;
   border: none;
   border-radius: 50%;
   width: 30px;
   height: 30px;
-  font-size: 16px;
+  font-size: 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1297,15 +1368,12 @@ body.dark-mode #cancel-btn:hover {
 }
 
 .media-modal-close:hover {
-  background: #d32f2f;
+  background-color: #d32f2f;
 }
 
-body.dark-mode .media-modal-close {
-  background: #d32f2f;
-}
-
-body.dark-mode .media-modal-close:hover {
-  background: #b71c1c;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 </style>
 
@@ -1525,7 +1593,7 @@ body.dark-mode .media-modal-close:hover {
   </div>
 
   <script src="translations.js"></script>
-  <script>
+<script>
 // Estrellas para el modo oscuro
 const stars = document.querySelector('.stars');
 const numStars = 1000;
@@ -1573,6 +1641,7 @@ const interestedPosts = new Set();
 let notificationOffset = 0;
 const notificationLimit = 10;
 let notificationCount = 0;
+let ws = null; // Variable para WebSocket
 
 // Obtener ID del usuario actual
 async function fetchCurrentUserId() {
@@ -1814,6 +1883,7 @@ async function cargarComentarios(postId, commentsContainer, loadMoreLink, offset
   }
 }
 
+// Enviar comentario
 async function submitComment(postId, inputElement, commentsContainer) {
   if (!currentUserId) {
     showNotification(translations[localStorage.getItem('language') || 'es'].inicio.comment_login_required, true);
@@ -1880,6 +1950,7 @@ async function submitComment(postId, inputElement, commentsContainer) {
   }
 }
 
+// Manejar interés en publicación
 async function toggleInterest(postId, button) {
   const lang = localStorage.getItem('language') || 'es';
   if (!currentUserId) {
@@ -1948,20 +2019,20 @@ function updateNotificationCounter(count) {
   counter.style.display = count > 0 ? 'flex' : 'none';
 }
 
+// Actualizar contador de chats no leídos
 async function updateChatsUnreadCounter() {
   try {
     const response = await fetch('/chats/unread_count', {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
-    if (!response.ok) throw new Error('Error al obtener contador');
+    if (!response.ok) return;
     const data = await response.json();
     const count = data.unread_count || 0;
     const counter = document.getElementById('chats-unread-counter');
     counter.textContent = count > 9 ? '9+' : count;
     counter.style.display = count > 0 ? 'flex' : 'none';
   } catch (error) {
-    console.error('Error al actualizar contador de chats:', error);
     document.getElementById('chats-unread-counter').style.display = 'none';
   }
 }
@@ -2103,7 +2174,7 @@ async function loadSinglePost(postId) {
         <div class="post-content">${pub.contenido && pub.contenido.trim() !== '' ? `<p>${pub.contenido}</p>` : ''}</div>
         <div class="post-media">
           ${pub.imagen_url && pub.imagen_url.trim() !== '' ? `<img src="${pub.imagen_url}" alt="Imagen" onclick="openMediaModal('${pub.imagen_url}', 'image')">` : ''}
-          ${pub.video_url && pub.video_url.trim() !== '' ? `<video controls src="${pub.video_url}" onclick="openMediaModal('${pub.video_url}', 'video')"></video>` : ''}
+          ${pub.video_url && pub.video_url.trim() !== '' ? `<video src="${pub.video_url}" onclick="openMediaModal('${pub.video_url}', 'video')"></video>` : ''}
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
@@ -2116,7 +2187,7 @@ async function loadSinglePost(postId) {
         </div>
         <div class="comments-section">
           <div class="comment-form">
-            <textarea class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder"></textarea>
+            <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
             <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
           </div>
           <div class="comments-list" id="comments-${pub.id}"></div>
@@ -2151,6 +2222,44 @@ function startNotificationPolling() {
       console.error('Error al verificar notificaciones:', error);
     }
   }, 30000);
+}
+
+// Configuración de WebSocket
+function setupWebSocket() {
+  // Usar wss:// en lugar de ws:// para HTTPS
+  const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+  const wsUrl = `${protocol}${window.location.host}/ws/notificaciones`;
+  ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    console.log('WebSocket conectado');
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.tipo === 'nueva_notificacion') {
+        updateNotificationCounter(notificationCount + 1);
+        if (document.getElementById('notifications-menu').style.display === 'block') {
+          loadNotifications(true); // Recargar notificaciones si el menú está abierto
+        }
+      } else if (data.tipo === 'mensaje_chat') {
+        updateChatsUnreadCounter();
+      }
+    } catch (error) {
+      console.error('Error al procesar mensaje WebSocket:', error);
+    }
+  };
+
+  ws.onclose = () => {
+    console.log('WebSocket desconectado, intentando reconectar...');
+    setTimeout(setupWebSocket, 5000); // Reintentar conexión cada 5 segundos
+  };
+
+  ws.onerror = (error) => {
+    console.error('Error en WebSocket:', error);
+    ws.close();
+  };
 }
 
 // Cargar feed
@@ -2219,7 +2328,7 @@ async function cargarFeed() {
         <div class="post-content">${pub.contenido && pub.contenido.trim() !== '' ? `<p>${pub.contenido}</p>` : ''}</div>
         <div class="post-media">
           ${pub.imagen_url && pub.imagen_url.trim() !== '' ? `<img src="${pub.imagen_url}" alt="Imagen" onclick="openMediaModal('${pub.imagen_url}', 'image')">` : ''}
-          ${pub.video_url && pub.video_url.trim() !== '' ? `<video controls src="${pub.video_url}" onclick="openMediaModal('${pub.video_url}', 'video')"></video>` : ''}
+          ${pub.video_url && pub.video_url.trim() !== '' ? `<video src="${pub.video_url}" onclick="openMediaModal('${pub.video_url}', 'video')"></video>` : ''}
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
@@ -2232,7 +2341,7 @@ async function cargarFeed() {
         </div>
         <div class="comments-section">
           <div class="comment-form">
-            <textarea class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder"></textarea>
+            <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
             <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
           </div>
           <div class="comments-list" id="comments-${pub.id}"></div>
@@ -2332,7 +2441,7 @@ async function search() {
         <div class="post-content">${pub.contenido && pub.contenido.trim() !== '' ? `<p>${pub.contenido}</p>` : ''}</div>
         <div class="post-media">
           ${pub.imagen_url && pub.imagen_url.trim() !== '' ? `<img src="${pub.imagen_url}" alt="Imagen" onclick="openMediaModal('${pub.imagen_url}', 'image')">` : ''}
-          ${pub.video_url && pub.video_url.trim() !== '' ? `<video controls src="${pub.video_url}" onclick="openMediaModal('${pub.video_url}', 'video')"></video>` : ''}
+          ${pub.video_url && pub.video_url.trim() !== '' ? `<video src="${pub.video_url}" onclick="openMediaModal('${pub.video_url}', 'video')"></video>` : ''}
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
@@ -2345,7 +2454,7 @@ async function search() {
         </div>
         <div class="comments-section">
           <div class="comment-form">
-            <textarea class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder"></textarea>
+            <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
             <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
           </div>
           <div class="comments-list" id="comments-${pub.id}"></div>
@@ -2360,485 +2469,317 @@ async function search() {
 
     offset += limit;
   } catch (error) {
-    console.error('Error al realizar la búsqueda:', error);
-    showNotification(translations[localStorage.getItem('language') || 'es'].inicio.feed_error, true);
+    console.error('Error al buscar publicaciones:', error);
+    showNotification(translations[localStorage.getItem('language') || 'es'].inicio.search_error, true);
+  } finally {
+    isLoading = false;
   }
 }
 
-// Filtrar por categoría
-async function filterByCategory(categoria) {
-  const feedDiv = document.getElementById('feed');
-  loadedPostIds.clear();
-  offset = 0;
-  hasMore = true;
-
-  document.querySelectorAll('.categoria-filter').forEach(btn => {
-    btn.classList.remove('active');
-    if (btn.getAttribute('data-categoria') === categoria) btn.classList.add('active');
-  });
-
-  if (!categoria) {
-    isSearching = false;
-    feedDiv.innerHTML = '';
-    await cargarFeed();
-    return;
-  }
-
-  isSearching = true;
-  feedDiv.innerHTML = '';
-
-  try {
-    const response = await fetch(`/search?query=${encodeURIComponent(categoria)}&limit=${limit}&offset=${offset}`, {
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-    });
-    if (!response.ok) {
-      if (response.status === 401) {
-        showNotification(translations[localStorage.getItem('language') || 'es'].inicio.comment_login_required, true);
-        return;
-      }
-      throw new Error(`Error en la solicitud: ${response.status}`);
-    }
-    const publicaciones = await response.json();
-
-    if (!Array.isArray(publicaciones)) {
-      throw new Error("La respuesta del servidor no es un array");
-    }
-
-    if (publicaciones.length === 0 && offset === 0) {
-      feedDiv.innerHTML = `<p style="text-align: center; color: #666;" data-translate="inicio.no_results">${translations[localStorage.getItem('language') || 'es'].inicio.no_results}</p>`;
-      hasMore = false;
-      return;
-    }
-
-    if (publicaciones.length < limit) hasMore = false;
-
-    const lang = localStorage.getItem('language') || 'es';
-
-    publicaciones.forEach(pub => {
-      if (loadedPostIds.has(pub.id)) return;
-      loadedPostIds.add(pub.id);
-      if (pub.interesado) interestedPosts.add(pub.id);
-
-      const div = document.createElement('div');
-      div.classList.add('post');
-      div.setAttribute('data-post-id', pub.id);
-
-      let postContent = `
-        <div class="post-header">
-          <div class="post-profile-pic-container">
-            ${pub.foto_perfil_url ? `<img src="${pub.foto_perfil_url}" alt="Foto de perfil" class="post-profile-pic" onerror="this.parentNode.innerHTML = '<i class=\\'fas fa-user post-profile-icon\\'></i>'">` : `<i class="fas fa-user post-profile-icon"></i>`}
-          </div>
-          <div class="post-user-info">
-            <span class="company-name" style="cursor: pointer;" onclick="redirectToProfile(${pub.user_id})">${pub.nombre_empresa}</span>
-          </div>
-        </div>
-      `;
-
-      if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
-        postContent += `
-          <button class="delete-button" onclick="borrarPublicacion(${pub.id}, this.parentElement)" title="${translations[lang].inicio.delete_post_title}">
-            <i class="fas fa-trash"></i>
-          </button>
-        `;
-      }
-
-      postContent += `
-        <div class="post-content">${pub.contenido && pub.contenido.trim() !== '' ? `<p>${pub.contenido}</p>` : ''}</div>
-        <div class="post-media">
-          ${pub.imagen_url && pub.imagen_url.trim() !== '' ? `<img src="${pub.imagen_url}" alt="Imagen" onclick="openMediaModal('${pub.imagen_url}', 'image')">` : ''}
-          ${pub.video_url && pub.video_url.trim() !== '' ? `<video controls src="${pub.video_url}" onclick="openMediaModal('${pub.video_url}', 'video')"></video>` : ''}
-        </div>
-        <div class="post-meta">
-          <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
-          <p>${pub.fecha_creacion}</p>
-          <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
-            <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i>
-            <span data-translate="inicio.${pub.interesado ? 'interested_button' : 'interest_button'}">${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
-          </button>
-          <span class="interested-count">${translations[lang].inicio.interested_count_label.replace('0', pub.interesados_count || 0)}</span>
-        </div>
-        <div class="comments-section">
-          <div class="comment-form">
-            <textarea class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder"></textarea>
-            <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
-          </div>
-          <div class="comments-list" id="comments-${pub.id}"></div>
-          <div class="load-more-comments" style="display: none;" data-offset="0" onclick="cargarComentarios(${pub.id}, document.getElementById('comments-${pub.id}'), this)">${translations[lang].inicio.load_more_comments}</div>
-        </div>
-      `;
-
-      div.innerHTML = postContent;
-      feedDiv.appendChild(div);
-      cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
-    });
-
-    offset += limit;
-  } catch (error) {
-    console.error('Error al realizar la búsqueda:', error);
-    showNotification(translations[localStorage.getItem('language') || 'es'].inicio.feed_error, true);
-  }
-}
-
-// Manejo de imágenes y videos
-const imagenInput = document.getElementById('imagen');
-const videoInput = document.getElementById('video');
-const contentInput = document.getElementById('content-input');
-const contenidoHidden = document.getElementById('contenido-hidden');
-const etiquetasHidden = document.getElementById('etiquetas-hidden');
-const previewArea = document.getElementById('preview-area');
-const form = document.getElementById('form-publicar');
-const etiquetasPreview = document.getElementById('etiquetas-preview');
-
-function clearPreview() {
-  previewArea.innerHTML = '';
-  imagenInput.value = '';
-  videoInput.value = '';
-}
-
-function addPreview(file, type) {
-  if (!file) return;
-
-  const wrapper = document.createElement('span');
-  wrapper.classList.add('preview-wrapper');
-  const previewElement = document.createElement('img');
-  previewElement.classList.add(type === 'image' ? 'preview-image' : 'preview-video');
-  const removeButton = document.createElement('button');
-  removeButton.classList.add('remove-preview');
-  removeButton.innerHTML = '×';
-  removeButton.title = translations[localStorage.getItem('language') || 'es'].inicio.remove_preview_title;
-  removeButton.addEventListener('click', () => {
-    wrapper.remove();
-    if (type === 'image') imagenInput.value = '';
-    else videoInput.value = '';
-    if (previewElement.src.startsWith('blob:')) URL.revokeObjectURL(previewElement.src);
-  });
-
-  if (type === 'image') {
-    previewElement.src = URL.createObjectURL(file);
-    wrapper.appendChild(previewElement);
-    wrapper.appendChild(removeButton);
-    previewArea.innerHTML = '';
-    previewArea.appendChild(wrapper);
-  } else {
-    const video = document.createElement('video');
-    video.src = URL.createObjectURL(file);
-    video.addEventListener('loadeddata', () => video.currentTime = 1);
-    video.addEventListener('seeked', () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 50;
-      canvas.height = 50;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, 50, 50);
-      previewElement.src = canvas.toDataURL('image/png');
-      wrapper.appendChild(previewElement);
-      wrapper.appendChild(removeButton);
-      previewArea.innerHTML = '';
-      previewArea.appendChild(wrapper);
-      URL.revokeObjectURL(video.src);
-    }, { once: true });
-  }
-}
-
-imagenInput.addEventListener('change', () => {
-  if (imagenInput.files && imagenInput.files[0]) addPreview(imagenInput.files[0], 'image');
-});
-
-videoInput.addEventListener('change', () => {
-  if (videoInput.files && videoInput.files[0]) addPreview(videoInput.files[0], 'video');
-});
-
-// Manejo de etiquetas
-function updateEtiquetasPreview() {
-  etiquetasPreview.innerHTML = '';
-  const selectedCategorias = Array.from(document.querySelectorAll('input[name="categorias"]:checked')).map(input => input.value);
-  let etiquetas = selectedCategorias.filter(cat => cat !== 'otro');
-  if (selectedCategorias.includes('otro')) {
-    const otraCategoria = document.getElementById('otra-categoria-input').value.trim();
-    if (otraCategoria) etiquetas.push(otraCategoria);
-  }
-
-  etiquetasHidden.value = etiquetas.join(',');
-
-  etiquetas.forEach(tag => {
-    const pill = document.createElement('span');
-    pill.classList.add('etiqueta-pill');
-    pill.innerHTML = `
-      ${tag}
-      <button class="remove-etiqueta" title="${translations[localStorage.getItem('language') || 'es'].inicio.remove_tag_title}">×</button>
-    `;
-    pill.querySelector('.remove-etiqueta').addEventListener('click', () => {
-      pill.remove();
-      const checkbox = document.querySelector(`input[name="categorias"][value="${tag}"]`);
-      if (checkbox) {
-        checkbox.checked = false;
-      } else {
-        document.getElementById('cat-otro').checked = false;
-        document.getElementById('otra-categoria-input').value = '';
-        document.getElementById('otra-categoria').style.display = 'none';
-      }
-      updateEtiquetasPreview();
-    });
-    etiquetasPreview.appendChild(pill);
-  });
-}
-
-// Modal de multimedia
+// Abrir modal de multimedia
 function openMediaModal(url, type) {
   const modal = document.getElementById('media-modal');
-  const content = modal.querySelector('.media-modal-content');
-  content.innerHTML = `
-    <button class="media-modal-close" title="${translations[localStorage.getItem('language') || 'es'].inicio.close_media_title}">×</button>
-    ${type === 'image' ? `<img src="${url}" alt="Imagen">` : `<video controls src="${url}" autoplay></video>`}
-  `;
-  modal.style.display = 'flex';
+  const modalContent = document.getElementById('media-modal-content');
+  modalContent.innerHTML = '';
 
   if (type === 'image') {
-    const img = content.querySelector('img');
-    img.addEventListener('click', () => {
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = 'Imagen ampliada';
+    img.onclick = () => {
       img.classList.toggle('zoomed');
+    };
+    modalContent.appendChild(img);
+  } else if (type === 'video') {
+    const video = document.createElement('video');
+    video.src = url;
+    video.controls = true;
+    video.autoplay = false;
+    modalContent.appendChild(video);
+  }
+
+  modal.style.display = 'flex';
+}
+
+// Cerrar modal de multimedia
+function closeMediaModal() {
+  const modal = document.getElementById('media-modal');
+  modal.style.display = 'none';
+  const modalContent = document.getElementById('media-modal-content');
+  modalContent.innerHTML = '';
+}
+
+// Manejar eventos de teclado para comentarios
+function setupCommentInputs() {
+  document.addEventListener('keydown', (event) => {
+    const activeElement = document.activeElement;
+    if (activeElement.classList.contains('comment-input')) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        const postId = activeElement.closest('.post').dataset.postId;
+        const commentsContainer = activeElement.nextElementSibling.nextElementSibling;
+        submitComment(postId, activeElement, commentsContainer);
+      } else if (event.key === 'Enter' && event.shiftKey) {
+        event.preventDefault();
+        const start = activeElement.selectionStart;
+        const end = activeElement.selectionEnd;
+        activeElement.value = activeElement.value.substring(0, start) + '\n' + activeElement.value.substring(end);
+        activeElement.selectionStart = activeElement.selectionEnd = start + 1;
+      }
+    }
+  });
+}
+
+// Manejar categorías
+function setupCategories() {
+  const categoriaButtons = document.querySelectorAll('.categoria-button');
+  const postForm = document.getElementById('post-form');
+  const etiquetasInput = document.getElementById('etiquetas');
+  const etiquetasPreview = document.getElementById('etiquetas-preview');
+
+  categoriaButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      button.classList.toggle('active');
+      updateSelectedCategories();
+    });
+  });
+
+  function updateSelectedCategories() {
+    const selectedCategories = Array.from(categoriaButtons)
+      .filter(button => button.classList.contains('active'))
+      .map(button => button.dataset.category);
+    etiquetasInput.value = selectedCategories.join(',');
+    updateEtiquetasPreview(selectedCategories);
+  }
+
+  function updateEtiquetasPreview(categories) {
+    etiquetasPreview.innerHTML = '';
+    categories.forEach(category => {
+      const pill = document.createElement('span');
+      pill.classList.add('etiqueta-pill');
+      pill.innerHTML = `
+        ${category}
+        <button class="remove-etiqueta" data-category="${category}">&times;</button>
+      `;
+      etiquetasPreview.appendChild(pill);
+    });
+
+    document.querySelectorAll('.remove-etiqueta').forEach(button => {
+      button.addEventListener('click', () => {
+        const category = button.dataset.category;
+        const buttonToToggle = document.querySelector(`.categoria-button[data-category="${category}"]`);
+        if (buttonToToggle) buttonToToggle.classList.remove('active');
+        updateSelectedCategories();
+      });
     });
   }
-
-  content.querySelector('.media-modal-close').addEventListener('click', () => {
-    modal.style.display = 'none';
-    content.innerHTML = `<button class="media-modal-close" title="${translations[localStorage.getItem('language') || 'es'].inicio.close_media_title}">×</button>`;
-  });
 }
 
-// Función para cerrar todos los menús desplegables
-function closeAllMenus(excludeNotifications = false) {
-  const menus = ['menu-perfil', 'language-menu', 'categorias-menu'];
-  if (!excludeNotifications) {
-    menus.push('notifications-menu');
-  }
-  menus.forEach(menuId => {
-    const menu = document.getElementById(menuId);
-    if (menu) menu.style.display = 'none';
-  });
-}
+// Manejar menús desplegables
+function setupMenus() {
+  const perfilMenu = document.getElementById('menu-perfil');
+  const languageMenu = document.getElementById('language-menu');
+  const categoriasMenu = document.getElementById('categorias-menu');
+  const notificationsMenu = document.getElementById('notifications-menu');
 
-// Función para alternar menús desplegables
-function toggleMenu(menuId, event) {
-  event.stopPropagation();
-  const menu = document.getElementById(menuId);
-  const isOpen = menu.style.display === 'block';
-  
-  closeAllMenus(menuId !== 'notifications-menu');
-
-  menu.style.display = isOpen ? 'none' : 'block';
-  if (menuId === 'notifications-menu' && !isOpen) {
-    loadNotifications(true); // Cargar notificaciones cada vez que se abre
-  }
-}
-
-// Eventos para los menús desplegables
-document.getElementById('perfil-btn').addEventListener('click', (event) => toggleMenu('menu-perfil', event));
-document.getElementById('language-toggle').addEventListener('click', (event) => toggleMenu('language-menu', event));
-document.getElementById('categorias-toggle').addEventListener('click', (event) => toggleMenu('categorias-menu', event));
-document.getElementById('notifications-toggle').addEventListener('click', (event) => toggleMenu('notifications-menu', event));
-
-// Prevenir que los clics dentro de los menús los cierren
-['menu-perfil', 'language-menu', 'categorias-menu', 'notifications-menu'].forEach(menuId => {
-  document.getElementById(menuId).addEventListener('click', (event) => event.stopPropagation());
-});
-
-// Cambiar idioma al hacer clic en una opción del menú de idioma
-document.querySelectorAll('#language-menu button[data-lang]').forEach(btn => {
-  btn.addEventListener('click', function() {
-    const lang = this.getAttribute('data-lang');
-    localStorage.setItem('language', lang);
-    updateLanguage(lang);
+  function toggleMenu(menu, button) {
+    const isOpen = menu.style.display === 'block';
     closeAllMenus();
+    menu.style.display = isOpen ? 'none' : 'block';
+    if (menu.id === 'notifications-menu' && !isOpen) {
+      loadNotifications(true);
+    }
+  }
+
+  function closeAllMenus() {
+    perfilMenu.style.display = 'none';
+    languageMenu.style.display = 'none';
+    categoriasMenu.style.display = 'none';
+    notificationsMenu.style.display = 'none';
+  }
+
+  document.querySelector('.perfil-menu > .icon-button').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMenu(perfilMenu, e.currentTarget);
   });
-});
 
-// Eventos para el menú de categorías
-document.getElementById('categorias-listo').addEventListener('click', (event) => {
-  event.stopPropagation();
-  document.getElementById('categorias-menu').style.display = 'none';
-  updateEtiquetasPreview();
-});
+  document.querySelector('.language-menu > .icon-button').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMenu(languageMenu, e.currentTarget);
+  });
 
-document.getElementById('cat-otro').addEventListener('change', function() {
-  document.getElementById('otra-categoria').style.display = this.checked ? 'block' : 'none';
-});
+  document.querySelector('.categorias-menu > .icon-button').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMenu(categoriasMenu, e.currentTarget);
+  });
 
-document.querySelectorAll('input[name="categorias"]').forEach(input => {
-  input.addEventListener('change', updateEtiquetasPreview);
-});
+  document.querySelector('.notifications-menu > .icon-button').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMenu(notificationsMenu, e.currentTarget);
+  });
 
-document.getElementById('otra-categoria-input').addEventListener('input', updateEtiquetasPreview);
-
-// Evento para el formulario
-contentInput.addEventListener('input', () => {
-  contenidoHidden.value = contentInput.innerText;
-});
-
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const lang = localStorage.getItem('language') || 'es';
-  const contenido = contentInput.innerText.trim();
-  const imagen = imagenInput.files[0];
-  const video = videoInput.files[0];
-  const etiquetas = etiquetasHidden.value.trim();
-
-  if (!contenido && !imagen && !video && !etiquetas) {
-    showNotification(translations[lang].inicio.post_error_empty, true);
-    return;
-  }
-
-  const formData = new FormData();
-  if (contenido) formData.append('contenido', contenido);
-  if (etiquetas) formData.append('etiquetas', etiquetas);
-  if (imagen) formData.append('imagen', imagen);
-  else if (video) formData.append('video', video);
-
-  try {
-    const response = await fetch('/publicar', {
-      method: 'POST',
-      body: formData,
-      credentials: 'include',
-    });
-
-    if (response.ok) {
-      form.reset();
-      contentInput.innerText = '';
-      contenidoHidden.value = '';
-      etiquetasHidden.value = '';
-      clearPreview();
-      etiquetasPreview.innerHTML = '';
-      document.querySelectorAll('input[name="categorias"]').forEach(input => input.checked = false);
-      document.getElementById('otra-categoria').style.display = 'none';
-      showNotification(translations[lang].inicio.post_success);
-      loadedPostIds.clear();
-      offset = 0;
-      hasMore = true;
-      document.getElementById('feed').innerHTML = '';
-      await cargarFeed();
-    } else {
-      const data = await response.json();
-      showNotification(`${translations[lang].inicio.post_error}: ${data.detail || translations[lang].inicio.unknown_error}`, true);
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.perfil-menu, .language-menu, .categorias-menu, .notifications-menu')) {
+      closeAllMenus();
     }
-  } catch (error) {
-    console.error('Error al publicar:', error);
-    showNotification(translations[lang].inicio.post_error_network, true);
-  }
-});
+  });
+}
 
-// Manejo de comentarios con Enter y Shift+Enter
-document.addEventListener('keydown', (event) => {
-  const activeElement = document.activeElement;
-  if (activeElement.classList.contains('comment-input')) {
-    const input = activeElement;
-    const postId = input.closest('.post').getAttribute('data-post-id');
-    const commentsContainer = input.nextElementSibling.nextElementSibling;
-
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      submitComment(postId, input, commentsContainer);
-    } else if (event.key === 'Enter' && event.shiftKey) {
-      input.value += '\n';
-    }
-  }
-});
-
-// Manejo de scroll
-let isScrolling = false;
-function handleScroll() {
-  if (isScrolling) return;
-  isScrolling = true;
-  setTimeout(() => {
-    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100 && !isLoading && hasMore) {
-      if (isSearching) {
-        const activeCategoria = document.querySelector('.categoria-filter.active');
-        if (activeCategoria) filterByCategory(activeCategoria.getAttribute('data-categoria'));
-        else search();
-      } else {
-        cargarFeed();
+// Limpiar contador de chats no leídos al abrir la página de chats
+function setupChatsLink() {
+  const chatsLink = document.querySelector('a[href="/mensajes"]');
+  if (chatsLink) {
+    chatsLink.addEventListener('click', async (e) => {
+      try {
+        await fetch('/chats/mark_all_read', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+        const counter = document.getElementById('chats-unread-counter');
+        counter.style.display = 'none';
+      } catch (error) {
+        console.error('Error al marcar chats como leídos:', error);
       }
-    }
-    isScrolling = false;
-  }, 100);
-}
-
-// Añadir WebSocket para notificaciones de chat
-async function initializeWebSocket() {
-  try {
-    const response = await fetch('/current_user', {
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
     });
-    if (!response.ok) throw new Error('No se pudo obtener el ID del usuario');
-    const data = await response.json();
-    if (!data.user_id) throw new Error('Usuario no autenticado');
-
-    const ws = new WebSocket(`wss://${window.location.host}/chats/ws/${data.user_id}`);
-    ws.onopen = () => console.log('WebSocket conectado para chats');
-    ws.onmessage = async (event) => {
-      const message = JSON.parse(event.data);
-      console.log('Mensaje WebSocket recibido:', message);
-      if (message.tipo === 'texto' || message.tipo === 'imagen' || message.tipo === 'video' || message.tipo === 'voz' || message.tipo === 'document') {
-        await updateChatsUnreadCounter();
-      } else if (message.tipo === 'nuevo_chat') {
-        await updateChatsUnreadCounter();
-      }
-    };
-    ws.onclose = () => {
-      console.log('WebSocket desconectado, intentando reconectar...');
-      setTimeout(initializeWebSocket, 5000);
-    };
-    ws.onerror = (error) => console.error('Error en WebSocket:', error);
-  } catch (error) {
-    console.error('Error al inicializar WebSocket:', error);
   }
 }
-
-// Polling para actualizar el contador cada 30 segundos
-function startChatsPolling() {
-  setInterval(updateChatsUnreadCounter, 30000);
-}
-
-// Manejo del botón de chats
-document.getElementById('chats-toggle').addEventListener('click', async (event) => {
-  event.preventDefault();
-  try {
-    await fetch('/chats/mark_all_read', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-    });
-    const counter = document.getElementById('chats-unread-counter');
-    counter.textContent = '0';
-    counter.style.display = 'none';
-    window.location.href = 'chats.html';
-  } catch (error) {
-    console.error('Error al marcar mensajes como leídos:', error);
-    showNotification(translations[localStorage.getItem('language') || 'es'].inicio.chats_error, true);
-  }
-});
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', async () => {
-  const savedLang = localStorage.getItem('language') || 'es';
-  updateLanguage(savedLang);
   await fetchCurrentUserId();
-  cargarFeed();
-  loadNotifications(true);
+  await cargarFeed();
+  await updateChatsUnreadCounter();
   startNotificationPolling();
-  initializeWebSocket();
-  updateChatsUnreadCounter();
-  startChatsPolling();
-  window.addEventListener('scroll', handleScroll);
+  setupWebSocket();
+  setupCommentInputs();
+  setupCategories();
+  setupMenus();
+  setupChatsLink();
 
-  document.querySelectorAll('.categoria-filter').forEach(button => {
-    button.addEventListener('click', () => filterByCategory(button.getAttribute('data-categoria')));
+  const postForm = document.getElementById('post-form');
+  if (postForm) {
+    postForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(postForm);
+      try {
+        const response = await fetch('/publicar', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const newPost = await response.json();
+          loadedPostIds.add(newPost.id);
+          const feedDiv = document.getElementById('feed');
+          const lang = localStorage.getItem('language') || 'es';
+          const div = document.createElement('div');
+          div.classList.add('post');
+          div.setAttribute('data-post-id', newPost.id);
+
+          let postContent = `
+            <div class="post-header">
+              <div class="post-profile-pic-container">
+                ${newPost.foto_perfil_url ? `<img src="${newPost.foto_perfil_url}" alt="Foto de perfil" class="post-profile-pic" onerror="this.parentNode.innerHTML = '<i class=\\'fas fa-user post-profile-icon\\'></i>'">` : `<i class="fas fa-user post-profile-icon"></i>`}
+              </div>
+              <div class="post-user-info">
+                <span class="company-name" style="cursor: pointer;" onclick="redirectToProfile(${newPost.user_id})">${newPost.nombre_empresa}</span>
+              </div>
+            </div>
+            <button class="delete-button" onclick="borrarPublicacion(${newPost.id}, this.parentElement)" title="${translations[lang].inicio.delete_post_title}">
+              <i class="fas fa-trash"></i>
+            </button>
+            <div class="post-content">${newPost.contenido && newPost.contenido.trim() !== '' ? `<p>${newPost.contenido}</p>` : ''}</div>
+            <div class="post-media">
+              ${newPost.imagen_url && newPost.imagen_url.trim() !== '' ? `<img src="${newPost.imagen_url}" alt="Imagen" onclick="openMediaModal('${newPost.imagen_url}', 'image')">` : ''}
+              ${newPost.video_url && newPost.video_url.trim() !== '' ? `<video src="${newPost.video_url}" onclick="openMediaModal('${newPost.video_url}', 'video')"></video>` : ''}
+            </div>
+            <div class="post-meta">
+              <p>${translations[lang].inicio.tags_label}: ${newPost.etiquetas && newPost.etiquetas.length ? newPost.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
+              <p>${newPost.fecha_creacion}</p>
+              <button class="interest-button" data-post-id="${newPost.id}" onclick="toggleInterest(${newPost.id}, this)">
+                <i class="fas fa-plus"></i>
+                <span data-translate="inicio.interest_button">${translations[lang].inicio.interest_button}</span>
+              </button>
+              <span class="interested-count">${translations[lang].inicio.interested_count_label.replace('0', newPost.interesados_count || 0)}</span>
+            </div>
+            <div class="comments-section">
+              <div class="comment-form">
+                <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
+                <button class="comment-submit" onclick="submitComment(${newPost.id}, this.previousElementSibling, this.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
+              </div>
+              <div class="comments-list" id="comments-${newPost.id}"></div>
+              <div class="load-more-comments" style="display: none;" data-offset="0" onclick="cargarComentarios(${newPost.id}, document.getElementById('comments-${newPost.id}'), this)">${translations[lang].inicio.load_more_comments}</div>
+            </div>
+          `;
+
+          div.innerHTML = postContent;
+          feedDiv.prepend(div);
+          document.getElementById('content-input').textContent = '';
+          document.getElementById('media-input').value = '';
+          document.getElementById('etiquetas').value = '';
+          document.getElementById('etiquetas-preview').innerHTML = '';
+          document.querySelectorAll('.categoria-button').forEach(btn => btn.classList.remove('active'));
+          showNotification(translations[lang].inicio.post_success);
+        } else {
+          const data = await response.json();
+          showNotification(`${translations[lang].inicio.post_error}: ${data.detail || translations[lang].inicio.unknown_error}`, true);
+        }
+      } catch (error) {
+        console.error('Error al publicar:', error);
+        showNotification(translations[localStorage.getItem('language') || 'es'].inicio.post_error_network, true);
+      }
+    });
+  }
+
+  const searchInput = document.getElementById('buscador');
+  if (searchInput) {
+    searchInput.addEventListener('input', debounce(search, 500));
+  }
+
+  const mediaInput = document.getElementById('media-input');
+  const previewArea = document.getElementById('preview-area');
+  if (mediaInput) {
+    mediaInput.addEventListener('change', () => {
+      previewArea.innerHTML = '';
+      const files = mediaInput.files;
+      for (let file of files) {
+        const fileType = file.type.split('/')[0];
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('preview-wrapper');
+        const mediaElement = document.createElement(fileType === 'image' ? 'img' : 'video');
+        mediaElement.classList.add(fileType === 'image' ? 'preview-image' : 'preview-video');
+        mediaElement.src = URL.createObjectURL(file);
+        if (fileType === 'video') mediaElement.controls = false;
+        const removeButton = document.createElement('button');
+        removeButton.classList.add('remove-preview');
+        removeButton.innerHTML = '&times;';
+        removeButton.addEventListener('click', () => {
+          wrapper.remove();
+          mediaInput.value = '';
+        });
+        wrapper.appendChild(mediaElement);
+        wrapper.appendChild(removeButton);
+        previewArea.appendChild(wrapper);
+      }
+    });
+  }
+
+  const loadMoreNotifications = document.getElementById('load-more-notifications');
+  if (loadMoreNotifications) {
+    loadMoreNotifications.addEventListener('click', () => loadNotifications());
+  }
+
+  document.getElementById('media-modal-close').addEventListener('click', closeMediaModal);
+
+  window.addEventListener('scroll', () => {
+    if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100 && !isLoading && hasMore && !isSearching) {
+      cargarFeed();
+    }
   });
 });
 
-// Debounce para búsqueda
-document.getElementById('buscador').addEventListener('input', debounce(search, 300));
-
+// Función de debounce para búsqueda
 function debounce(func, wait) {
   let timeout;
   return function executedFunction(...args) {
@@ -2850,6 +2791,7 @@ function debounce(func, wait) {
     timeout = setTimeout(later, wait);
   };
 }
+
 </script>
 </body>
 </html>
