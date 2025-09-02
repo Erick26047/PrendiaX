@@ -5,8 +5,6 @@
   <title>Inicio | PrendiaX</title>
    <link rel="icon" type="image/png" href="PRENDIAX.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/dist/date-fns.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/date-fns-tz@1.3.7/dist/date-fns-tz.min.js"></script>
   <link rel="stylesheet" href="style.css" />
  <style>
 body {
@@ -1569,6 +1567,22 @@ const interestedPosts = new Set();
 let notificationOffset = 0;
 const notificationLimit = 10;
 let notificationCount = 0;
+let wsNotifications = null;
+
+// Formatear fechas según idioma
+function formatDate(dateString, lang = 'es') {
+  const date = new Date(dateString);
+  if (isNaN(date)) return 'Fecha inválida';
+  const options = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: lang === 'en',
+  };
+  return date.toLocaleString(lang === 'es' ? 'es-ES' : 'en-US', options);
+}
 
 // Obtener ID del usuario actual
 async function fetchCurrentUserId() {
@@ -1637,6 +1651,16 @@ function updateLanguage(lang) {
   });
   document.documentElement.lang = lang;
   updatePlaceholder();
+  // Actualizar fechas en publicaciones y comentarios
+  document.querySelectorAll('.post-meta p:not(:last-child)').forEach(p => {
+    const dateText = p.textContent.split(': ')[1];
+    if (dateText && !isNaN(new Date(dateText))) {
+      p.textContent = `${translations[lang].inicio.tags_label}: ${p.textContent.split(': ')[1]}`;
+    }
+  });
+  document.querySelectorAll('.comment-meta').forEach(p => {
+    p.textContent = formatDate(p.textContent, lang);
+  });
 }
 
 // Actualizar placeholders
@@ -1779,12 +1803,6 @@ async function cargarComentarios(postId, commentsContainer, loadMoreLink, offset
     comentarios.comentarios.forEach(comentario => {
       const commentDiv = document.createElement('div');
       commentDiv.classList.add('comment');
-      // Formatear la fecha en CST
-      const fechaCST = dateFnsTz.format(
-        dateFnsTz.utcToZonedTime(new Date(comentario.fecha_creacion), 'America/Chicago'),
-        'dd/MM/yyyy HH:mm:ss',
-        { timeZone: 'America/Chicago' }
-      );
       let commentContent = `
         <div class="comment-profile-pic-container">
           ${comentario.foto_perfil_url ? `<img src="${comentario.foto_perfil_url}" alt="Foto de perfil" class="comment-profile-pic" onerror="this.parentNode.innerHTML = '<i class=\\'fas fa-user comment-profile-icon\\'></i>'">` : `<i class="fas fa-user comment-profile-icon"></i>`}
@@ -1792,7 +1810,7 @@ async function cargarComentarios(postId, commentsContainer, loadMoreLink, offset
         <div class="comment-content">
           <p class="comment-user" style="cursor: pointer;" onclick="redirectToProfile(${comentario.user_id})">${comentario.nombre_empresa}</p>
           <p class="comment-text">${comentario.contenido}</p>
-          <p class="comment-meta">${fechaCST}</p>
+          <p class="comment-meta">${formatDate(comentario.fecha_creacion, lang)}</p>
         </div>
       `;
 
@@ -1815,6 +1833,7 @@ async function cargarComentarios(postId, commentsContainer, loadMoreLink, offset
     showNotification(translations[localStorage.getItem('language') || 'es'].inicio.comments_error, true);
   }
 }
+
 async function submitComment(postId, inputElement, commentsContainer) {
   if (!currentUserId) {
     showNotification(translations[localStorage.getItem('language') || 'es'].inicio.comment_login_required, true);
@@ -1840,12 +1859,6 @@ async function submitComment(postId, inputElement, commentsContainer) {
       const lang = localStorage.getItem('language') || 'es';
       const commentDiv = document.createElement('div');
       commentDiv.classList.add('comment');
-      // Formatear la fecha en CST
-      const fechaCST = dateFnsTz.format(
-        dateFnsTz.utcToZonedTime(new Date(comentario.fecha_creacion), 'America/Chicago'),
-        'dd/MM/yyyy HH:mm:ss',
-        { timeZone: 'America/Chicago' }
-      );
       let commentContent = `
         <div class="comment-profile-pic-container">
           ${comentario.foto_perfil_url ? `<img src="${comentario.foto_perfil_url}" alt="Foto de perfil" class="comment-profile-pic" onerror="this.parentNode.innerHTML = '<i class=\\'fas fa-user comment-profile-icon\\'></i>'">` : `<i class="fas fa-user comment-profile-icon"></i>`}
@@ -1853,7 +1866,7 @@ async function submitComment(postId, inputElement, commentsContainer) {
         <div class="comment-content">
           <p class="comment-user" style="cursor: pointer;" onclick="redirectToProfile(${comentario.user_id})">${comentario.nombre_usuario || comentario.nombre_empresa}</p>
           <p class="comment-text">${comentario.contenido}</p>
-          <p class="comment-meta">${fechaCST}</p>
+          <p class="comment-meta">${formatDate(comentario.fecha_creacion, lang)}</p>
         </div>
         <button class="comment-delete" onclick="borrarComentario(${comentario.id}, this.parentElement)" title="${translations[lang].inicio.delete_comment_title}">
           <i class="fas fa-trash"></i>
@@ -1951,29 +1964,12 @@ async function toggleInterest(postId, button) {
 function updateNotificationCounter(count) {
   const counter = document.getElementById('notification-counter');
   notificationCount = count;
-  counter.textContent = count;
+  counter.textContent = count > 9 ? '9+' : count;
   counter.style.display = count > 0 ? 'flex' : 'none';
 }
 
-async function updateChatsUnreadCounter() {
-  try {
-    const response = await fetch('/chats/unread_count', {
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-    });
-    if (!response.ok) return;
-    const data = await response.json();
-    const count = data.unread_count || 0;
-    const counter = document.getElementById('chats-unread-counter');
-    counter.textContent = count > 9 ? '9+' : count;
-    counter.style.display = count > 0 ? 'flex' : 'none';
-  } catch (error) {
-    document.getElementById('chats-unread-counter').style.display = 'none';
-  }
-}
-
 // Cargar notificaciones
-async function loadNotifications(clearList = false) {
+async function loadNotifications() {
   try {
     const response = await fetch(`/notificaciones?limit=${notificationLimit}&offset=${notificationOffset}`, {
       headers: { 'Content-Type': 'application/json' },
@@ -1993,9 +1989,9 @@ async function loadNotifications(clearList = false) {
     const notificationsList = document.getElementById('notifications-list');
     const loadMoreButton = document.getElementById('load-more-notifications');
 
-    if (clearList) {
+    // Limpiar la lista solo si es la primera carga (offset === 0)
+    if (notificationOffset === 0) {
       notificationsList.innerHTML = '';
-      notificationOffset = 0;
     }
 
     if (notifications.length === 0 && notificationOffset === 0) {
@@ -2006,6 +2002,9 @@ async function loadNotifications(clearList = false) {
     }
 
     notifications.forEach(notification => {
+      // Evitar duplicados
+      if (notificationsList.querySelector(`[data-notification-id="${notification.id}"]`)) return;
+
       const notificationItem = document.createElement('div');
       notificationItem.classList.add('notification-item');
       notificationItem.setAttribute('data-notification-id', notification.id);
@@ -2016,11 +2015,15 @@ async function loadNotifications(clearList = false) {
         ? translations[lang].inicio.notification_comment.replace('{user}', notification.nombre_usuario || 'Usuario').replace('{post}', notification.publicacion_id)
         : translations[lang].inicio.notification_interest.replace('{user}', notification.nombre_usuario || 'Usuario').replace('{post}', notification.publicacion_id);
 
-      notificationItem.innerHTML = `<i class="${iconClass}"></i><span>${message}</span>`;
+      notificationItem.innerHTML = `
+        <i class="${iconClass}"></i>
+        <span>${message}</span>
+        <p class="notification-meta">${formatDate(notification.fecha_creacion, lang)}</p>
+      `;
       notificationItem.addEventListener('click', () => {
         markNotificationAsRead(notification.id);
         scrollToPost(notification.publicacion_id);
-        document.getElementById('notifications-menu').style.display = 'none'; // Cerrar el menú al hacer clic en una notificación
+        document.getElementById('notifications-menu').style.display = 'none';
       });
       notificationsList.appendChild(notificationItem);
     });
@@ -2028,6 +2031,17 @@ async function loadNotifications(clearList = false) {
     updateNotificationCounter(data.no_leidas || 0);
     loadMoreButton.style.display = notificationOffset + notifications.length < total ? 'block' : 'none';
     notificationOffset += notifications.length;
+
+    // Añadir botón para marcar todas como leídas
+    const markAllReadButton = document.getElementById('mark-all-read');
+    if (!markAllReadButton && notifications.length > 0) {
+      const button = document.createElement('button');
+      button.id = 'mark-all-read';
+      button.classList.add('load-more-notifications');
+      button.textContent = translations[lang].inicio.mark_all_read;
+      button.addEventListener('click', markAllNotificationsAsRead);
+      notificationsList.insertAdjacentElement('afterend', button);
+    }
   } catch (error) {
     console.error('Error al cargar notificaciones:', error);
     showNotification(translations[localStorage.getItem('language') || 'es'].inicio.notifications_error, true);
@@ -2049,6 +2063,25 @@ async function markNotificationAsRead(notificationId) {
     }
   } catch (error) {
     console.error('Error al marcar notificación como leída:', error);
+  }
+}
+
+// Marcar todas las notificaciones como leídas
+async function markAllNotificationsAsRead() {
+  try {
+    const response = await fetch('/notificaciones/marcar_todas_leidas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+    if (response.ok) {
+      document.querySelectorAll('.notification-item.unread').forEach(item => item.classList.remove('unread'));
+      updateNotificationCounter(0);
+      showNotification(translations[localStorage.getItem('language') || 'es'].inicio.notifications_all_read);
+    }
+  } catch (error) {
+    console.error('Error al marcar todas las notificaciones como leídas:', error);
+    showNotification(translations[localStorage.getItem('language') || 'es'].inicio.notifications_error, true);
   }
 }
 
@@ -2113,7 +2146,7 @@ async function loadSinglePost(postId) {
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
-          <p>${pub.fecha_creacion}</p>
+          <p>${formatDate(pub.fecha_creacion, lang)}</p>
           <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
             <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i>
             <span data-translate="inicio.${pub.interesado ? 'interested_button' : 'interest_button'}">${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
@@ -2138,6 +2171,58 @@ async function loadSinglePost(postId) {
   } catch (error) {
     console.error('Error al cargar publicación:', error);
     showNotification(translations[localStorage.getItem('language') || 'es'].inicio.feed_error, true);
+  }
+}
+
+// Inicializar WebSocket para notificaciones
+async function initializeNotificationsWebSocket() {
+  try {
+    const response = await fetch('/current_user', {
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error('No se pudo obtener el ID del usuario');
+    const data = await response.json();
+    if (!data.user_id) throw new Error('Usuario no autenticado');
+
+    wsNotifications = new WebSocket(`ws://${window.location.host}/notificaciones/ws/${data.user_id}`);
+    wsNotifications.onopen = () => console.log('WebSocket conectado para notificaciones');
+    wsNotifications.onmessage = async (event) => {
+      const notification = JSON.parse(event.data);
+      console.log('Notificación WebSocket recibida:', notification);
+      const notificationsList = document.getElementById('notifications-list');
+      const lang = localStorage.getItem('language') || 'es';
+
+      if (!notificationsList.querySelector(`[data-notification-id="${notification.id}"]`)) {
+        const notificationItem = document.createElement('div');
+        notificationItem.classList.add('notification-item', 'unread');
+        notificationItem.setAttribute('data-notification-id', notification.id);
+        let iconClass = notification.tipo === 'comentario' ? 'fas fa-comment' : 'fas fa-plus';
+        let message = notification.tipo === 'comentario'
+          ? translations[lang].inicio.notification_comment.replace('{user}', notification.nombre_usuario || 'Usuario').replace('{post}', notification.publicacion_id)
+          : translations[lang].inicio.notification_interest.replace('{user}', notification.nombre_usuario || 'Usuario').replace('{post}', notification.publicacion_id);
+
+        notificationItem.innerHTML = `
+          <i class="${iconClass}"></i>
+          <span>${message}</span>
+          <p class="notification-meta">${formatDate(notification.fecha_creacion, lang)}</p>
+        `;
+        notificationItem.addEventListener('click', () => {
+          markNotificationAsRead(notification.id);
+          scrollToPost(notification.publicacion_id);
+          document.getElementById('notifications-menu').style.display = 'none';
+        });
+        notificationsList.prepend(notificationItem);
+        updateNotificationCounter(notificationCount + 1);
+      }
+    };
+    wsNotifications.onclose = () => {
+      console.log('WebSocket de notificaciones desconectado, intentando reconectar...');
+      setTimeout(initializeNotificationsWebSocket, 5000);
+    };
+    wsNotifications.onerror = (error) => console.error('Error en WebSocket de notificaciones:', error);
+  } catch (error) {
+    console.error('Error al inicializar WebSocket de notificaciones:', error);
   }
 }
 
@@ -2201,12 +2286,7 @@ async function cargarFeed() {
       const div = document.createElement('div');
       div.classList.add('post');
       div.setAttribute('data-post-id', pub.id);
-// Formatear la fecha en CST
-const fechaCST = dateFnsTz.format(
-  dateFnsTz.utcToZonedTime(new Date(pub.fecha_creacion), 'America/Chicago'),
-  'dd/MM/yyyy HH:mm:ss',
-  { timeZone: 'America/Chicago' }
-);
+
       let postContent = `
         <div class="post-header">
           <div class="post-profile-pic-container">
@@ -2234,7 +2314,7 @@ const fechaCST = dateFnsTz.format(
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
-          <p>${pub.fecha_creacion}</p>
+          <p>${formatDate(pub.fecha_creacion, lang)}</p>
           <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
             <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i>
             <span data-translate="inicio.${pub.interesado ? 'interested_button' : 'interest_button'}">${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
@@ -2347,7 +2427,7 @@ async function search() {
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
-          <p>${pub.fecha_creacion}</p>
+          <p>${formatDate(pub.fecha_creacion, lang)}</p>
           <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
             <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i>
             <span data-translate="inicio.${pub.interesado ? 'interested_button' : 'interest_button'}">${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
@@ -2462,7 +2542,7 @@ async function filterByCategory(categoria) {
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
-          <p>${pub.fecha_creacion}</p>
+          <p>${formatDate(pub.fecha_creacion, lang)}</p>
           <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
             <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i>
             <span data-translate="inicio.${pub.interesado ? 'interested_button' : 'interest_button'}">${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
@@ -2594,7 +2674,7 @@ function updateEtiquetasPreview() {
   });
 }
 
-// Función para cerrar todos los menús desplegables, con opción de excluir notificaciones
+// Función para cerrar todos los menús desplegables
 function closeAllMenus(excludeNotifications = false) {
   const menus = ['menu-perfil', 'language-menu', 'categorias-menu'];
   if (!excludeNotifications) {
@@ -2606,20 +2686,23 @@ function closeAllMenus(excludeNotifications = false) {
   });
 }
 
+// Función para alternar menús desplegables
 function toggleMenu(menuId, event) {
   event.stopPropagation();
   const menu = document.getElementById(menuId);
   const isOpen = menu.style.display === 'block';
 
-  // Cerrar todos los menús, incluyendo notificaciones si no es el menú de notificaciones
-  closeAllMenus(menuId === 'notifications-menu');
+  // Cerrar todos los menús, excluyendo notificaciones si se está alternando otro menú
+  closeAllMenus(menuId !== 'notifications-menu');
 
-  // Alternar el menú seleccionado
-  menu.style.display = isOpen ? 'none' : 'block';
-
-  // Si es el menú de notificaciones y se está abriendo, recargar notificaciones
-  if (menuId === 'notifications-menu' && !isOpen) {
-    loadNotifications(true);
+  if (!isOpen) {
+    menu.style.display = 'block';
+    if (menuId === 'notifications-menu') {
+      notificationOffset = 0; // Resetear el offset para cargar desde el inicio
+      loadNotifications();
+    }
+  } else {
+    menu.style.display = 'none';
   }
 }
 
@@ -2737,19 +2820,6 @@ function handleScroll() {
   }, 100);
 }
 
-// Eventos adicionales
-document.getElementById('load-more-notifications').addEventListener('click', () => loadNotifications());
-document.addEventListener('click', (event) => {
-  // Evitar cerrar si el clic proviene del botón de notificaciones o dentro del menú de notificaciones
-  if (
-    event.target.closest('#notifications-toggle') ||
-    event.target.closest('#notifications-menu')
-  ) {
-    return;
-  }
-  closeAllMenus(false);
-});
-
 // Añadir WebSocket para notificaciones de chat
 async function initializeWebSocket() {
   try {
@@ -2761,7 +2831,7 @@ async function initializeWebSocket() {
     const data = await response.json();
     if (!data.user_id) throw new Error('Usuario no autenticado');
 
-   const ws = new WebSocket(`wss://${window.location.host}/chats/ws/${data.user_id}`);
+    const ws = new WebSocket(`ws://${window.location.host}/chats/ws/${data.user_id}`);
     ws.onopen = () => console.log('WebSocket conectado para chats');
     ws.onmessage = async (event) => {
       const message = JSON.parse(event.data);
@@ -2782,6 +2852,24 @@ async function initializeWebSocket() {
   }
 }
 
+// Actualizar contador de chats no leídos
+async function updateChatsUnreadCounter() {
+  try {
+    const response = await fetch('/chats/unread_count', {
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    const count = data.unread_count || 0;
+    const counter = document.getElementById('chats-unread-counter');
+    counter.textContent = count > 9 ? '9+' : count;
+    counter.style.display = count > 0 ? 'flex' : 'none';
+  } catch (error) {
+    document.getElementById('chats-unread-counter').style.display = 'none';
+  }
+}
+
 // Polling para actualizar el contador cada 30 segundos
 function startChatsPolling() {
   setInterval(updateChatsUnreadCounter, 30000);
@@ -2793,9 +2881,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateLanguage(savedLang);
   await fetchCurrentUserId();
   cargarFeed();
-  loadNotifications(true);
+  loadNotifications();
   startNotificationPolling();
   initializeWebSocket();
+  initializeNotificationsWebSocket();
   updateChatsUnreadCounter();
   startChatsPolling();
   window.addEventListener('scroll', handleScroll);
