@@ -17,6 +17,11 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+body.dark-mode {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
 .stars {
   position: fixed;
   top: 0;
@@ -27,6 +32,10 @@ body {
   z-index: -1;
   pointer-events: none;
   display: none;
+}
+
+body.dark-mode .stars {
+  display: block;
 }
 
 .star {
@@ -64,30 +73,35 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: fixed; /* Cambiar de relative a fixed */
-  top: 0; /* Asegura que esté en la parte superior */
-  width: 100%; /* Ocupa todo el ancho */
-  box-sizing: border-box; /* Evita desbordamiento por padding */
-  z-index: 5000; /* Mantener alto para que esté por encima de todo */
+  position: fixed;
+  top: 0;
+  width: 100%;
+  box-sizing: border-box;
+  z-index: 5000;
+}
+
+body.dark-mode header {
+  background-color: #1c2526;
 }
 
 .logo {
   font-size: 32px;
   font-weight: bold;
   color: #fff;
-  text-decoration: none; /* Elimina el subrayado típico de los enlaces */
-  cursor: pointer; /* Indica que es clicable */
+  text-decoration: none;
+  cursor: pointer;
 }
+
 .logo:hover {
-  color: #e0e0e0; /* Efecto hover para mejor UX */
+  color: #e0e0e0;
 }
 
 .header-icons {
   display: flex;
   align-items: center;
   gap: 10px;
-  position: relative; /* Asegura que sea un contexto de apilamiento */
-  z-index: 2000; /* Igual o mayor que los menús desplegables, pero menor que notifications-desplegable */
+  position: relative;
+  z-index: 2000;
 }
 
 .header-icons input {
@@ -103,9 +117,18 @@ header {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+body.dark-mode .header-icons input {
+  background-color: #2c2c2c;
+  color: #e0e0e0;
+  border: 1px solid #444;
+}
+
 .header-icons input::placeholder {
-  color: #000;
-  opacity: 0.7;
+  color: #999;
+}
+
+body.dark-mode .header-icons input::placeholder {
+  color: #888;
 }
 
 .icon-button {
@@ -123,8 +146,18 @@ header {
   position: relative;
 }
 
+body.dark-mode .icon-button {
+  background-color: #2c2c2c;
+  color: #e0e0e0;
+  border: 1px solid #444;
+}
+
 .icon-button:hover {
   background-color: #e0e0e0;
+}
+
+body.dark-mode .icon-button:hover {
+  background-color: #3c3c3c;
 }
 
 #theme-toggle {
@@ -142,16 +175,26 @@ header {
   z-index: 2;
 }
 
+body.dark-mode #theme-toggle {
+  background-color: #2c2c2c;
+  color: #e0e0e0;
+  border: 1px solid #444;
+}
+
 #theme-toggle:hover {
   background-color: #e0e0e0;
 }
 
-.perfil-menu, .language-menu, .categorias-menu {
+body.dark-mode #theme-toggle:hover {
+  background-color: #3c3c3c;
+}
+
+.perfil-menu, .language-menu, .categorias-menu, .notifications-menu {
   position: relative;
   display: inline-block;
 }
 
-.menu-desplegable, .language-desplegable, .categorias-desplegable {
+.menu-desplegable, .language-desplegable, .categorias-desplegable, .notifications-desplegable {
   display: none;
   position: absolute;
   right: 0;
@@ -168,6 +211,15 @@ header {
   transition: background-color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
 }
 
+body.dark-mode .menu-desplegable,
+body.dark-mode .language-desplegable,
+body.dark-mode .categorias-desplegable,
+body.dark-mode .notifications-desplegable {
+  background-color: #2c2c2c;
+  border-color: #444;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
 .language-desplegable {
   min-width: 150px;
   top: 40px;
@@ -179,7 +231,18 @@ header {
   width: 250px;
 }
 
-.menu-desplegable::before, .language-desplegable::before, .categorias-desplegable::before {
+.notifications-desplegable {
+  right: 0;
+  top: 50px;
+  width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.menu-desplegable::before,
+.language-desplegable::before,
+.categorias-desplegable::before,
+.notifications-desplegable::before {
   content: '';
   position: absolute;
   top: -10px;
@@ -190,11 +253,22 @@ header {
   transition: border-color 0.3s ease;
 }
 
+body.dark-mode .menu-desplegable::before,
+body.dark-mode .language-desplegable::before,
+body.dark-mode .categorias-desplegable::before,
+body.dark-mode .notifications-desplegable::before {
+  border-color: transparent transparent #2c2c2c transparent;
+}
+
 .categorias-desplegable::before {
   left: 14px;
 }
 
-.menu-desplegable a, .menu-desplegable button, .language-desplegable button, .categorias-desplegable button {
+.menu-desplegable a,
+.menu-desplegable button,
+.language-desplegable button,
+.categorias-desplegable button,
+.notifications-desplegable button {
   color: #333333;
   padding: 12px 16px;
   text-decoration: none;
@@ -211,24 +285,81 @@ header {
   cursor: pointer;
 }
 
-.menu-desplegable a:hover, .menu-desplegable button:hover, .language-desplegable button:hover, .categorias-desplegable button:hover {
+body.dark-mode .menu-desplegable a,
+body.dark-mode .menu-desplegable button,
+body.dark-mode .language-desplegable button,
+body.dark-mode .categorias-desplegable button,
+body.dark-mode .notifications-desplegable button {
+  color: #e0e0e0;
+}
+
+.menu-desplegable a:hover,
+.menu-desplegable button:hover,
+.language-desplegable button:hover,
+.categorias-desplegable button:hover,
+.notifications-desplegable button:hover {
   background-color: #e3f2fd;
   color: #1976d2;
   transform: translateX(4px);
 }
 
-.menu-desplegable a i, .menu-desplegable button i, .language-desplegable button i, .categorias-desplegable button i {
+body.dark-mode .menu-desplegable a:hover,
+body.dark-mode .menu-desplegable button:hover,
+body.dark-mode .language-desplegable button:hover,
+body.dark-mode .categorias-desplegable button:hover,
+body.dark-mode .notifications-desplegable button:hover {
+  background-color: #3c3c3c;
+  color: #bbdefb;
+}
+
+.menu-desplegable a i,
+.menu-desplegable button i,
+.language-desplegable button i,
+.categorias-desplegable button i,
+.notifications-desplegable button i {
   font-size: 16px;
   color: #555555;
   transition: color 0.2s ease;
 }
 
-.menu-desplegable a:hover i, .menu-desplegable button:hover i, .language-desplegable button:hover i, .categorias-desplegable button:hover i {
+body.dark-mode .menu-desplegable a i,
+body.dark-mode .menu-desplegable button i,
+body.dark-mode .language-desplegable button i,
+body.dark-mode .categorias-desplegable button i,
+body.dark-mode .notifications-desplegable button i {
+  color: #e0e0e0;
+}
+
+.menu-desplegable a:hover i,
+.menu-desplegable button:hover i,
+.language-desplegable button:hover i,
+.categorias-desplegable button:hover i,
+.notifications-desplegable button:hover i {
   color: #1976d2;
 }
 
-.menu-desplegable a:not(:last-child), .menu-desplegable button:not(:last-child), .language-desplegable button:not(:last-child), .categorias-desplegable button:not(:last-child) {
+body.dark-mode .menu-desplegable a:hover i,
+body.dark-mode .menu-desplegable button:hover i,
+body.dark-mode .language-desplegable button:hover i,
+body.dark-mode .categorias-desplegable button:hover i,
+body.dark-mode .notifications-desplegable button:hover i {
+  color: #bbdefb;
+}
+
+.menu-desplegable a:not(:last-child),
+.menu-desplegable button:not(:last-child),
+.language-desplegable button:not(:last-child),
+.categorias-desplegable button:not(:last-child),
+.notifications-desplegable button:not(:last-child) {
   border-bottom: 1px solid #e0e0e0;
+}
+
+body.dark-mode .menu-desplegable a:not(:last-child),
+body.dark-mode .menu-desplegable button:not(:last-child),
+body.dark-mode .language-desplegable button:not(:last-child),
+body.dark-mode .categorias-desplegable button:not(:last-child),
+body.dark-mode .notifications-desplegable button:not(:last-child) {
+  border-bottom: 1px solid #444;
 }
 
 .logout-form {
@@ -256,9 +387,18 @@ header {
   cursor: pointer;
 }
 
+body.dark-mode .categorias-desplegable li {
+  color: #e0e0e0;
+}
+
 .categorias-desplegable li:hover {
   background-color: #e3f2fd;
   color: #1976d2;
+}
+
+body.dark-mode .categorias-desplegable li:hover {
+  background-color: #3c3c3c;
+  color: #bbdefb;
 }
 
 .categorias-desplegable li input[type="checkbox"] {
@@ -288,9 +428,19 @@ header {
   transition: border-color 0.3s ease, background-color 0.3s ease;
 }
 
+body.dark-mode #otra-categoria input {
+  background-color: #2c2c2c;
+  color: #e0e0e0;
+  border-color: #444;
+}
+
 #otra-categoria input:focus {
   border-color: #000;
   outline: none;
+}
+
+body.dark-mode #otra-categoria input:focus {
+  border-color: #bbdefb;
 }
 
 @keyframes slideDown {
@@ -300,7 +450,7 @@ header {
 
 .container {
   max-width: 1200px;
-  margin: 100px auto 40px auto; /* Agregar margen superior (100px es un estimado de la altura del header) */
+  margin: 100px auto 40px auto;
   padding: 20px;
   position: relative;
   z-index: 0;
@@ -321,6 +471,12 @@ header {
   min-width: 300px;
 }
 
+body.dark-mode .publicar {
+  background-color: #2c2c2c;
+  border-color: #444;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
 .filtros-categorias {
   background-color: #fafafa;
   padding: 20px;
@@ -333,6 +489,12 @@ header {
   height: fit-content;
   position: relative;
   z-index: 1000;
+}
+
+body.dark-mode .filtros-categorias {
+  background-color: #2c2c2c;
+  border-color: #444;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .categoria-buttons {
@@ -382,6 +544,12 @@ header {
   word-wrap: break-word;
 }
 
+body.dark-mode .content-input {
+  background-color: #2c2c2c;
+  color: #e0e0e0;
+  border-color: #444;
+}
+
 .content-input:empty:before {
   content: attr(data-placeholder);
   color: #999;
@@ -389,9 +557,17 @@ header {
   display: block;
 }
 
+body.dark-mode .content-input:empty:before {
+  color: #888;
+}
+
 .content-input:focus {
   outline: none;
   border-color: #000;
+}
+
+body.dark-mode .content-input:focus {
+  border-color: #bbdefb;
 }
 
 .action-buttons {
@@ -408,52 +584,154 @@ header {
   flex-wrap: wrap;
 }
 
+.preview-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.preview-image, .preview-video {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.remove-preview {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #f44336;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+}
+
+.remove-preview:hover {
+  background: #d32f2f;
+}
+
+body.dark-mode .remove-preview {
+  background: #d32f2f;
+}
+
+body.dark-mode .remove-preview:hover {
+  background: #b71c1c;
+}
+
+.etiquetas-preview {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.etiqueta-pill {
+  background-color: #e0e0e0;
+  color: #333;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+body.dark-mode .etiqueta-pill {
+  background-color: #444;
+  color: #e0e0e0;
+}
+
+.remove-etiqueta {
+  background: none;
+  border: none;
+  color: #333;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+}
+
+body.dark-mode .remove-etiqueta {
+  color: #e0e0e0;
+}
+
+.remove-etiqueta:hover {
+  color: #f44336;
+}
+
+body.dark-mode .remove-etiqueta:hover {
+  color: #ef5350;
+}
+
 .publicar button[type="submit"] {
   margin-top: 10px;
   padding: 10px 20px;
   border: none;
   background-color: #000;
   color: #fff;
-  font-size: 16px;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
 }
 
-.feed {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
+body.dark-mode .publicar button[type="submit"] {
+  background-color: #bbdefb;
+  color: #000;
+}
+
+.publicar button[type="submit"]:hover {
+  background-color: #333;
+}
+
+body.dark-mode .publicar button[type="submit"]:hover {
+  background-color: #90caf9;
 }
 
 .post {
   background-color: #fafafa;
   padding: 20px;
   border-radius: 10px;
+  margin-bottom: 20px;
   border: 1px solid #ccc;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
   position: relative;
+}
+
+body.dark-mode .post {
+  background-color: #2c2c2c;
+  border-color: #444;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .post-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .post-profile-pic-container {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1px solid #ccc;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
   background-color: #e0e0e0;
+}
+
+body.dark-mode .post-profile-pic-container {
+  background-color: #444;
 }
 
 .post-profile-pic {
@@ -463,136 +741,137 @@ header {
 }
 
 .post-profile-icon {
-  font-size: 24px;
+  font-size: 20px;
   color: #666;
+}
+
+body.dark-mode .post-profile-icon {
+  color: #e0e0e0;
 }
 
 .post-user-info {
-  display: flex;
-  flex-direction: column;
+  flex: 1;
 }
 
-.post-user-info .company-name {
-  font-size: 16px;
+.company-name {
   font-weight: bold;
+  font-size: 16px;
   color: #000;
-  margin: 0;
-  transition: color 0.3s ease;
 }
 
-.post-content {
-  margin-bottom: 10px;
+body.dark-mode .company-name {
+  color: #e0e0e0;
+}
+
+.delete-button {
+  background: none;
+  border: none;
+  color: #f44336;
+  font-size: 16px;
+  cursor: pointer;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+body.dark-mode .delete-button {
+  color: #ef5350;
+}
+
+.delete-button:hover {
+  color: #d32f2f;
+}
+
+body.dark-mode .delete-button:hover {
+  color: #b71c1c;
 }
 
 .post-content p {
-  margin: 0 0 10px;
+  margin: 0 0 10px 0;
   font-size: 16px;
-  color: #000;
-  line-height: 1.5;
-  transition: color 0.3s ease;
+  color: #333;
 }
 
-.post-media {
-  margin-top: 10px;
+body.dark-mode .post-content p {
+  color: #e0e0e0;
 }
 
 .post-media img, .post-media video {
-  max-width: 25%;
-  height: auto;
+  max-width: 100%;
   border-radius: 8px;
-  display: block;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+.post-meta {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #666;
+}
+
+body.dark-mode .post-meta {
+  color: #e0e0e0;
 }
 
 .post-meta p {
-  margin: 10px 0 0;
-  font-size: 14px;
-  color: #666;
-  transition: color 0.3s ease;
+  margin: 5px 0;
 }
 
-.post-meta p:last-child {
-  font-size: 12px;
-  color: #999;
+.interest-button {
+  background-color: #000;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: background-color 0.3s ease;
+}
+
+body.dark-mode .interest-button {
+  background-color: #bbdefb;
+  color: #000;
+}
+
+.interest-button.interested {
+  background-color: #4caf50;
+}
+
+body.dark-mode .interest-button.interested {
+  background-color: #66bb6a;
+}
+
+.interest-button:hover {
+  background-color: #333;
+}
+
+body.dark-mode .interest-button:hover {
+  background-color: #90caf9;
+}
+
+body.dark-mode .interest-button.interested:hover {
+  background-color: #388e3c;
 }
 
 .interested-count {
   margin-left: 10px;
   font-size: 14px;
   color: #666;
-  transition: color 0.3s ease;
-  display: inline-block;
-  vertical-align: middle;
 }
 
-.delete-button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: #f44336;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  padding: 5px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-}
-
-.delete-button:hover {
-  background-color: #d32f2f;
-}
-
-.delete-button i {
-  margin: 0;
-}
-
-.interest-button {
-  background-color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 14px;
-  color: #000;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  transition: background-color 0.3s ease, color 0.3s ease;
-  margin-top: 10px;
-}
-
-.interest-button:hover {
-  background-color: #e0e0e0;
-}
-
-.interest-button.interested {
-  background-color: #4caf50;
-  color: #fff;
-}
-
-.interest-button.interested:hover {
-  background-color: #45a049;
-}
-
-.interest-button.interested i {
-  color: #fff;
+body.dark-mode .interested-count {
+  color: #e0e0e0;
 }
 
 .comments-section {
   margin-top: 15px;
-  border-top: 1px solid #e0e0e0;
-  padding-top: 10px;
-  transition: border-color 0.3s ease;
 }
 
 .comment-form {
   display: flex;
-  align-items: center;
   gap: 10px;
   margin-bottom: 10px;
 }
@@ -606,6 +885,16 @@ header {
   background-color: #fff;
   color: #000;
   transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+  resize: vertical;
+  min-height: 30px;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+body.dark-mode .comment-input {
+  background-color: #2c2c2c;
+  color: #e0e0e0;
+  border-color: #444;
 }
 
 .comment-input:focus {
@@ -613,47 +902,58 @@ header {
   outline: none;
 }
 
+body.dark-mode .comment-input:focus {
+  border-color: #bbdefb;
+}
+
 .comment-submit {
+  padding: 8px 16px;
+  border: none;
   background-color: #000;
   color: #fff;
-  border: none;
   border-radius: 15px;
-  padding: 8px 15px;
-  font-size: 14px;
   cursor: pointer;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+body.dark-mode .comment-submit {
+  background-color: #bbdefb;
+  color: #000;
 }
 
 .comment-submit:hover {
   background-color: #333;
 }
 
+body.dark-mode .comment-submit:hover {
+  background-color: #90caf9;
+}
+
 .comments-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 200px;
-  overflow-y: auto;
+  margin-top: 10px;
 }
 
 .comment {
   display: flex;
-  align-items: flex-start;
   gap: 10px;
+  margin-bottom: 10px;
   position: relative;
-  padding: 5px 0;
 }
 
 .comment-profile-pic-container {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 1px solid #ccc;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
   background-color: #e0e0e0;
+}
+
+body.dark-mode .comment-profile-pic-container {
+  background-color: #444;
 }
 
 .comment-profile-pic {
@@ -663,8 +963,12 @@ header {
 }
 
 .comment-profile-icon {
-  font-size: 18px;
+  font-size: 16px;
   color: #666;
+}
+
+body.dark-mode .comment-profile-icon {
+  color: #e0e0e0;
 }
 
 .comment-content {
@@ -672,137 +976,184 @@ header {
 }
 
 .comment-user {
-  font-size: 14px;
   font-weight: bold;
+  font-size: 14px;
   color: #000;
-  margin: 0;
-  transition: color 0.3s ease;
+}
+
+body.dark-mode .comment-user {
+  color: #e0e0e0;
 }
 
 .comment-text {
+  margin: 5px 0;
   font-size: 14px;
   color: #333;
-  margin: 2px 0 0;
-  transition: color 0.3s ease;
+}
+
+body.dark-mode .comment-text {
+  color: #e0e0e0;
 }
 
 .comment-meta {
   font-size: 12px;
-  color: #999;
-  margin-top: 2px;
+  color: #666;
+}
+
+body.dark-mode .comment-meta {
+  color: #e0e0e0;
 }
 
 .comment-delete {
-  position: absolute;
-  top: 5px;
-  right: 0;
-  background-color: #f44336;
-  color: #fff;
+  background: none;
   border: none;
-  border-radius: 5px;
-  padding: 2px;
-  font-size: 12px;
+  color: #f44336;
+  font-size: 14px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+body.dark-mode .comment-delete {
+  color: #ef5350;
 }
 
 .comment-delete:hover {
-  background-color: #d32f2f;
+  color: #d32f2f;
+}
+
+body.dark-mode .comment-delete:hover {
+  color: #b71c1c;
 }
 
 .load-more-comments {
+  text-align: center;
   font-size: 14px;
   color: #1976d2;
   cursor: pointer;
-  text-align: center;
   margin-top: 10px;
-  transition: color 0.3s ease;
+}
+
+body.dark-mode .load-more-comments {
+  color: #bbdefb;
 }
 
 .load-more-comments:hover {
-  color: #1565c0;
+  text-decoration: underline;
 }
 
 .notification {
   position: fixed;
-  top: 10px;
-  right: 20px;
+  top: 20px;
+  right: -300px;
   background-color: #4caf50;
-  color: white;
-  padding: 15px 20px;
+  color: #fff;
+  padding: 10px 20px;
   border-radius: 8px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-  z-index: 6000; /* Por encima de todo */
   display: none;
   align-items: center;
   gap: 10px;
-  font-size: 16px;
-  border: 1px solid #e0e0e0;
-  transition: background-color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
+  z-index: 5000;
+  transition: right 0.3s ease, opacity 0.3s ease;
+}
+
+.notification.active {
+  right: 20px;
+  opacity: 1;
 }
 
 .notification.error {
   background-color: #f44336;
 }
 
-.notification.active {
-  display: flex;
-  animation: slideDown 0.3s ease-in-out;
+body.dark-mode .notification {
+  background-color: #66bb6a;
 }
 
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(100%); }
-  to { opacity: 1; transform: translateX(0); }
+body.dark-mode .notification.error {
+  background-color: #ef5350;
 }
 
-@keyframes slideOut {
-  from { opacity: 1; transform: translateX(0); }
-  to { opacity: 0; transform: translateX(100%); }
-}
-
-.preview-wrapper {
-  position: relative;
-  display: inline-block;
-}
-
-.preview-image, .preview-video {
-  width: 50px;
-  height: 50px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  object-fit: cover;
-  vertical-align: middle;
-  transition: border-color 0.3s ease;
-}
-
-.remove-preview {
+.notification-counter, .chats-unread-counter {
   position: absolute;
   top: -8px;
   right: -8px;
   background-color: #f44336;
   color: #fff;
-  border: none;
   border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  font-size: 10px;
-  cursor: pointer;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.3s ease;
+  font-size: 12px;
+  font-weight: bold;
 }
 
-.remove-preview:hover {
-  background-color: #d32f2f;
+body.dark-mode .notification-counter,
+body.dark-mode .chats-unread-counter {
+  background-color: #ef5350;
 }
 
-.modal {
+.notification-item {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+body.dark-mode .notification-item {
+  color: #e0e0e0;
+}
+
+.notification-item.unread {
+  background-color: #e3f2fd;
+}
+
+body.dark-mode .notification-item.unread {
+  background-color: #3c3c3c;
+}
+
+.notification-item:hover {
+  background-color: #e0e0e0;
+}
+
+body.dark-mode .notification-item:hover {
+  background-color: #4c4c4c;
+}
+
+.notification-item i {
+  font-size: 16px;
+  color: #555;
+}
+
+body.dark-mode .notification-item i {
+  color: #e0e0e0;
+}
+
+#load-more-notifications {
+  text-align: center;
+  font-size: 14px;
+  color: #1976d2;
+  cursor: pointer;
+  padding: 10px;
+  display: none;
+}
+
+body.dark-mode #load-more-notifications {
+  color: #bbdefb;
+}
+
+#load-more-notifications:hover {
+  text-decoration: underline;
+}
+
+.confirm-modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -812,494 +1163,149 @@ header {
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 3000;
   animation: fadeIn 0.2s ease-in-out;
 }
 
-.modal-content {
-  background: #fff;
+.confirm-modal-content {
+  background-color: #fff;
   padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
   text-align: center;
   max-width: 400px;
   width: 90%;
-  color: #000;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.modal-content p {
-  margin: 0 0 20px;
-  font-size: 16px;
-}
-
-.modal-content button {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  font-size: 16px;
-  cursor: pointer;
-  margin: 0 10px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   transition: background-color 0.3s ease;
 }
 
+body.dark-mode .confirm-modal-content {
+  background-color: #2c2c2c;
+  color: #e0e0e0;
+}
+
+.confirm-modal-content p {
+  margin: 0 0 20px 0;
+  font-size: 16px;
+}
+
+.confirm-modal-content button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  margin: 0 10px;
+}
+
 #confirm-btn {
-  background: #f44336;
-  color: white;
+  background-color: #f44336;
+  color: #fff;
+}
+
+body.dark-mode #confirm-btn {
+  background-color: #ef5350;
 }
 
 #confirm-btn:hover {
-  background: #d32f2f;
+  background-color: #d32f2f;
+}
+
+body.dark-mode #confirm-btn:hover {
+  background-color: #b71c1c;
 }
 
 #cancel-btn {
-  background: #ccc;
-  color: black;
+  background-color: #ccc;
+  color: #000;
+}
+
+body.dark-mode #cancel-btn {
+  background-color: #444;
+  color: #e0e0e0;
 }
 
 #cancel-btn:hover {
-  background: #bbb;
+  background-color: #b0b0b0;
 }
 
-.etiquetas-preview {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-left: 10px;
+body.dark-mode #cancel-btn:hover {
+  background-color: #555;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.media-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: none;
   align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: fadeIn 0.2s ease-in-out;
 }
 
-.etiqueta-pill {
-  background-color: #e3f2fd;
-  color: #1976d2;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
+.media-modal-content {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
   display: flex;
   align-items: center;
-  gap: 4px;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  justify-content: center;
 }
 
-.etiqueta-pill .remove-etiqueta {
-  background: none;
-  border: none;
-  color: #1976d2;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
+.media-modal-content img,
+.media-modal-content video {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
 }
 
-.etiqueta-pill .remove-etiqueta:hover {
-  color: #d32f2f;
+.media-modal-content img {
+  cursor: zoom-in;
 }
 
-.notification-counter {
+.media-modal-content img.zoomed {
+  transform: scale(1.5);
+  cursor: zoom-out;
+}
+
+.media-modal-close {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  background-color: #f44336;
+  top: -30px;
+  right: -30px;
+  background: #f44336;
   color: #fff;
+  border: none;
   border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  font-size: 12px;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background-color 0.3s ease;
 }
 
-.notifications-desplegable {
-  display: none;
-  position: absolute;
-  right: 0;
-  top: 50px;
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-  width: 300px;
-  max-height: 400px;
-  overflow-y: auto;
-  z-index: 4000; /* Mantén este valor alto */
-  padding: 8px 0;
-  font-family: 'Segoe UI', sans-serif;
-  animation: slideDown 0.3s ease-in-out;
-  border: 1px solid #e0e0e0;
-  transition: background-color 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
+.media-modal-close:hover {
+  background: #d32f2f;
 }
 
-.notifications-desplegable::before {
-  content: '';
-  position: absolute;
-  top: -10px;
-  right: 14px;
-  border-width: 6px;
-  border-style: solid;
-  border-color: transparent transparent #ffffff transparent;
-  transition: border-color 0.3s ease;
+body.dark-mode .media-modal-close {
+  background: #d32f2f;
 }
 
-.notifications-header {
-  padding: 12px 16px;
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
-  border-bottom: 1px solid #e0e0e0;
-  transition: color 0.3s ease, border-color 0.3s ease;
-}
-
-.notifications-list {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.notification-item {
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 14px;
-  color: #333;
-  transition: background-color 0.2s ease, color 0.2s ease;
-  cursor: pointer;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.notification-item.unread {
-  background-color: #e3f2fd;
-  font-weight: 500;
-}
-
-.notification-item:hover {
-  background-color: #f5f5f5;
-}
-
-.notification-item i {
-  font-size: 16px;
-  color: #555;
-}
-
-.notification-item.unread i {
-  color: #1976d2;
-}
-
-.notification-item span {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.load-more-notifications {
-  display: block;
-  width: 100%;
-  padding: 10px;
-  border: none;
-  background: none;
-  color: #1976d2;
-  font-size: 14px;
-  text-align: center;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.load-more-notifications:hover {
-  color: #1565c0;
-}
-
-body.dark-mode {
-  background-color: #000;
-  color: #fff;
-}
-
-body.dark-mode .stars {
-  display: block;
-}
-
-body.dark-mode .header-icons input {
-  background-color: #000;
-  color: #fff;
-}
-
-body.dark-mode .header-icons input::placeholder {
-  color: #fff;
-  opacity: 0.7;
-}
-
-body.dark-mode .icon-button {
-  background-color: #000;
-  color: #fff;
-}
-
-body.dark-mode .icon-button:hover {
-  background-color: #222;
-}
-
-body.dark-mode #theme-toggle {
-  background-color: #000;
-  color: #fff;
-}
-
-body.dark-mode #theme-toggle:hover {
-  background-color: #222;
-}
-
-body.dark-mode .menu-desplegable, body.dark-mode .language-desplegable, body.dark-mode .categorias-desplegable {
-  background-color: #2a2a2a;
-  border: 1px solid #444444;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-}
-
-body.dark-mode .menu-desplegable::before, body.dark-mode .language-desplegable::before, body.dark-mode .categorias-desplegable::before {
-  border-color: transparent transparent #2a2a2a transparent;
-}
-
-body.dark-mode .menu-desplegable a, body.dark-mode .menu-desplegable button, body.dark-mode .language-desplegable button, body.dark-mode .categorias-desplegable button {
-  color: #e0e0e0;
-}
-
-body.dark-mode .menu-desplegable a:hover, body.dark-mode .menu-desplegable button:hover, body.dark-mode .language-desplegable button:hover, body.dark-mode .categorias-desplegable button:hover {
-  background-color: #3a3a3a;
-  color: #90caf9;
-}
-
-body.dark-mode .menu-desplegable a i, body.dark-mode .menu-desplegable button i, body.dark-mode .language-desplegable button i, body.dark-mode .categorias-desplegable button i {
-  color: #aaaaaa;
-}
-
-body.dark-mode .menu-desplegable a:hover i, body.dark-mode .menu-desplegable button:hover i, body.dark-mode .language-desplegable button:hover i, body.dark-mode .categorias-desplegable button:hover i {
-  color: #90caf9;
-}
-
-body.dark-mode .menu-desplegable a:not(:last-child), body.dark-mode .menu-desplegable button:not(:last-child), body.dark-mode .language-desplegable button:not(:last-child), body.dark-mode .categorias-desplegable button:not(:last-child) {
-  border-bottom: 1px solid #444444;
-}
-
-body.dark-mode .categorias-desplegable li {
-  color: #e0e0e0;
-}
-
-body.dark-mode .categorias-desplegable li:hover {
-  background-color: #3a3a3a;
-  color: #90caf9;
-}
-
-body.dark-mode #otra-categoria input {
-  background-color: #222;
-  color: #fff;
-  border-color: #444;
-}
-
-body.dark-mode .publicar {
-  background-color: #000;
-  border: 1px solid #333;
-  box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
-}
-
-body.dark-mode .filtros-categorias {
-  background-color: #000;
-  border: 1px solid #333;
-  box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
-}
-
-body.dark-mode .content-input {
-  background-color: #fff;
-  color: #000;
-}
-
-body.dark-mode .preview-area {
-  background-color: #000;
-}
-
-body.dark-mode .publicar button {
-  background-color: #000;
-  color: #fff;
-}
-
-body.dark-mode .post {
-  background-color: #000;
-  border: 1px solid #333;
-  box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
-}
-
-body.dark-mode .post-user-info .company-name {
-  color: #fff;
-}
-
-body.dark-mode .post-content p {
-  color: #fff;
-}
-
-body.dark-mode .post-meta p {
-  color: #bbb;
-}
-
-body.dark-mode .post-meta p:last-child {
-  color: #888;
-}
-
-body.dark-mode .interested-count {
-  color: #bbb;
-}
-
-body.dark-mode .interest-button {
-  background-color: #333;
-  color: #fff;
-}
-
-body.dark-mode .interest-button:hover {
-  background-color: #555;
-}
-
-body.dark-mode .interest-button.interested {
-  background-color: #4caf50;
-  color: #fff;
-}
-
-body.dark-mode .interest-button.interested:hover {
-  background-color: #45a049;
-}
-
-body.dark-mode .comments-section {
-  border-top: 1px solid #444;
-}
-
-body.dark-mode .comment-input {
-  background-color: #222;
-  color: #fff;
-  border-color: #444;
-}
-
-body.dark-mode .comment-submit {
-  background-color: #333;
-  color: #fff;
-}
-
-body.dark-mode .comment-submit:hover {
-  background-color: #555;
-}
-
-body.dark-mode .comment-user {
-  color: #fff;
-}
-
-body.dark-mode .comment-text {
-  color: #e0e0e0;
-}
-
-body.dark-mode .comment-meta {
-  color: #888;
-}
-
-body.dark-mode .comment-profile-pic-container {
-  border-color: #444;
-  background-color: #333;
-}
-
-body.dark-mode .load-more-comments {
-  color: #90caf9;
-}
-
-body.dark-mode .load-more-notifications {
-  color: #90caf9;
-}
-
-body.dark-mode .load-more-notifications:hover {
-  color: #64b5f6;
-}
-
-body.dark-mode .notification-counter {
-  background-color: #d32f2f;
-}
-
-body.dark-mode .notifications-desplegable {
-  background-color: #2a2a2a;
-  border: 1px solid #444444;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-}
-
-body.dark-mode .notifications-desplegable::before {
-  border-color: transparent transparent #2a2a2a transparent;
-}
-
-body.dark-mode .notifications-header {
-  color: #e0e0e0;
-  border-bottom: 1px solid #444444;
-}
-
-body.dark-mode .notification-item {
-  color: #e0e0e0;
-  border-bottom: 1px solid #444444;
-}
-
-body.dark-mode .notification-item.unread {
-  background-color: #3a3a3a;
-}
-
-body.dark-mode .notification-item:hover {
-  background-color: #333333;
-}
-
-body.dark-mode .notification-item i {
-  color: #aaaaaa;
-}
-
-body.dark-mode .notification-item.unread i {
-  color: #90caf9;
-}
-
-body.dark-mode .load-more-notifications {
-  color: #90caf9;
-}
-
-body.dark-mode .load-more-notifications:hover {
-  color: #64b5f6;
-}
-
-/* Ajustes para modo oscuro */
-body.dark-mode .notification {
-  background-color: #4caf50;
-  border: 1px solid #444444;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-}
-
-body.dark-mode .notification.error {
-  background-color: #f44336;
-}
-body.dark-mode .preview-image, body.dark-mode .preview-video {
-  border-color: #555;
-}
-
-body.dark-mode .etiquetas-preview .etiqueta-pill {
-  background-color: #222;
-  color: #90caf9;
-}
-
-body.dark-mode .etiqueta-pill .remove-etiqueta {
-  color: #90caf9;
-}
-
-body.dark-mode .etiqueta-pill .remove-etiqueta:hover {
-  color: #d32f2f;
-}
-
-body.dark-mode .modal-content {
-  background: #222;
-  color: #fff;
-}
-.filter-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 15px 0;
-  text-align: center;
-  color: #000;
-  transition: color 0.3s ease;
-}
-
-body.dark-mode .filter-title {
-  color: #fff; /* Asegura que el título sea visible en modo oscuro */
+body.dark-mode .media-modal-close:hover {
+  background: #b71c1c;
 }
 </style>
 
@@ -1459,7 +1465,7 @@ body.dark-mode .filter-title {
       </form>
     </div>
 <div class="filtros-categorias">
-  <h3 class="filter-title" data-translate="inicio.filter_title">Filtrar feed por categoría</h3>
+  <h3 class="filter-title" data-translate="inicio.filter_title">Filtrar contenido por categoría</h3>
   <div class="categoria-buttons">
     <button class="icon-button categoria-filter" data-categoria="Restaurantes y comida rápida" title="Restaurantes y comida rápida">
       <i class="fas fa-utensils"></i>
@@ -1948,13 +1954,14 @@ async function updateChatsUnreadCounter() {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
-    if (!response.ok) return;
+    if (!response.ok) throw new Error('Error al obtener contador');
     const data = await response.json();
     const count = data.unread_count || 0;
     const counter = document.getElementById('chats-unread-counter');
     counter.textContent = count > 9 ? '9+' : count;
     counter.style.display = count > 0 ? 'flex' : 'none';
   } catch (error) {
+    console.error('Error al actualizar contador de chats:', error);
     document.getElementById('chats-unread-counter').style.display = 'none';
   }
 }
@@ -2007,7 +2014,7 @@ async function loadNotifications(clearList = false) {
       notificationItem.addEventListener('click', () => {
         markNotificationAsRead(notification.id);
         scrollToPost(notification.publicacion_id);
-        document.getElementById('notifications-menu').style.display = 'none'; // Cerrar el menú al hacer clic en una notificación
+        document.getElementById('notifications-menu').style.display = 'none';
       });
       notificationsList.appendChild(notificationItem);
     });
@@ -2095,8 +2102,8 @@ async function loadSinglePost(postId) {
       postContent += `
         <div class="post-content">${pub.contenido && pub.contenido.trim() !== '' ? `<p>${pub.contenido}</p>` : ''}</div>
         <div class="post-media">
-          ${pub.imagen_url && pub.imagen_url.trim() !== '' ? `<img src="${pub.imagen_url}" alt="Imagen">` : ''}
-          ${pub.video_url && pub.video_url.trim() !== '' ? `<video controls src="${pub.video_url}"></video>` : ''}
+          ${pub.imagen_url && pub.imagen_url.trim() !== '' ? `<img src="${pub.imagen_url}" alt="Imagen" onclick="openMediaModal('${pub.imagen_url}', 'image')">` : ''}
+          ${pub.video_url && pub.video_url.trim() !== '' ? `<video controls src="${pub.video_url}" onclick="openMediaModal('${pub.video_url}', 'video')"></video>` : ''}
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
@@ -2109,7 +2116,7 @@ async function loadSinglePost(postId) {
         </div>
         <div class="comments-section">
           <div class="comment-form">
-            <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
+            <textarea class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder"></textarea>
             <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
           </div>
           <div class="comments-list" id="comments-${pub.id}"></div>
@@ -2211,8 +2218,8 @@ async function cargarFeed() {
       postContent += `
         <div class="post-content">${pub.contenido && pub.contenido.trim() !== '' ? `<p>${pub.contenido}</p>` : ''}</div>
         <div class="post-media">
-          ${pub.imagen_url && pub.imagen_url.trim() !== '' ? `<img src="${pub.imagen_url}" alt="Imagen">` : ''}
-          ${pub.video_url && pub.video_url.trim() !== '' ? `<video controls src="${pub.video_url}"></video>` : ''}
+          ${pub.imagen_url && pub.imagen_url.trim() !== '' ? `<img src="${pub.imagen_url}" alt="Imagen" onclick="openMediaModal('${pub.imagen_url}', 'image')">` : ''}
+          ${pub.video_url && pub.video_url.trim() !== '' ? `<video controls src="${pub.video_url}" onclick="openMediaModal('${pub.video_url}', 'video')"></video>` : ''}
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
@@ -2225,7 +2232,7 @@ async function cargarFeed() {
         </div>
         <div class="comments-section">
           <div class="comment-form">
-            <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
+            <textarea class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder"></textarea>
             <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
           </div>
           <div class="comments-list" id="comments-${pub.id}"></div>
@@ -2324,8 +2331,8 @@ async function search() {
       postContent += `
         <div class="post-content">${pub.contenido && pub.contenido.trim() !== '' ? `<p>${pub.contenido}</p>` : ''}</div>
         <div class="post-media">
-          ${pub.imagen_url && pub.imagen_url.trim() !== '' ? `<img src="${pub.imagen_url}" alt="Imagen">` : ''}
-          ${pub.video_url && pub.video_url.trim() !== '' ? `<video controls src="${pub.video_url}"></video>` : ''}
+          ${pub.imagen_url && pub.imagen_url.trim() !== '' ? `<img src="${pub.imagen_url}" alt="Imagen" onclick="openMediaModal('${pub.imagen_url}', 'image')">` : ''}
+          ${pub.video_url && pub.video_url.trim() !== '' ? `<video controls src="${pub.video_url}" onclick="openMediaModal('${pub.video_url}', 'video')"></video>` : ''}
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
@@ -2338,7 +2345,7 @@ async function search() {
         </div>
         <div class="comments-section">
           <div class="comment-form">
-            <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
+            <textarea class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder"></textarea>
             <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
           </div>
           <div class="comments-list" id="comments-${pub.id}"></div>
@@ -2439,8 +2446,8 @@ async function filterByCategory(categoria) {
       postContent += `
         <div class="post-content">${pub.contenido && pub.contenido.trim() !== '' ? `<p>${pub.contenido}</p>` : ''}</div>
         <div class="post-media">
-          ${pub.imagen_url && pub.imagen_url.trim() !== '' ? `<img src="${pub.imagen_url}" alt="Imagen">` : ''}
-          ${pub.video_url && pub.video_url.trim() !== '' ? `<video controls src="${pub.video_url}"></video>` : ''}
+          ${pub.imagen_url && pub.imagen_url.trim() !== '' ? `<img src="${pub.imagen_url}" alt="Imagen" onclick="openMediaModal('${pub.imagen_url}', 'image')">` : ''}
+          ${pub.video_url && pub.video_url.trim() !== '' ? `<video controls src="${pub.video_url}" onclick="openMediaModal('${pub.video_url}', 'video')"></video>` : ''}
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
@@ -2453,7 +2460,7 @@ async function filterByCategory(categoria) {
         </div>
         <div class="comments-section">
           <div class="comment-form">
-            <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
+            <textarea class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder"></textarea>
             <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
           </div>
           <div class="comments-list" id="comments-${pub.id}"></div>
@@ -2576,7 +2583,30 @@ function updateEtiquetasPreview() {
   });
 }
 
-// Función para cerrar todos los menús desplegables, con opción de excluir notificaciones
+// Modal de multimedia
+function openMediaModal(url, type) {
+  const modal = document.getElementById('media-modal');
+  const content = modal.querySelector('.media-modal-content');
+  content.innerHTML = `
+    <button class="media-modal-close" title="${translations[localStorage.getItem('language') || 'es'].inicio.close_media_title}">×</button>
+    ${type === 'image' ? `<img src="${url}" alt="Imagen">` : `<video controls src="${url}" autoplay></video>`}
+  `;
+  modal.style.display = 'flex';
+
+  if (type === 'image') {
+    const img = content.querySelector('img');
+    img.addEventListener('click', () => {
+      img.classList.toggle('zoomed');
+    });
+  }
+
+  content.querySelector('.media-modal-close').addEventListener('click', () => {
+    modal.style.display = 'none';
+    content.innerHTML = `<button class="media-modal-close" title="${translations[localStorage.getItem('language') || 'es'].inicio.close_media_title}">×</button>`;
+  });
+}
+
+// Función para cerrar todos los menús desplegables
 function closeAllMenus(excludeNotifications = false) {
   const menus = ['menu-perfil', 'language-menu', 'categorias-menu'];
   if (!excludeNotifications) {
@@ -2594,15 +2624,11 @@ function toggleMenu(menuId, event) {
   const menu = document.getElementById(menuId);
   const isOpen = menu.style.display === 'block';
   
-  // Cerrar todos los menús, excluyendo notificaciones si se está alternando otro menú
   closeAllMenus(menuId !== 'notifications-menu');
 
-  // Alternar el menú seleccionado
-  if (!isOpen) {
-    menu.style.display = 'block';
-    if (menuId === 'notifications-menu') loadNotifications(true);
-  } else {
-    menu.style.display = 'none';
+  menu.style.display = isOpen ? 'none' : 'block';
+  if (menuId === 'notifications-menu' && !isOpen) {
+    loadNotifications(true); // Cargar notificaciones cada vez que se abre
   }
 }
 
@@ -2657,7 +2683,6 @@ form.addEventListener('submit', async (e) => {
   const video = videoInput.files[0];
   const etiquetas = etiquetasHidden.value.trim();
 
-  // Validación en el frontend
   if (!contenido && !imagen && !video && !etiquetas) {
     showNotification(translations[lang].inicio.post_error_empty, true);
     return;
@@ -2701,6 +2726,23 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
+// Manejo de comentarios con Enter y Shift+Enter
+document.addEventListener('keydown', (event) => {
+  const activeElement = document.activeElement;
+  if (activeElement.classList.contains('comment-input')) {
+    const input = activeElement;
+    const postId = input.closest('.post').getAttribute('data-post-id');
+    const commentsContainer = input.nextElementSibling.nextElementSibling;
+
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      submitComment(postId, input, commentsContainer);
+    } else if (event.key === 'Enter' && event.shiftKey) {
+      input.value += '\n';
+    }
+  }
+});
+
 // Manejo de scroll
 let isScrolling = false;
 function handleScroll() {
@@ -2720,10 +2762,6 @@ function handleScroll() {
   }, 100);
 }
 
-// Eventos adicionales
-document.getElementById('load-more-notifications').addEventListener('click', () => loadNotifications());
-document.addEventListener('click', () => closeAllMenus(true));
-
 // Añadir WebSocket para notificaciones de chat
 async function initializeWebSocket() {
   try {
@@ -2735,7 +2773,7 @@ async function initializeWebSocket() {
     const data = await response.json();
     if (!data.user_id) throw new Error('Usuario no autenticado');
 
-    const ws = new WebSocket(`ws://${window.location.host}/chats/ws/${data.user_id}`);
+    const ws = new WebSocket(`wss://${window.location.host}/chats/ws/${data.user_id}`);
     ws.onopen = () => console.log('WebSocket conectado para chats');
     ws.onmessage = async (event) => {
       const message = JSON.parse(event.data);
@@ -2760,6 +2798,25 @@ async function initializeWebSocket() {
 function startChatsPolling() {
   setInterval(updateChatsUnreadCounter, 30000);
 }
+
+// Manejo del botón de chats
+document.getElementById('chats-toggle').addEventListener('click', async (event) => {
+  event.preventDefault();
+  try {
+    await fetch('/chats/mark_all_read', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+    const counter = document.getElementById('chats-unread-counter');
+    counter.textContent = '0';
+    counter.style.display = 'none';
+    window.location.href = 'chats.html';
+  } catch (error) {
+    console.error('Error al marcar mensajes como leídos:', error);
+    showNotification(translations[localStorage.getItem('language') || 'es'].inicio.chats_error, true);
+  }
+});
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', async () => {
