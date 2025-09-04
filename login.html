@@ -19,17 +19,17 @@
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     }
     .login-buttons {
-      margin: 10px 0; /* Reducido */
+      margin: 10px 0;
     }
     .login-btn {
       display: block;
       width: 100%;
-      max-width: 340px; /* Mismo tamaño */
-      margin: 5px auto; /* Más compacto */
-      padding: 14px; /* Botones más grandes */
+      max-width: 340px;
+      margin: 5px auto;
+      padding: 14px;
       border-radius: 5px;
       text-decoration: none;
-      font-size: 18px; /* Texto más grande */
+      font-size: 18px;
       font-weight: 500;
       border: 1px solid #ccc;
       cursor: pointer;
@@ -52,18 +52,18 @@
       background-color: #333;
     }
     .login-icon {
-      width: 24px; /* Ícono más grande */
+      width: 24px;
       vertical-align: middle;
       margin-right: 10px;
     }
     .separator {
-      margin: 5px 0; /* Más compacto */
+      margin: 5px 0;
       color: #666;
       font-size: 14px;
     }
     .register-link {
       display: block;
-      margin: 5px 0; /* Más compacto */
+      margin: 5px 0;
       color: #007bff;
       font-size: 16px;
       text-decoration: none;
@@ -74,7 +74,7 @@
     }
     .email-form, .register-form {
       display: none;
-      margin-top: 10px; /* Más compacto */
+      margin-top: 10px;
       max-width: 340px;
       margin-left: auto;
       margin-right: auto;
@@ -82,7 +82,7 @@
     .email-form input, .register-form input {
       display: block;
       width: 100%;
-      margin: 5px 0; /* Más compacto */
+      margin: 5px 0;
       padding: 10px;
       font-size: 16px;
       border: 1px solid #ccc;
@@ -105,7 +105,7 @@
     .error-message {
       color: #d32f2f;
       font-size: 14px;
-      margin: 5px 0; /* Más compacto */
+      margin: 5px 0;
       display: none;
       max-width: 340px;
       margin-left: auto;
@@ -114,11 +114,11 @@
     .login-msg {
       font-size: 14px;
       color: #666;
-      margin-top: 10px; /* Más compacto */
+      margin-top: 10px;
     }
     .back-link {
       display: block;
-      margin-top: 10px; /* Más compacto */
+      margin-top: 10px;
       color: #007bff;
       text-decoration: none;
     }
@@ -140,6 +140,8 @@
       <div class="separator">– o –</div>
       <a class="register-link" onclick="toggleRegisterForm()">Registrarse</a>
     </div>
+
+    <!-- FORM LOGIN -->
     <form id="email-form" class="email-form" action="/auth/email" method="POST">
       <input type="email" name="email" placeholder="Correo electrónico" required />
       <input type="password" name="password" placeholder="Contraseña" required />
@@ -147,14 +149,18 @@
       <input type="hidden" name="target" id="target" />
       <button type="submit">Iniciar Sesión</button>
     </form>
-    <form id="register-form" class="register-form" action="/auth/register" method="POST">
+
+    <!-- FORM REGISTRO -->
+    <form id="register-form" class="register-form" action="/auth/register" method="POST" onsubmit="return validarEdad()">
       <input type="text" name="nombre" placeholder="Ingrese su nombre" required />
       <input type="email" name="email" placeholder="Correo electrónico" required />
       <input type="password" name="password" placeholder="Contraseña" required />
+      <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" required />
       <input type="hidden" name="tipo" id="register-tipo" />
       <input type="hidden" name="target" id="register-target" />
       <button type="submit">Registrarse</button>
     </form>
+
     <p class="login-msg">Al iniciar sesión o registrarse acepta nuestros términos y condiciones.</p>
     <a href="/" class="back-link">← Volver al inicio</a>
   </div>
@@ -195,6 +201,29 @@
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
       emailForm.style.display = 'none';
       errorMessage.style.display = 'none';
+    }
+
+    // Validar edad mínima de 18 años
+    function validarEdad() {
+      const fechaNacimiento = document.getElementById('fecha_nacimiento').value;
+      if (!fechaNacimiento) return false;
+
+      const hoy = new Date();
+      const nacimiento = new Date(fechaNacimiento);
+      let edad = hoy.getFullYear() - nacimiento.getFullYear();
+      const mes = hoy.getMonth() - nacimiento.getMonth();
+
+      if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+        edad--;
+      }
+
+      if (edad < 18) {
+        const errorMessage = document.getElementById('error-message');
+        errorMessage.style.display = 'block';
+        errorMessage.textContent = 'Debes tener al menos 18 años para registrarte.';
+        return false;
+      }
+      return true;
     }
 
     // Manejo de errores

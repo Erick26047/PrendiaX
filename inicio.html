@@ -1573,19 +1573,13 @@ let wsNotifications = null;
 // Formatear fechas según idioma y zona horaria CST (UTC-6)
 function formatDate(dateString, lang = 'es') {
     // Manejar caso de fecha vacía o inválida
-    if (!dateString) {
-        console.warn('Fecha recibida vacía o inválida:', dateString);
-        return translations[lang].inicio.invalid_date || 'Fecha inválida';
-    }
+    if (!dateString) return translations[lang].inicio.invalid_date || 'Fecha inválida';
 
     // Parsear la fecha en formato "YYYY-MM-DD HH:MM:SS" asumiendo UTC
     const date = luxon.DateTime.fromFormat(dateString, 'yyyy-MM-dd HH:mm:ss', { zone: 'utc' }).setZone('America/Chicago');
     
     // Verificar si la fecha es válida
-    if (!date.isValid) {
-        console.warn('Fecha no válida:', dateString, date.invalidExplanation);
-        return translations[lang].inicio.invalid_date || 'Fecha inválida';
-    }
+    if (!date.isValid) return translations[lang].inicio.invalid_date || 'Fecha inválida';
 
     // Formatear la fecha según el idioma
     const options = {
@@ -1667,29 +1661,19 @@ function updateLanguage(lang) {
     });
     document.documentElement.lang = lang;
     updatePlaceholder();
-
-    // Actualizar fechas en publicaciones
+  
+  // Actualizar fechas en publicaciones
     document.querySelectorAll('.post-meta p[data-original-date]').forEach(p => {
         const originalDate = p.dataset.originalDate;
-        console.log('Actualizando fecha de publicación:', originalDate);
         p.textContent = originalDate ? formatDate(originalDate, lang) : translations[lang].inicio.invalid_date;
     });
 
     // Actualizar fechas en comentarios
     document.querySelectorAll('.comment-meta[data-original-date]').forEach(p => {
         const originalDate = p.dataset.originalDate;
-        console.log('Actualizando fecha de comentario:', originalDate);
-        p.textContent = originalDate ? formatDate(originalDate, lang) : translations[lang].inicio.invalid_date;
-    });
-
-    // Actualizar fechas en notificaciones
-    document.querySelectorAll('.notification-meta[data-original-date]').forEach(p => {
-        const originalDate = p.dataset.originalDate;
-        console.log('Actualizando fecha de notificación:', originalDate);
         p.textContent = originalDate ? formatDate(originalDate, lang) : translations[lang].inicio.invalid_date;
     });
 }
-
 // Actualizar placeholders
 function updatePlaceholder() {
   const contentInput = document.getElementById('content-input');
@@ -1828,7 +1812,6 @@ async function cargarComentarios(postId, commentsContainer, loadMoreLink, offset
     const currentCount = commentsContainer.children.length + comentarios.comentarios.length;
 
     comentarios.comentarios.forEach(comentario => {
-      console.log('Fecha de comentario recibida:', comentario.fecha_creacion);
       const commentDiv = document.createElement('div');
       commentDiv.classList.add('comment');
       let commentContent = `
@@ -1838,7 +1821,7 @@ async function cargarComentarios(postId, commentsContainer, loadMoreLink, offset
         <div class="comment-content">
           <p class="comment-user" style="cursor: pointer;" onclick="redirectToProfile(${comentario.user_id})">${comentario.nombre_empresa}</p>
           <p class="comment-text">${comentario.contenido}</p>
-          <p class="comment-meta" data-original-date="${comentario.fecha_creacion}">${formatDate(comentario.fecha_creacion, lang)}</p>
+          <p class="comment-meta">${formatDate(comentario.fecha_creacion, lang)}</p>
         </div>
       `;
 
@@ -1884,7 +1867,6 @@ async function submitComment(postId, inputElement, commentsContainer) {
 
     if (response.ok) {
       const comentario = await response.json();
-      console.log('Fecha de nuevo comentario:', comentario.fecha_creacion);
       const lang = localStorage.getItem('language') || 'es';
       const commentDiv = document.createElement('div');
       commentDiv.classList.add('comment');
@@ -1895,7 +1877,7 @@ async function submitComment(postId, inputElement, commentsContainer) {
         <div class="comment-content">
           <p class="comment-user" style="cursor: pointer;" onclick="redirectToProfile(${comentario.user_id})">${comentario.nombre_usuario || comentario.nombre_empresa}</p>
           <p class="comment-text">${comentario.contenido}</p>
-          <p class="comment-meta" data-original-date="${comentario.fecha_creacion}">${formatDate(comentario.fecha_creacion, lang)}</p>
+          <p class="comment-meta">${formatDate(comentario.fecha_creacion, lang)}</p>
         </div>
         <button class="comment-delete" onclick="borrarComentario(${comentario.id}, this.parentElement)" title="${translations[lang].inicio.delete_comment_title}">
           <i class="fas fa-trash"></i>
@@ -2031,7 +2013,6 @@ async function loadNotifications() {
     }
 
     notifications.forEach(notification => {
-      console.log('Fecha de notificación recibida:', notification.fecha_creacion);
       // Evitar duplicados
       if (notificationsList.querySelector(`[data-notification-id="${notification.id}"]`)) return;
 
@@ -2048,7 +2029,7 @@ async function loadNotifications() {
       notificationItem.innerHTML = `
         <i class="${iconClass}"></i>
         <span>${message}</span>
-        <p class="notification-meta" data-original-date="${notification.fecha_creacion}">${formatDate(notification.fecha_creacion, lang)}</p>
+        <p class="notification-meta">${formatDate(notification.fecha_creacion, lang)}</p>
       `;
       notificationItem.addEventListener('click', () => {
         markNotificationAsRead(notification.id);
@@ -2140,7 +2121,6 @@ async function loadSinglePost(postId) {
       throw new Error(`Error en la solicitud: ${response.status}`);
     }
     const pub = await response.json();
-    console.log('Fecha de publicación específica:', pub.fecha_creacion);
     const feedDiv = document.getElementById('feed');
     const lang = localStorage.getItem('language') || 'es';
 
@@ -2177,7 +2157,7 @@ async function loadSinglePost(postId) {
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
-          <p data-original-date="${pub.fecha_creacion}">${formatDate(pub.fecha_creacion, lang)}</p>
+          <p>${formatDate(pub.fecha_creacion, lang)}</p>
           <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
             <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i>
             <span data-translate="inicio.${pub.interesado ? 'interested_button' : 'interest_button'}">${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
@@ -2220,7 +2200,7 @@ async function initializeNotificationsWebSocket() {
     wsNotifications.onopen = () => console.log('WebSocket conectado para notificaciones');
     wsNotifications.onmessage = async (event) => {
       const notification = JSON.parse(event.data);
-      console.log('Notificación WebSocket recibida, fecha:', notification.fecha_creacion);
+      console.log('Notificación WebSocket recibida:', notification);
       const notificationsList = document.getElementById('notifications-list');
       const lang = localStorage.getItem('language') || 'es';
 
@@ -2236,7 +2216,7 @@ async function initializeNotificationsWebSocket() {
         notificationItem.innerHTML = `
           <i class="${iconClass}"></i>
           <span>${message}</span>
-          <p class="notification-meta" data-original-date="${notification.fecha_creacion}">${formatDate(notification.fecha_creacion, lang)}</p>
+          <p class="notification-meta">${formatDate(notification.fecha_creacion, lang)}</p>
         `;
         notificationItem.addEventListener('click', () => {
           markNotificationAsRead(notification.id);
@@ -2310,7 +2290,6 @@ async function cargarFeed() {
     const lang = localStorage.getItem('language') || 'es';
 
     publicaciones.forEach(pub => {
-      console.log('Fecha de publicación recibida:', pub.fecha_creacion);
       if (loadedPostIds.has(pub.id)) return;
       loadedPostIds.add(pub.id);
       if (pub.interesado) interestedPosts.add(pub.id);
@@ -2346,7 +2325,7 @@ async function cargarFeed() {
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
-          <p data-original-date="${pub.fecha_creacion}">${formatDate(pub.fecha_creacion, lang)}</p>
+          <p>${formatDate(pub.fecha_creacion, lang)}</p>
           <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
             <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i>
             <span data-translate="inicio.${pub.interesado ? 'interested_button' : 'interest_button'}">${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
@@ -2424,7 +2403,6 @@ async function search() {
     const lang = localStorage.getItem('language') || 'es';
 
     publicaciones.forEach(pub => {
-      console.log('Fecha de publicación en búsqueda:', pub.fecha_creacion);
       if (loadedPostIds.has(pub.id)) return;
       loadedPostIds.add(pub.id);
       if (pub.interesado) interestedPosts.add(pub.id);
@@ -2460,7 +2438,7 @@ async function search() {
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
-          <p data-original-date="${pub.fecha_creacion}">${formatDate(pub.fecha_creacion, lang)}</p>
+          <p>${formatDate(pub.fecha_creacion, lang)}</p>
           <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
             <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i>
             <span data-translate="inicio.${pub.interesado ? 'interested_button' : 'interest_button'}">${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
@@ -2540,7 +2518,6 @@ async function filterByCategory(categoria) {
     const lang = localStorage.getItem('language') || 'es';
 
     publicaciones.forEach(pub => {
-      console.log('Fecha de publicación en filtro:', pub.fecha_creacion);
       if (loadedPostIds.has(pub.id)) return;
       loadedPostIds.add(pub.id);
       if (pub.interesado) interestedPosts.add(pub.id);
@@ -2576,7 +2553,7 @@ async function filterByCategory(categoria) {
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
-          <p data-original-date="${pub.fecha_creacion}">${formatDate(pub.fecha_creacion, lang)}</p>
+          <p>${formatDate(pub.fecha_creacion, lang)}</p>
           <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
             <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i>
             <span data-translate="inicio.${pub.interesado ? 'interested_button' : 'interest_button'}">${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
