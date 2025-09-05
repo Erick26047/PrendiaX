@@ -234,6 +234,171 @@
     body.dark-mode .modal-btn.continue:hover {
       background-color: #2e7d32;
     }
+
+    /* Media Query para Dispositivos Móviles (max-width: 768px) */
+    @media (max-width: 768px) {
+      /* Ajustar la sección hero */
+      .hero .container {
+        padding: 20px;
+        text-align: center;
+      }
+
+      .hero h2 {
+        font-size: 24px;
+        line-height: 1.4;
+      }
+
+      .hero p {
+        font-size: 16px;
+        margin-bottom: 20px;
+      }
+
+      /* Apilar los botones verticalmente */
+      .hero .buttons {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .hero .btn {
+        width: 100%;
+        max-width: 300px;
+        padding: 12px;
+        font-size: 16px;
+      }
+
+      /* Ajustar el encabezado */
+      header .container {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 20px;
+      }
+
+      .logo {
+        font-size: 24px;
+        margin-bottom: 10px;
+      }
+
+      .language-menu {
+        align-self: flex-end;
+      }
+
+      .icon-button {
+        font-size: 16px;
+        padding: 6px 10px;
+      }
+
+      .menu-desplegable.language-desplegable {
+        min-width: 120px;
+        top: 35px;
+      }
+
+      .menu-desplegable.language-desplegable button {
+        font-size: 14px;
+        padding: 10px 12px;
+      }
+
+      /* Ajustar la sección about */
+      .about .container {
+        padding: 20px;
+      }
+
+      .about h2 {
+        font-size: 22px;
+      }
+
+      .about p {
+        font-size: 14px;
+      }
+
+      /* Ajustar el footer */
+      footer .container {
+        padding: 15px 20px;
+      }
+
+      footer p {
+        font-size: 14px;
+      }
+
+      /* Ajustar el modal para móviles */
+      .modal-content {
+        width: 90%;
+        max-width: 320px;
+        padding: 15px;
+      }
+
+      .modal-content p {
+        font-size: 14px;
+        margin-bottom: 15px;
+      }
+
+      .modal-buttons {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .modal-btn {
+        width: 100%;
+        padding: 10px;
+        font-size: 14px;
+      }
+    }
+
+    /* Media Query para pantallas muy pequeñas (max-width: 480px) */
+    @media (max-width: 480px) {
+      .hero h2 {
+        font-size: 20px;
+      }
+
+      .hero p {
+        font-size: 14px;
+      }
+
+      .hero .btn {
+        font-size: 14px;
+        padding: 10px;
+      }
+
+      .logo {
+        font-size: 20px;
+      }
+
+      .icon-button {
+        font-size: 14px;
+        padding: 5px 8px;
+      }
+
+      .menu-desplegable.language-desplegable {
+        min-width: 100px;
+        top: 30px;
+      }
+
+      .menu-desplegable.language-desplegable button {
+        font-size: 13px;
+        padding: 8px 10px;
+      }
+
+      .about h2 {
+        font-size: 20px;
+      }
+
+      .about p {
+        font-size: 13px;
+      }
+
+      .modal-content {
+        padding: 10px;
+      }
+
+      .modal-content p {
+        font-size: 13px;
+      }
+
+      .modal-btn {
+        font-size: 13px;
+      }
+    }
   </style>
 </head>
 <body>
