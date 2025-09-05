@@ -1574,11 +1574,25 @@ function formatDateSeparator(date) {
 }
 
 async function selectChat(chatId, recipientId, displayName, fotoPerfilUrl, tipoUsuario) {
+  if (!currentUserId) {
+    console.error('No se puede seleccionar chat: currentUserId no definido');
+    showNotification(translations[document.documentElement.lang].chat.user_not_identified, true);
+    setTimeout(() => { window.location.href = '/login.html'; }, 2000);
+    return;
+  }
+
   try {
+    console.log('Seleccionando chat:', { 
+      chatId, 
+      recipientId, 
+      displayName, 
+      fotoPerfilUrl, 
+      tipoUsuario, 
+      currentUserId 
+    });
+
     currentChatId = chatId;
     currentRecipientId = recipientId;
-
-    console.log('Seleccionando chat:', { chatId, recipientId, displayName, fotoPerfilUrl, tipoUsuario });
 
     // Actualizar la lista de chats
     document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
@@ -1627,15 +1641,20 @@ async function selectChat(chatId, recipientId, displayName, fotoPerfilUrl, tipoU
 
 async function loadMessages(chatId) {
   if (!currentUserId) {
-    console.error('currentUserId no está definido');
+    console.error('⚠️ currentUserId no está definido al intentar cargar mensajes');
     showNotification(translations[document.documentElement.lang].chat.user_not_identified, true);
+    setTimeout(() => { window.location.href = '/login.html'; }, 2000);
     return;
   }
+
   try {
+    console.log('Cargando mensajes para chat_id:', chatId, 'con currentUserId:', currentUserId);
+
     const response = await fetch(`/chats/${chatId}/mensajes?limit=20&offset=0`, {
       credentials: 'include',
       headers: { 'Cache-Control': 'no-cache' }
     });
+
     if (!response.ok) {
       if (response.status === 401) {
         showNotification(translations[document.documentElement.lang].chat.session_expired, true);
@@ -1648,21 +1667,40 @@ async function loadMessages(chatId) {
       }
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
+
     const data = await response.json();
+    console.log('Respuesta del servidor para mensajes:', data);
 
     const messagesContainer = document.querySelector('.chat-messages');
-    messagesContainer.innerHTML = '';
-    if (data.mensajes.length === 0) {
-      messagesContainer.innerHTML = `<p style="text-align: center; color: #666;">${translations[document.documentElement.lang].chat.no_messages}</p>`;
+    messagesContainer.innerHTML = ''; // limpiar siempre el contenedor
+
+    if (!data.mensajes || data.mensajes.length === 0) {
+      messagesContainer.innerHTML = `<p style="text-align: center; color: #666;" class="no-messages">${translations[document.documentElement.lang].chat.no_messages}</p>`;
       return;
     }
 
+    // ordenar por fecha
     data.mensajes.sort((a, b) => new Date(a.fecha_envio) - new Date(b.fecha_envio));
     lastMessageDate = null;
 
     data.mensajes.forEach(msg => {
-      msg.es_mio = Number(msg.remitente_id) === currentUserId;
-      console.log('Mensaje:', msg.id, 'remitente_id:', msg.remitente_id, 'currentUserId:', currentUserId, 'es_mio:', msg.es_mio);
+      if (msg.emisor_id === undefined || msg.emisor_id === null) {
+        console.warn('Mensaje sin emisor_id:', msg);
+        msg.es_mio = false;
+      } else {
+        msg.es_mio = String(msg.emisor_id) === String(currentUserId);
+      }
+
+      console.log('Procesando mensaje:', {
+        id: msg.id,
+        emisor_id: msg.emisor_id,
+        currentUserId: currentUserId,
+        es_mio: msg.es_mio,
+        contenido: msg.contenido,
+        tipo: msg.tipo,
+        fecha_envio: msg.fecha_envio
+      });
+
       const messageDate = convertToCST(new Date(msg.fecha_envio));
       if (!lastMessageDate || !isSameDay(messageDate, lastMessageDate)) {
         const separatorText = formatDateSeparator(messageDate);
@@ -1675,19 +1713,34 @@ async function loadMessages(chatId) {
         }
         lastMessageDate = messageDate;
       }
+
       appendMessage(msg);
     });
 
     scrollToBottom();
   } catch (error) {
-    console.error('Error al cargar mensajes:', error);
+    console.error('❌ Error al cargar mensajes:', error);
     showNotification(translations[document.documentElement.lang].chat.messages_error, true);
   }
 }
 
+
 function appendMessage(msg) {
-  console.log('Mensaje recibido:', msg);
+  console.log('Añadiendo mensaje:', {
+    id: msg.id,
+    es_mio: msg.es_mio,
+    contenido: msg.contenido,
+    tipo: msg.tipo,
+    media_url: msg.media_url,
+    fecha_envio: msg.fecha_envio
+  });
   const messagesContainer = document.querySelector('.chat-messages');
+
+  // Remover el mensaje "Sin mensajes" si existe
+  const noMessages = messagesContainer.querySelector('.no-messages');
+  if (noMessages) {
+    noMessages.remove();
+  }
 
   // Evitar duplicar mensajes
   if (document.querySelector(`.message[data-message-id="${msg.id}"]`)) {
@@ -1930,6 +1983,13 @@ async function sendMessage() {
   }
 
   try {
+    // Limpiar el mensaje "Sin mensajes"
+    const messagesContainer = document.querySelector('.chat-messages');
+    const noMessages = messagesContainer.querySelector('.no-messages');
+    if (noMessages) {
+      noMessages.remove();
+    }
+
     // Generar un ID temporal para el mensaje
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -2257,6 +2317,13 @@ async function sendVoiceNote(audioBlob) {
   }
 
   try {
+    // Limpiar el mensaje "Sin mensajes"
+    const messagesContainer = document.querySelector('.chat-messages');
+    const noMessages = messagesContainer.querySelector('.no-messages');
+    if (noMessages) {
+      noMessages.remove();
+    }
+
     // Añadir nota de voz temporalmente
     const tempId = `temp_voice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const tempVoiceMessage = {
