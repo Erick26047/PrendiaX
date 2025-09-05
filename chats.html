@@ -1172,6 +1172,7 @@ let recordingSeconds = 0;
 let currentLanguage = localStorage.getItem('language') || 'es';
 let selectedFiles = [];
 let chatDataCache = {}; // Caché para datos de los chats
+let lastMessageDate = null;
 
 // Convertir fecha UTC a CST
 function convertToCST(date) {
@@ -1236,6 +1237,11 @@ function changeLanguage() {
   if (currentChatId && currentName) {
     chatHeader.textContent = currentName;
   }
+
+  // Recargar mensajes para actualizar separadores
+  if (currentChatId) {
+    loadMessages(currentChatId);
+  }
 }
 
 document.getElementById('language-toggle').addEventListener('click', changeLanguage);
@@ -1286,6 +1292,7 @@ async function fetchCurrentUserId() {
     const data = await response.json();
     if (data.user_id !== null && data.user_id !== undefined) {
       currentUserId = Number(data.user_id);
+      console.log('Current User ID:', currentUserId);
       return currentUserId;
     } else {
       showNotification(translations[document.documentElement.lang].chat.user_not_identified, true);
@@ -1323,7 +1330,7 @@ async function connectWebSocket() {
       if (data.type === 'ping') return;
 
       // Determinar si el mensaje es propio
-      data.es_mio = data.remitente_id === currentUserId;
+      data.es_mio = Number(data.remitente_id) === currentUserId;
 
       if (data.tipo === 'nuevo_chat') {
         // Nuevo chat creado, recargar la lista completa
@@ -1534,22 +1541,35 @@ function scrollToBottom() {
 }
 
 function isSameDay(date1, date2) {
-  return date1.getFullYear() === date2.getFullYear() &&
-         date1.getMonth() === date2.getMonth() &&
-         date1.getDate() === date2.getDate();
+  const d1 = convertToCST(new Date(date1));
+  const d2 = convertToCST(new Date(date2));
+  return d1.getFullYear() === d2.getFullYear() &&
+         d1.getMonth() === d2.getMonth() &&
+         d1.getDate() === d2.getDate();
+}
+
+function getDayDifference(date1, date2) {
+  const d1 = convertToCST(new Date(date1));
+  const d2 = convertToCST(new Date(date2));
+  d1.setHours(0, 0, 0, 0);
+  d2.setHours(0, 0, 0, 0);
+  const diffTime = d2 - d1;
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
 }
 
 function formatDateSeparator(date) {
+  const messageDate = convertToCST(new Date(date));
   const today = convertToCST(new Date());
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
+  const diffDays = getDayDifference(messageDate, today);
 
-  if (isSameDay(date, today)) {
+  if (diffDays === 0) {
     return translations[document.documentElement.lang].chat.today;
-  } else if (isSameDay(date, yesterday)) {
+  } else if (diffDays === -1) {
     return translations[document.documentElement.lang].chat.yesterday;
+  } else if (diffDays === -2) {
+    return translations[document.documentElement.lang].chat.day_before_yesterday;
   } else {
-    return date.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+    return messageDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
   }
 }
 
@@ -1606,10 +1626,15 @@ async function selectChat(chatId, recipientId, displayName, fotoPerfilUrl, tipoU
 }
 
 async function loadMessages(chatId) {
+  if (!currentUserId) {
+    console.error('currentUserId no está definido');
+    showNotification(translations[document.documentElement.lang].chat.user_not_identified, true);
+    return;
+  }
   try {
     const response = await fetch(`/chats/${chatId}/mensajes?limit=20&offset=0`, {
       credentials: 'include',
-      headers: { 'Cache-Control': 'no-cache' } // Evitar caché
+      headers: { 'Cache-Control': 'no-cache' }
     });
     if (!response.ok) {
       if (response.status === 401) {
@@ -1633,17 +1658,22 @@ async function loadMessages(chatId) {
     }
 
     data.mensajes.sort((a, b) => new Date(a.fecha_envio) - new Date(b.fecha_envio));
-    let lastDate = null;
+    lastMessageDate = null;
 
     data.mensajes.forEach(msg => {
-      msg.es_mio = msg.remitente_id === currentUserId; // Asegurar es_mio
-      const messageDate = convertToCST(msg.fecha_envio);
-      if (!lastDate || !isSameDay(messageDate, lastDate)) {
-        const separator = document.createElement('div');
-        separator.className = 'date-separator';
-        separator.innerHTML = `<span>${formatDateSeparator(messageDate)}</span>`;
-        messagesContainer.appendChild(separator);
-        lastDate = messageDate;
+      msg.es_mio = Number(msg.remitente_id) === currentUserId;
+      console.log('Mensaje:', msg.id, 'remitente_id:', msg.remitente_id, 'currentUserId:', currentUserId, 'es_mio:', msg.es_mio);
+      const messageDate = convertToCST(new Date(msg.fecha_envio));
+      if (!lastMessageDate || !isSameDay(messageDate, lastMessageDate)) {
+        const separatorText = formatDateSeparator(messageDate);
+        const lastSeparator = messagesContainer.querySelector('.date-separator:last-child');
+        if (!lastSeparator || lastSeparator.querySelector('span').textContent !== separatorText) {
+          const separator = document.createElement('div');
+          separator.className = 'date-separator';
+          separator.innerHTML = `<span>${separatorText}</span>`;
+          messagesContainer.appendChild(separator);
+        }
+        lastMessageDate = messageDate;
       }
       appendMessage(msg);
     });
@@ -1665,20 +1695,20 @@ function appendMessage(msg) {
     return;
   }
 
-  const messageDate = convertToCST(msg.fecha_envio);
-  const lastMessage = messagesContainer.querySelector('.message:last-child');
-  let lastDate = lastMessage ? convertToCST(lastMessage.dataset.fechaEnvio) : null;
+  const messageDate = convertToCST(new Date(msg.fecha_envio));
+  const lastSeparator = messagesContainer.querySelector('.date-separator:last-child');
+  const lastSeparatorText = lastSeparator ? lastSeparator.querySelector('span').textContent : null;
+  const separatorText = formatDateSeparator(messageDate);
 
-  // Añadir separador de fecha si es necesario
-  if (!lastDate || !isSameDay(messageDate, lastDate)) {
-    const separatorText = formatDateSeparator(messageDate);
-    const lastSeparator = messagesContainer.querySelector('.date-separator:last-child');
-    if (!lastSeparator || lastSeparator.innerText !== separatorText) {
-      const separator = document.createElement('div');
-      separator.className = 'date-separator';
-      separator.innerHTML = `<span>${separatorText}</span>`;
-      messagesContainer.appendChild(separator);
+  if (!lastMessageDate || !isSameDay(messageDate, lastMessageDate) || (lastSeparatorText && lastSeparatorText !== separatorText)) {
+    if (lastSeparator && lastSeparatorText !== separatorText) {
+      lastSeparator.remove();
     }
+    const separator = document.createElement('div');
+    separator.className = 'date-separator';
+    separator.innerHTML = `<span>${separatorText}</span>`;
+    messagesContainer.appendChild(separator);
+    lastMessageDate = messageDate;
   }
 
   const messageEl = document.createElement('div');
@@ -2329,6 +2359,7 @@ window.addEventListener('load', async () => {
     }
   }
 });
+
 </script>
 </body>
 </html>
