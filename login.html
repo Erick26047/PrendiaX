@@ -7,6 +7,7 @@
   <link rel="icon" type="image/png" href="PRENDIAX.png" />
   <link rel="stylesheet" href="style.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     .login-container {
       max-width: 400px;
@@ -125,20 +126,199 @@
     .back-link:hover {
       text-decoration: underline;
     }
+    /* Estilos para el botón de términos y condiciones */
+    .terms-link {
+      display: block;
+      margin-top: 10px;
+      color: #007bff;
+      font-size: 16px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .terms-link:hover {
+      text-decoration: underline;
+    }
+    /* Estilos para el modal de términos y condiciones */
+    .terms-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    .terms-modal-content {
+      background-color: #ffffff;
+      border-radius: 10px;
+      padding: 20px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      font-family: 'Poppins', sans-serif;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      animation: slideDown 0.3s ease-in-out;
+    }
+    .terms-modal-content h2 {
+      font-size: 24px;
+      color: #333333;
+      margin-bottom: 15px;
+    }
+    .terms-modal-content h3 {
+      font-size: 18px;
+      color: #333333;
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+    .terms-modal-content p, .terms-modal-content li {
+      font-size: 14px;
+      color: #333333;
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+    .terms-modal-content ul {
+      list-style-type: disc;
+      padding-left: 20px;
+    }
+    .terms-modal-content .close-btn {
+      background-color: #e0e0e0;
+      color: #333333;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background-color 0.3s ease;
+    }
+    .terms-modal-content .close-btn:hover {
+      background-color: #d0d0d0;
+    }
+    /* Estilos para modo oscuro */
+    body.dark-mode .terms-modal-content {
+      background-color: #2a2a2a;
+      color: #e0e0e0;
+    }
+    body.dark-mode .terms-modal-content h2,
+    body.dark-mode .terms-modal-content h3,
+    body.dark-mode .terms-modal-content p,
+    body.dark-mode .terms-modal-content li {
+      color: #e0e0e0;
+    }
+    body.dark-mode .terms-modal-content .close-btn {
+      background-color: #444444;
+      color: #e0e0e0;
+    }
+    body.dark-mode .terms-modal-content .close-btn:hover {
+      background-color: #555555;
+    }
+    /* Media Query para dispositivos móviles */
+    @media (max-width: 768px) {
+      .login-container {
+        margin: 20px auto;
+        padding: 15px;
+      }
+      .login-btn {
+        font-size: 16px;
+        padding: 12px;
+      }
+      .register-link, .terms-link, .back-link {
+        font-size: 14px;
+      }
+      .email-form input, .register-form input {
+        font-size: 14px;
+        padding: 8px;
+      }
+      .email-form button, .register-form button {
+        font-size: 14px;
+        padding: 10px;
+      }
+      .error-message {
+        font-size: 12px;
+      }
+      .login-msg {
+        font-size: 12px;
+      }
+      .terms-modal-content {
+        max-width: 90%;
+        padding: 15px;
+      }
+      .terms-modal-content h2 {
+        font-size: 20px;
+      }
+      .terms-modal-content h3 {
+        font-size: 16px;
+      }
+      .terms-modal-content p, .terms-modal-content li {
+        font-size: 12px;
+      }
+      .terms-modal-content .close-btn {
+        font-size: 12px;
+        padding: 8px 16px;
+      }
+    }
+    @media (max-width: 480px) {
+      .login-container {
+        margin: 15px auto;
+        padding: 10px;
+      }
+      .login-btn {
+        font-size: 14px;
+        padding: 10px;
+      }
+      .register-link, .terms-link, .back-link {
+        font-size: 12px;
+      }
+      .email-form input, .register-form input {
+        font-size: 12px;
+        padding: 6px;
+      }
+      .email-form button, .register-form button {
+        font-size: 12px;
+        padding: 8px;
+      }
+      .error-message {
+        font-size: 10px;
+      }
+      .login-msg {
+        font-size: 10px;
+      }
+      .terms-modal-content {
+        padding: 10px;
+      }
+      .terms-modal-content h2 {
+        font-size: 18px;
+      }
+      .terms-modal-content h3 {
+        font-size: 14px;
+      }
+      .terms-modal-content p, .terms-modal-content li {
+        font-size: 11px;
+      }
+      .terms-modal-content .close-btn {
+        font-size: 11px;
+        padding: 6px 12px;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="login-container">
-    <h2>Inicia sesión para continuar</h2>
+    <h2 data-translate="login.title">Inicia sesión para continuar</h2>
     <div class="error-message" id="error-message"></div>
     <div class="login-buttons">
       <a href="#" class="login-btn google">
         <img src="google.png" alt="Google logo" class="login-icon">
-        Continuar con Google
+        <span data-translate="login.google">Continuar con Google</span>
       </a>
-      <button class="login-btn email" onclick="toggleEmailForm()">Iniciar con Email</button>
+      <button class="login-btn email" onclick="toggleEmailForm()"><span data-translate="login.email">Iniciar con Email</span></button>
       <div class="separator">– o –</div>
-      <a class="register-link" onclick="toggleRegisterForm()">Registrarse</a>
+      <a class="register-link" onclick="toggleRegisterForm()" data-translate="login.register">Registrarse</a>
     </div>
 
     <!-- FORM LOGIN -->
@@ -147,7 +327,7 @@
       <input type="password" name="password" placeholder="Contraseña" required />
       <input type="hidden" name="tipo" id="tipo" />
       <input type="hidden" name="target" id="target" />
-      <button type="submit">Iniciar Sesión</button>
+      <button type="submit" data-translate="login.submit">Iniciar Sesión</button>
     </form>
 
     <!-- FORM REGISTRO -->
@@ -158,11 +338,66 @@
       <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" required />
       <input type="hidden" name="tipo" id="register-tipo" />
       <input type="hidden" name="target" id="register-target" />
-      <button type="submit">Registrarse</button>
+      <button type="submit" data-translate="login.register_submit">Registrarse</button>
     </form>
 
-    <p class="login-msg">Al iniciar sesión o registrarse acepta nuestros términos y condiciones.</p>
-    <a href="/" class="back-link">← Volver al inicio</a>
+    <p class="login-msg" data-translate="login.terms_notice">Al iniciar sesión o registrarse acepta nuestros términos y condiciones.</p>
+    <a href="/" class="back-link" data-translate="login.back">← Volver al inicio</a>
+    <a class="terms-link" onclick="openTermsModal()" data-translate="login.terms_link">Consultar Términos y Condiciones</a>
+  </div>
+
+  <!-- Modal para Términos y Condiciones -->
+  <div class="terms-modal" id="terms-modal">
+    <div class="terms-modal-content">
+      <h2 data-translate="login.terms_title">PrendiaX - Políticas de Privacidad y Términos y Condiciones</h2>
+      <h3 data-translate="login.privacy_title">Políticas de Privacidad – PrendiaX</h3>
+      <p data-translate="login.privacy_intro">En PrendiaX valoramos la confianza de nuestros usuarios y nos comprometemos a proteger la información personal que nos proporcionan.</p>
+      <h3 data-translate="login.privacy_collection_title">1. Recolección de datos</h3>
+      <p>Recopilamos los siguientes tipos de información:</p>
+      <ul>
+        <li data-translate="login.privacy_collection_1">Datos de registro (nombre, correo electrónico, foto de perfil, etc.).</li>
+        <li data-translate="login.privacy_collection_2">Información relacionada con los negocios que los usuarios publiquen en la plataforma (descripción, imágenes, ubicación, enlaces, etc.).</li>
+        <li data-translate="login.privacy_collection_3">Datos de interacción dentro de la app (publicaciones, comentarios, reacciones, chats privados).</li>
+      </ul>
+      <h3 data-translate="login.privacy_usage_title">2. Uso de los datos</h3>
+      <p>Los datos que recopilamos son utilizados exclusivamente para los fines de la plataforma:</p>
+      <ul>
+        <li data-translate="login.privacy_usage_1">Impulsar, promover y dar visibilidad a los negocios de nuestros usuarios.</li>
+        <li data-translate="login.privacy_usage_2">Permitir la interacción entre usuarios dentro de la comunidad, ya sea mediante publicaciones, comentarios o chats.</li>
+        <li data-translate="login.privacy_usage_3">Mejorar las funcionalidades y servicios de PrendiaX.</li>
+      </ul>
+      <p data-translate="login.privacy_usage_note">No vendemos ni compartimos información personal con terceros ajenos al funcionamiento de la plataforma, salvo que sea requerido por ley.</p>
+      <h3 data-translate="login.privacy_protection_title">3. Protección de la información</h3>
+      <p data-translate="login.privacy_protection">Implementamos medidas técnicas y administrativas para proteger la información de nuestros usuarios. Sin embargo, PrendiaX no garantiza la seguridad absoluta ante incidentes externos como hackeos, robos de información o accesos no autorizados, y el usuario acepta este riesgo al registrarse en la plataforma.</p>
+      <h3 data-translate="login.privacy_rights_title">4. Derechos del usuario</h3>
+      <p>Los usuarios podrán:</p>
+      <ul>
+        <li data-translate="login.privacy_rights_1">Acceder, rectificar o eliminar sus datos personales.</li>
+        <li data-translate="login.privacy_rights_2">Solicitar la baja de su cuenta en cualquier momento.</li>
+      </ul>
+      <p data-translate="login.privacy_rights_contact">Para ejercer estos derechos, pueden comunicarse al correo: <a href="mailto:soporte@prendiax.com">soporte@prendiax.com</a></p>
+      <h3 data-translate="login.privacy_age_title">5. Restricción de edad</h3>
+      <p data-translate="login.privacy_age">El uso de PrendiaX está permitido únicamente a personas mayores de 18 años. En caso de que un menor de edad utilice la plataforma, será bajo la supervisión y consentimiento de sus padres o tutores legales, quienes asumen toda la responsabilidad.</p>
+      <h3 data-translate="login.terms_title_2">Términos y Condiciones – PrendiaX</h3>
+      <h3 data-translate="login.terms_usage_title">1. Uso de la plataforma</h3>
+      <ul>
+        <li data-translate="login.terms_usage_1">El usuario es responsable del contenido que publique (información, imágenes, videos, etc.).</li>
+        <li data-translate="login.terms_usage_2">No se permite publicar información falsa, engañosa o que infrinja derechos de terceros.</li>
+        <li data-translate="login.terms_usage_3">Queda estrictamente prohibido publicar, compartir o distribuir contenido ilegal, ofensivo, discriminatorio, violento, pornográfico o que promueva actividades ilícitas.</li>
+        <li data-translate="login.terms_usage_4">PrendiaX se reserva el derecho de suspender o eliminar cuentas que incumplan estas reglas.</li>
+      </ul>
+      <h3 data-translate="login.terms_responsibility_title">2. Responsabilidad</h3>
+      <ul>
+        <li data-translate="login.terms_responsibility_1">PrendiaX no se hace responsable por pérdidas económicas, fraudes, robos de identidad, ni ningún otro percance que pueda surgir del uso de la plataforma.</li>
+        <li data-translate="login.terms_responsibility_2">Si a través de la app se realizan ventas, compras, acuerdos comerciales, intercambios de productos/servicios o conversaciones mediante el chat, la responsabilidad recae únicamente en los usuarios involucrados.</li>
+        <li data-translate="login.terms_responsibility_3">PrendiaX actúa únicamente como un espacio de conexión y promoción de negocios, no como intermediario, aval ni garante de dichas transacciones.</li>
+      </ul>
+      <h3 data-translate="login.terms_modifications_title">3. Modificaciones</h3>
+      <p data-translate="login.terms_modifications">PrendiaX podrá actualizar estas políticas y términos en cualquier momento. Las modificaciones se notificarán a los usuarios y entrarán en vigor al publicarse en la plataforma.</p>
+      <h3 data-translate="login.terms_acceptance_title">4. Aceptación</h3>
+      <p data-translate="login.terms_acceptance">Al registrarse o usar la aplicación, el usuario declara haber leído y aceptado estas Políticas de Privacidad y Términos y Condiciones.</p>
+      <button class="close-btn" onclick="closeTermsModal()" data-translate="login.close_terms">Cerrar</button>
+    </div>
   </div>
 
   <script>
@@ -246,6 +481,24 @@
         errorMessage.textContent = 'Este correo está registrado con Google. Por favor, inicia sesión con Google.';
       }
     }
+
+    // Funciones para abrir y cerrar el modal de términos
+    function openTermsModal() {
+      const modal = document.getElementById('terms-modal');
+      modal.style.display = 'flex';
+    }
+
+    function closeTermsModal() {
+      const modal = document.getElementById('terms-modal');
+      modal.style.display = 'none';
+    }
+
+    // Cerrar modal al hacer clic fuera
+    document.getElementById('terms-modal').addEventListener('click', (event) => {
+      if (event.target === document.getElementById('terms-modal')) {
+        closeTermsModal();
+      }
+    });
   </script>
 </body>
 </html>
