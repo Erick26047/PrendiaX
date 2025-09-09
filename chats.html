@@ -1357,7 +1357,8 @@ async function connectWebSocket() {
     // Mensaje nuevo, verificar si no está duplicado
     if (!document.querySelector(`.message[data-message-id="${data.id}"]`)) {
       if (data.chat_id === currentChatId) {
-        appendMessage(data, true); // Añadir separador si es necesario
+        // Añadir el mensaje y verificar si se necesita un separador
+        appendMessage(data, true);
         scrollToBottom();
       }
       // Actualizar la lista de chats dinámicamente
@@ -1754,14 +1755,19 @@ function appendMessage(msg, addSeparator = true) {
     return;
   }
 
-  // Añadir separador de fecha si es necesario
+  // Verificar si se debe añadir un separador de fecha
   if (addSeparator) {
     const messageDate = convertToCST(new Date(msg.fecha_envio));
     const separatorText = formatDateSeparator(messageDate);
 
-    if (!lastMessageDate || !isSameDay(messageDate, lastMessageDate)) {
-      const lastSeparator = messagesContainer.querySelector('.date-separator:last-child');
-      if (!lastSeparator || lastSeparator.querySelector('span').textContent !== separatorText) {
+    // Buscar el último separador existente
+    const lastSeparator = messagesContainer.querySelector('.date-separator:last-child');
+    const lastSeparatorText = lastSeparator ? lastSeparator.querySelector('span').textContent : null;
+
+    // Solo añadir un separador si el día cambió o no hay un separador para este día
+    if (!lastMessageDate || !isSameDay(messageDate, lastMessageDate) || lastSeparatorText !== separatorText) {
+      // Evitar duplicar el separador si ya existe para el mismo día
+      if (!lastSeparator || lastSeparatorText !== separatorText) {
         const separator = document.createElement('div');
         separator.className = 'date-separator';
         separator.innerHTML = `<span>${separatorText}</span>`;
@@ -1771,6 +1777,7 @@ function appendMessage(msg, addSeparator = true) {
     }
   }
 
+  // Crear el elemento del mensaje
   const messageEl = document.createElement('div');
   messageEl.className = `message ${msg.es_mio ? 'sent' : 'received'}`;
   messageEl.dataset.messageId = msg.id;
@@ -1998,12 +2005,10 @@ async function sendMessage() {
       noMessages.remove();
     }
 
-    // Generar un ID temporal para el mensaje
-    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
     // Enviar mensaje de texto si existe
     if (message) {
       // Añadir mensaje localmente primero (optimismo)
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const tempMessage = {
         id: tempId,
         chat_id: currentChatId,
@@ -2012,7 +2017,7 @@ async function sendMessage() {
         tipo: 'texto',
         es_mio: true
       };
-      appendMessage(tempMessage);
+      appendMessage(tempMessage, true); // Permitir separador si es necesario
 
       const formData = new FormData();
       formData.append('contenido', message);
@@ -2035,7 +2040,7 @@ async function sendMessage() {
       // Reemplazar mensaje temporal con el mensaje real
       const tempEl = document.querySelector(`.message[data-message-id="${tempId}"]`);
       if (tempEl) tempEl.remove();
-      appendMessage(msg);
+      appendMessage(msg, true); // Permitir separador si es necesario
       await updateChatList(msg); // Actualizar lista de chats
     }
 
@@ -2061,7 +2066,7 @@ async function sendMessage() {
           media_url: URL.createObjectURL(file),
           es_mio: true
         };
-        appendMessage(tempFileMessage);
+        appendMessage(tempFileMessage, true); // Permitir separador si es necesario
 
         const formData = new FormData();
         formData.append('file', file);
@@ -2089,7 +2094,7 @@ async function sendMessage() {
         // Reemplazar mensaje temporal
         const tempEl = document.querySelector(`.message[data-message-id="${tempFileId}"]`);
         if (tempEl) tempEl.remove();
-        appendMessage(msg);
+        appendMessage(msg, true); // Permitir separador si es necesario
         await updateChatList(msg); // Actualizar lista de chats
       }
     }
