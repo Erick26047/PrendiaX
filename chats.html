@@ -1327,46 +1327,46 @@ async function connectWebSocket() {
       showNotification(translations[document.documentElement.lang].chat.websocket_connected);
     };
     ws.onmessage = async (event) => {
-      const data = JSON.parse(event.data);
-      console.log('Mensaje WebSocket recibido:', data);
-      if (data.type === 'ping') return;
+  const data = JSON.parse(event.data);
+  console.log('Mensaje WebSocket recibido:', data);
+  if (data.type === 'ping') return;
 
-      // Determinar si el mensaje es propio
-      data.es_mio = Number(data.remitente_id) === currentUserId;
+  // Determinar si el mensaje es propio
+  data.es_mio = Number(data.remitente_id) === currentUserId;
 
-      if (data.tipo === 'nuevo_chat') {
-        // Nuevo chat creado, recargar la lista completa
-        offset = 0;
-        hasMoreChats = true;
-        document.querySelector('.chat-list').innerHTML = '';
-        await loadChats();
-      } else if (data.tipo === 'chat_deleted') {
-        // Chat eliminado, actualizar la interfaz
-        if (currentChatId === data.chat_id) {
-          currentChatId = null;
-          currentRecipientId = null;
-          document.querySelector('.chat-messages').innerHTML = `<p style="text-align: center; color: #666;">${translations[document.documentElement.lang].chat.no_messages}</p>`;
-          document.querySelector('.chat-header .name').textContent = translations[document.documentElement.lang].chat.select_chat;
-          document.querySelector('.chat-header .avatar-container').innerHTML = '<i class="fas fa-user avatar-icon"></i>';
-        }
-        offset = 0;
-        hasMoreChats = true;
-        document.querySelector('.chat-list').innerHTML = '';
-        await loadChats();
-      } else {
-        // Mensaje nuevo, verificar si no está duplicado
-        if (!document.querySelector(`.message[data-message-id="${data.id}"]`)) {
-          if (data.chat_id === currentChatId) {
-            appendMessage(data);
-            scrollToBottom();
-          }
-          // Actualizar la lista de chats dinámicamente
-          await updateChatList(data);
-        } else {
-          console.log('Mensaje duplicado detectado, omitiendo:', data.id);
-        }
+  if (data.tipo === 'nuevo_chat') {
+    // Nuevo chat creado, recargar la lista completa
+    offset = 0;
+    hasMoreChats = true;
+    document.querySelector('.chat-list').innerHTML = '';
+    await loadChats();
+  } else if (data.tipo === 'chat_deleted') {
+    // Chat eliminado, actualizar la interfaz
+    if (currentChatId === data.chat_id) {
+      currentChatId = null;
+      currentRecipientId = null;
+      document.querySelector('.chat-messages').innerHTML = `<p style="text-align: center; color: #666;">${translations[document.documentElement.lang].chat.no_messages}</p>`;
+      document.querySelector('.chat-header .name').textContent = translations[document.documentElement.lang].chat.select_chat;
+      document.querySelector('.chat-header .avatar-container').innerHTML = '<i class="fas fa-user avatar-icon"></i>';
+    }
+    offset = 0;
+    hasMoreChats = true;
+    document.querySelector('.chat-list').innerHTML = '';
+    await loadChats();
+  } else {
+    // Mensaje nuevo, verificar si no está duplicado
+    if (!document.querySelector(`.message[data-message-id="${data.id}"]`)) {
+      if (data.chat_id === currentChatId) {
+        appendMessage(data, true); // Añadir separador si es necesario
+        scrollToBottom();
       }
-    };
+      // Actualizar la lista de chats dinámicamente
+      await updateChatList(data);
+    } else {
+      console.log('Mensaje duplicado detectado, omitiendo:', data.id);
+    }
+  }
+};
     ws.onerror = (error) => {
       console.error('Error en WebSocket:', error);
       showNotification(translations[document.documentElement.lang].chat.websocket_error, true);
@@ -1674,16 +1674,16 @@ async function loadMessages(chatId) {
     console.log('Respuesta del servidor para mensajes:', data);
 
     const messagesContainer = document.querySelector('.chat-messages');
-    messagesContainer.innerHTML = ''; // limpiar siempre el contenedor
+    messagesContainer.innerHTML = ''; // Limpiar el contenedor
 
     if (!data.mensajes || data.mensajes.length === 0) {
       messagesContainer.innerHTML = `<p style="text-align: center; color: #666;" class="no-messages">${translations[document.documentElement.lang].chat.no_messages}</p>`;
       return;
     }
 
-    // ordenar por fecha
+    // Ordenar mensajes por fecha
     data.mensajes.sort((a, b) => new Date(a.fecha_envio) - new Date(b.fecha_envio));
-    lastMessageDate = null;
+    lastMessageDate = null; // Reiniciar lastMessageDate
 
     data.mensajes.forEach(msg => {
       if (msg.emisor_id === undefined || msg.emisor_id === null) {
@@ -1704,8 +1704,11 @@ async function loadMessages(chatId) {
       });
 
       const messageDate = convertToCST(new Date(msg.fecha_envio));
+      const separatorText = formatDateSeparator(messageDate);
+
+      // Solo añadir un separador si el día cambia
       if (!lastMessageDate || !isSameDay(messageDate, lastMessageDate)) {
-        const separatorText = formatDateSeparator(messageDate);
+        // Verificar si el último separador coincide con el nuevo día
         const lastSeparator = messagesContainer.querySelector('.date-separator:last-child');
         if (!lastSeparator || lastSeparator.querySelector('span').textContent !== separatorText) {
           const separator = document.createElement('div');
@@ -1716,7 +1719,7 @@ async function loadMessages(chatId) {
         lastMessageDate = messageDate;
       }
 
-      appendMessage(msg);
+      appendMessage(msg, false); // Pasar false para no añadir separadores adicionales
     });
 
     scrollToBottom();
@@ -1727,7 +1730,7 @@ async function loadMessages(chatId) {
 }
 
 
-function appendMessage(msg) {
+function appendMessage(msg, addSeparator = true) {
   console.log('Añadiendo mensaje:', {
     id: msg.id,
     es_mio: msg.es_mio,
@@ -1736,6 +1739,7 @@ function appendMessage(msg) {
     media_url: msg.media_url,
     fecha_envio: msg.fecha_envio
   });
+
   const messagesContainer = document.querySelector('.chat-messages');
 
   // Remover el mensaje "Sin mensajes" si existe
@@ -1750,20 +1754,21 @@ function appendMessage(msg) {
     return;
   }
 
-  const messageDate = convertToCST(new Date(msg.fecha_envio));
-  const lastSeparator = messagesContainer.querySelector('.date-separator:last-child');
-  const lastSeparatorText = lastSeparator ? lastSeparator.querySelector('span').textContent : null;
-  const separatorText = formatDateSeparator(messageDate);
+  // Añadir separador de fecha si es necesario
+  if (addSeparator) {
+    const messageDate = convertToCST(new Date(msg.fecha_envio));
+    const separatorText = formatDateSeparator(messageDate);
 
-  if (!lastMessageDate || !isSameDay(messageDate, lastMessageDate) || (lastSeparatorText && lastSeparatorText !== separatorText)) {
-    if (lastSeparator && lastSeparatorText !== separatorText) {
-      lastSeparator.remove();
+    if (!lastMessageDate || !isSameDay(messageDate, lastMessageDate)) {
+      const lastSeparator = messagesContainer.querySelector('.date-separator:last-child');
+      if (!lastSeparator || lastSeparator.querySelector('span').textContent !== separatorText) {
+        const separator = document.createElement('div');
+        separator.className = 'date-separator';
+        separator.innerHTML = `<span>${separatorText}</span>`;
+        messagesContainer.appendChild(separator);
+      }
+      lastMessageDate = messageDate;
     }
-    const separator = document.createElement('div');
-    separator.className = 'date-separator';
-    separator.innerHTML = `<span>${separatorText}</span>`;
-    messagesContainer.appendChild(separator);
-    lastMessageDate = messageDate;
   }
 
   const messageEl = document.createElement('div');
@@ -1793,7 +1798,8 @@ function appendMessage(msg) {
     const docClass = ['pdf', 'docx', 'doc', 'txt'].includes(extension) ? extension : '';
     content = `<a href="${mediaUrl}" target="_blank" class="document-link ${docClass}" title="${fileName}"><i class="fas fa-file-${extension === 'pdf' ? 'pdf' : extension === 'txt' ? 'alt' : 'word'}"></i> ${fileName}</a>`;
   }
-  messageEl.innerHTML = `${content}<div class="time">${messageDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div>`;
+
+  messageEl.innerHTML = `${content}<div class="time">${convertToCST(new Date(msg.fecha_envio)).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div>`;
   messagesContainer.appendChild(messageEl);
   scrollToBottom();
 }
