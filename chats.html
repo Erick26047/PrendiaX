@@ -1651,168 +1651,92 @@ async function selectChat(chatId, recipientId, displayName, fotoPerfilUrl, tipoU
 }
 
 async function loadMessages(chatId) {
-  if (!currentUserId) {
-    console.error('⚠️ currentUserId no está definido al intentar cargar mensajes');
-    showNotification(translations[document.documentElement.lang].chat.user_not_identified, true);
-    setTimeout(() => { window.location.href = '/login.html'; }, 2000);
-    return;
-  }
-
   try {
-    console.log('Cargando mensajes para chat_id:', chatId, 'con currentUserId:', currentUserId);
-
-    const response = await fetch(`/chats/${chatId}/mensajes?limit=20&offset=0`, {
-      credentials: 'include',
-      headers: { 'Cache-Control': 'no-cache' }
+    const response = await fetch(`/chats/${chatId}/mensajes`, {
+      method: "GET",
+      credentials: "include",
     });
+    if (!response.ok) throw new Error("Error al cargar mensajes");
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        showNotification(translations[document.documentElement.lang].chat.session_expired, true);
-        setTimeout(() => { window.location.href = '/login.html'; }, 2000);
-        return;
-      }
-      if (response.status === 404) {
-        showNotification(translations[document.documentElement.lang].chat.chat_not_found, true);
-        return;
-      }
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
+    const messages = await response.json();
+    const messagesContainer = document.querySelector(".chat-messages");
+    messagesContainer.innerHTML = ""; // limpiar antes de cargar
 
-    const data = await response.json();
-    console.log('Respuesta del servidor para mensajes:', data);
+    let lastDate = null;
 
-    const messagesContainer = document.querySelector('.chat-messages');
-    messagesContainer.innerHTML = ''; // Limpiar el contenedor
-
-    if (!data.mensajes || data.mensajes.length === 0) {
-      messagesContainer.innerHTML = `<p style="text-align: center; color: #666;" class="no-messages">${translations[document.documentElement.lang].chat.no_messages}</p>`;
-      return;
-    }
-
-    // Ordenar mensajes por fecha
-    data.mensajes.sort((a, b) => new Date(a.fecha_envio) - new Date(b.fecha_envio));
-    lastMessageDate = null; // Reiniciar lastMessageDate
-
-    data.mensajes.forEach((msg, index) => {
-      if (msg.emisor_id === undefined || msg.emisor_id === null) {
-        console.warn('Mensaje sin emisor_id:', msg);
-        msg.es_mio = false;
-      } else {
-        msg.es_mio = String(msg.emisor_id) === String(currentUserId);
-      }
-
-      console.log('Procesando mensaje:', {
-        id: msg.id,
-        emisor_id: msg.emisor_id,
-        currentUserId: currentUserId,
-        es_mio: msg.es_mio,
-        contenido: msg.contenido,
-        tipo: msg.tipo,
-        fecha_envio: msg.fecha_envio
-      });
-
+    messages.forEach((msg) => {
       const messageDate = convertToCST(new Date(msg.fecha_envio));
-      const separatorText = formatDateSeparator(messageDate);
 
-      // 🔹 Solo mostrar separador cuando el día cambie respecto al anterior
-      if (!lastMessageDate || !isSameDay(messageDate, lastMessageDate)) {
-        const separator = document.createElement('div');
-        separator.className = 'date-separator';
-        separator.innerHTML = `<span>${separatorText}</span>`;
+      // Insertar separador de fecha si cambia el día
+      if (!lastDate || !isSameDay(lastDate, messageDate)) {
+        const separatorText = formatDateSeparator(messageDate);
+        const separator = document.createElement("div");
+        separator.className = "date-separator";
+        separator.textContent = separatorText;
         messagesContainer.appendChild(separator);
-
-        lastMessageDate = messageDate; // actualizar referencia al último día mostrado
+        lastDate = messageDate;
       }
 
-      // ⚠️ Aquí ya NO pasamos addSeparator = true, porque el control lo hace loadMessages
-      appendMessage(msg, false);
+      appendMessage(msg, false); // false = no forzar scroll aquí
     });
 
     scrollToBottom();
-  } catch (error) {
-    console.error('❌ Error al cargar mensajes:', error);
-    showNotification(translations[document.documentElement.lang].chat.messages_error, true);
+  } catch (err) {
+    console.error("Error en loadMessages:", err);
   }
 }
 
 
+function appendMessage(msg, scroll = true) {
+  const messagesContainer = document.querySelector(".chat-messages");
 
-function appendMessage(msg, addSeparator = false) {
-  console.log('Añadiendo mensaje:', {
-    id: msg.id,
-    es_mio: msg.es_mio,
-    contenido: msg.contenido,
-    tipo: msg.tipo,
-    media_url: msg.media_url,
-    fecha_envio: msg.fecha_envio
-  });
+  // Evitar duplicados
+  if (document.querySelector(`.message[data-message-id="${msg.id}"]`)) return;
 
-  const messagesContainer = document.querySelector('.chat-messages');
+  const messageDiv = document.createElement("div");
+  messageDiv.classList.add("message");
+  messageDiv.dataset.messageId = msg.id;
 
-  // Remover el mensaje "Sin mensajes" si existe
-  const noMessages = messagesContainer.querySelector('.no-messages');
-  if (noMessages) {
-    noMessages.remove();
+  // Diferenciar si es mío o del otro
+  if (msg.es_mio) {
+    messageDiv.classList.add("sent");
+  } else {
+    messageDiv.classList.add("received");
   }
 
-  // Evitar duplicar mensajes
-  if (document.querySelector(`.message[data-message-id="${msg.id}"]`)) {
-    console.log('Mensaje ya existe en el DOM, omitiendo:', msg.id);
-    return;
-  }
-
-  // ✅ SOLO añadir separador si se pide explícitamente
-  if (addSeparator) {
-    const messageDate = convertToCST(new Date(msg.fecha_envio));
-    const separatorText = formatDateSeparator(messageDate);
-
-    const lastSeparator = messagesContainer.querySelector('.date-separator:last-child');
-    const lastSeparatorText = lastSeparator ? lastSeparator.querySelector('span').textContent : null;
-
-    if (!lastMessageDate || !isSameDay(messageDate, lastMessageDate) || lastSeparatorText !== separatorText) {
-      const separator = document.createElement('div');
-      separator.className = 'date-separator';
-      separator.innerHTML = `<span>${separatorText}</span>`;
-      messagesContainer.appendChild(separator);
-
-      lastMessageDate = messageDate;
-    }
-  }
-
-  // Crear el elemento del mensaje
-  const messageEl = document.createElement('div');
-  messageEl.className = `message ${msg.es_mio ? 'sent' : 'received'}`;
-  messageEl.dataset.messageId = msg.id;
-  messageEl.dataset.fechaEnvio = msg.fecha_envio;
-
-  let mediaUrl = msg.media_url || '';
-  console.log('URL del archivo:', mediaUrl);
-
-  let content = '';
-  if (msg.tipo === 'texto') {
-    content = `<span>${msg.contenido}</span>`;
-  } else if (msg.tipo === 'imagen') {
-    content = `<img src="${mediaUrl}" alt="${translations[document.documentElement.lang].chat.image}" style="cursor: pointer;" onclick="openMedia('${mediaUrl}')" onerror="this.outerHTML='<span>${translations[document.documentElement.lang].chat.media_error}</span>'; console.error('Error cargando imagen: ${mediaUrl}')">`;
-  } else if (msg.tipo === 'video') {
-    content = `<video controls src="${mediaUrl}" onerror="this.outerHTML='<span>${translations[document.documentElement.lang].chat.media_error}</span>'; console.error('Error cargando video: ${mediaUrl}')"></video>`;
-  } else if (msg.tipo === 'voz') {
-    content = `
-      <div class="audio-container">
-        <audio controls src="${mediaUrl}" onerror="this.outerHTML='<span>${translations[document.documentElement.lang].chat.voice_note_error}</span>'; console.error('Error cargando audio: ${mediaUrl}')"></audio>
-      </div>
+  // Contenido según tipo
+  if (msg.tipo === "texto") {
+    messageDiv.innerHTML = `
+      <div class="message-text">${msg.contenido}</div>
+      <span class="message-time">${new Date(msg.fecha_envio).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</span>
     `;
-  } else if (msg.tipo === 'document') {
-    const fileName = msg.contenido || 'Documento';
-    const extension = fileName.split('.').pop().toLowerCase();
-    const docClass = ['pdf', 'docx', 'doc', 'txt'].includes(extension) ? extension : '';
-    content = `<a href="${mediaUrl}" target="_blank" class="document-link ${docClass}" title="${fileName}"><i class="fas fa-file-${extension === 'pdf' ? 'pdf' : extension === 'txt' ? 'alt' : 'word'}"></i> ${fileName}</a>`;
+  } else if (msg.tipo === "imagen") {
+    messageDiv.innerHTML = `
+      <img src="${msg.media_url}" alt="imagen" class="message-media"/>
+      <span class="message-time">${new Date(msg.fecha_envio).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</span>
+    `;
+  } else if (msg.tipo === "video") {
+    messageDiv.innerHTML = `
+      <video controls class="message-media">
+        <source src="${msg.media_url}" type="video/mp4">
+        Tu navegador no soporta video.
+      </video>
+      <span class="message-time">${new Date(msg.fecha_envio).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</span>
+    `;
+  } else if (msg.tipo === "document") {
+    messageDiv.innerHTML = `
+      <a href="${msg.media_url}" target="_blank" class="message-doc">
+        📄 ${msg.contenido}
+      </a>
+      <span class="message-time">${new Date(msg.fecha_envio).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</span>
+    `;
   }
 
-  messageEl.innerHTML = `${content}<div class="time">${convertToCST(new Date(msg.fecha_envio)).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div>`;
-  messagesContainer.appendChild(messageEl);
-  scrollToBottom();
+  messagesContainer.appendChild(messageDiv);
+
+  if (scroll) scrollToBottom();
 }
+
 
 
 async function updateChatList(msg) {
