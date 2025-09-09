@@ -5,7 +5,7 @@
   <title>Inicio | PrendiaX</title>
    <link rel="icon" type="image/png" href="PRENDIAX.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=1" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js"></script>
  <style>
 body {
@@ -1830,13 +1830,14 @@ body.dark-mode .filter-title {
   </div>
 
   <script src="translations.js"></script>
+  <script src="main.js?v=1"></script>
   <script>
 // Estrellas para el modo oscuro
 const stars = document.querySelector('.stars');
 const numStars = 1000;
 
 for (let i = 0; i < numStars; i++) {
-  const star = document.createElement('div');
+  const star = document.createElement('div'); 
   star.classList.add('star');
   star.style.left = `${Math.random() * 100}vw`;
   star.style.top = '0';
