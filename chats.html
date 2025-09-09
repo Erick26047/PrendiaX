@@ -1650,6 +1650,30 @@ async function selectChat(chatId, recipientId, displayName, fotoPerfilUrl, tipoU
   }
 }
 
+// ✅ Función para dar formato a la etiqueta de fecha
+function formatDateSeparator(date) {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) {
+    return "Hoy";
+  } else if (date.toDateString() === yesterday.toDateString()) {
+    return "Ayer";
+  } else {
+    return date.toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric"
+    });
+  }
+}
+
+// ✅ Verifica si ya existe un separador de esa fecha
+function separatorExists(container, separatorText) {
+  return container.querySelector(`.date-separator[data-date="${separatorText}"]`);
+}
+
 async function loadMessages(chatId) {
   if (!currentUserId) {
     console.error('⚠️ currentUserId no está definido al intentar cargar mensajes');
@@ -1697,30 +1721,21 @@ async function loadMessages(chatId) {
     data.mensajes.forEach((msg) => {
       msg.es_mio = String(msg.emisor_id) === String(currentUserId);
 
-      console.log('Procesando mensaje:', {
-        id: msg.id,
-        emisor_id: msg.emisor_id,
-        currentUserId: currentUserId,
-        es_mio: msg.es_mio,
-        contenido: msg.contenido,
-        tipo: msg.tipo,
-        fecha_envio: msg.fecha_envio
-      });
-
       const messageDate = convertToCST(new Date(msg.fecha_envio));
       const separatorText = formatDateSeparator(messageDate);
 
-      // 🔹 Agregar separador solo cuando cambia el día
+      // 🔹 Agregar separador solo si cambia el día
       if (!lastMessageDate || !isSameDay(messageDate, lastMessageDate)) {
-        const separator = document.createElement('div');
-        separator.className = 'date-separator';
-        separator.innerHTML = `<span>${separatorText}</span>`;
-        messagesContainer.appendChild(separator);
-
+        if (!separatorExists(messagesContainer, separatorText)) {
+          const separator = document.createElement('div');
+          separator.className = 'date-separator';
+          separator.dataset.date = separatorText;
+          separator.innerHTML = `<span>${separatorText}</span>`;
+          messagesContainer.appendChild(separator);
+        }
         lastMessageDate = messageDate;
       }
 
-      // 🔹 Aquí NO pasamos addSeparator, porque loadMessages ya controla los separadores
       appendMessage(msg, false);
     });
 
@@ -1731,35 +1746,32 @@ async function loadMessages(chatId) {
   }
 }
 
-
-
-
 function appendMessage(msg, addSeparator = false) {
   const messagesContainer = document.querySelector('.chat-messages');
 
-  // Remover el mensaje "Sin mensajes" si existe
   const noMessages = messagesContainer.querySelector('.no-messages');
   if (noMessages) noMessages.remove();
 
-  // Evitar duplicar mensajes
   if (document.querySelector(`.message[data-message-id="${msg.id}"]`)) {
     return;
   }
 
-  // ✅ Solo agregar separador si se pide explícitamente (ej. mensaje nuevo enviado)
   if (addSeparator) {
     const messageDate = convertToCST(new Date(msg.fecha_envio));
     const separatorText = formatDateSeparator(messageDate);
 
-    const separator = document.createElement('div');
-    separator.className = 'date-separator';
-    separator.innerHTML = `<span>${separatorText}</span>`;
-    messagesContainer.appendChild(separator);
+    // ✅ Solo agrega separador si no existe ya
+    if (!separatorExists(messagesContainer, separatorText)) {
+      const separator = document.createElement('div');
+      separator.className = 'date-separator';
+      separator.dataset.date = separatorText;
+      separator.innerHTML = `<span>${separatorText}</span>`;
+      messagesContainer.appendChild(separator);
+    }
 
     lastMessageDate = messageDate;
   }
 
-  // Crear el elemento del mensaje
   const messageEl = document.createElement('div');
   messageEl.className = `message ${msg.es_mio ? 'sent' : 'received'}`;
   messageEl.dataset.messageId = msg.id;
@@ -1769,12 +1781,12 @@ function appendMessage(msg, addSeparator = false) {
   if (msg.tipo === 'texto') {
     content = `<span>${msg.contenido}</span>`;
   }
-  // ... resto igual
 
   messageEl.innerHTML = `${content}<div class="time">${convertToCST(new Date(msg.fecha_envio)).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div>`;
   messagesContainer.appendChild(messageEl);
   scrollToBottom();
 }
+
 
 
 
