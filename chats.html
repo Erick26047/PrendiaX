@@ -1331,43 +1331,28 @@ async function connectWebSocket() {
   console.log('Mensaje WebSocket recibido:', data);
   if (data.type === 'ping') return;
 
-  // Determinar si el mensaje es propio
   data.es_mio = Number(data.remitente_id) === currentUserId;
 
   if (data.tipo === 'nuevo_chat') {
-    // Nuevo chat creado, recargar la lista completa
     offset = 0;
     hasMoreChats = true;
     document.querySelector('.chat-list').innerHTML = '';
     await loadChats();
   } else if (data.tipo === 'chat_deleted') {
-    // Chat eliminado, actualizar la interfaz
-    if (currentChatId === data.chat_id) {
-      currentChatId = null;
-      currentRecipientId = null;
-      document.querySelector('.chat-messages').innerHTML = `<p style="text-align: center; color: #666;">${translations[document.documentElement.lang].chat.no_messages}</p>`;
-      document.querySelector('.chat-header .name').textContent = translations[document.documentElement.lang].chat.select_chat;
-      document.querySelector('.chat-header .avatar-container').innerHTML = '<i class="fas fa-user avatar-icon"></i>';
-    }
-    offset = 0;
-    hasMoreChats = true;
-    document.querySelector('.chat-list').innerHTML = '';
-    await loadChats();
+  
   } else {
-    // Mensaje nuevo, verificar si no está duplicado
     if (!document.querySelector(`.message[data-message-id="${data.id}"]`)) {
       if (data.chat_id === currentChatId) {
-        // Añadir el mensaje y verificar si se necesita un separador
         appendMessage(data, true);
         scrollToBottom();
       }
-      // Actualizar la lista de chats dinámicamente
-      await updateChatList(data);
-    } else {
-      console.log('Mensaje duplicado detectado, omitiendo:', data.id);
     }
+
+    // 🚀 Importante: NO bloquear el mensaje con await
+    updateChatList(data); 
   }
 };
+
     ws.onerror = (error) => {
       console.error('Error en WebSocket:', error);
       showNotification(translations[document.documentElement.lang].chat.websocket_error, true);
