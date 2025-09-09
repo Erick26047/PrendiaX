@@ -1561,20 +1561,28 @@ function getDayDifference(date1, date2) {
 }
 
 function formatDateSeparator(date) {
-  const messageDate = convertToCST(new Date(date));
   const today = convertToCST(new Date());
-  const diffDays = getDayDifference(messageDate, today);
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const dayBeforeYesterday = new Date(today);
+  dayBeforeYesterday.setDate(today.getDate() - 2);
 
-  if (diffDays === 0) {
-    return translations[document.documentElement.lang].chat.today;
-  } else if (diffDays === -1) {
-    return translations[document.documentElement.lang].chat.yesterday;
-  } else if (diffDays === -2) {
-    return translations[document.documentElement.lang].chat.day_before_yesterday;
+  if (isSameDay(date, today)) {
+    return "Hoy";
+  } else if (isSameDay(date, yesterday)) {
+    return "Ayer";
+  } else if (isSameDay(date, dayBeforeYesterday)) {
+    return "Antier";
   } else {
-    return messageDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+    return date.toLocaleDateString("es-MX", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
   }
 }
+
 
 async function selectChat(chatId, recipientId, displayName, fotoPerfilUrl, tipoUsuario) {
   if (!currentUserId) {
