@@ -64,7 +64,9 @@ const translations = {
       remove_tag_title: "Eliminar etiqueta",
       notification_comment: "{user} comentó en tu publicación {post}",
       notification_interest: "{user} mostró interés en tu publicación {post}",
-      unknown_error: "Error desconocido"
+      unknown_error: "Error desconocido",
+      read_more: "Ver más", // Nueva clave añadida
+      read_less: "Ver menos" // Nueva clave añadida
     },
     chat: {
       search_placeholder: "Buscar chats...",
@@ -182,7 +184,9 @@ const translations = {
       remove_tag_title: "Remove tag",
       notification_comment: "{user} commented on your post {post}",
       notification_interest: "{user} showed interest in your post {post}",
-      unknown_error: "Unknown error"
+      unknown_error: "Unknown error",
+      read_more: "Read more", // Nueva clave añadida
+      read_less: "Read less" // Nueva clave añadida
     },
     chat: {
       search_placeholder: "Search chats...",

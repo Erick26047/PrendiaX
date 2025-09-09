@@ -65,30 +65,31 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: fixed; /* Cambiar de relative a fixed */
-  top: 0; /* Asegura que esté en la parte superior */
-  width: 100%; /* Ocupa todo el ancho */
-  box-sizing: border-box; /* Evita desbordamiento por padding */
-  z-index: 5000; /* Mantener alto para que esté por encima de todo */
+  position: fixed;
+  top: 0;
+  width: 100%;
+  box-sizing: border-box;
+  z-index: 5000;
 }
 
 .logo {
   font-size: 32px;
   font-weight: bold;
   color: #fff;
-  text-decoration: none; /* Elimina el subrayado típico de los enlaces */
-  cursor: pointer; /* Indica que es clicable */
+  text-decoration: none;
+  cursor: pointer;
 }
+
 .logo:hover {
-  color: #e0e0e0; /* Efecto hover para mejor UX */
+  color: #e0e0e0;
 }
 
 .header-icons {
   display: flex;
   align-items: center;
   gap: 10px;
-  position: relative; /* Asegura que sea un contexto de apilamiento */
-  z-index: 2000; /* Igual o mayor que los menús desplegables, pero menor que notifications-desplegable */
+  position: relative;
+  z-index: 2000;
 }
 
 .header-icons input {
@@ -301,7 +302,7 @@ header {
 
 .container {
   max-width: 1200px;
-  margin: 100px auto 40px auto; /* Agregar margen superior (100px es un estimado de la altura del header) */
+  margin: 100px auto 40px auto;
   padding: 20px;
   position: relative;
   z-index: 0;
@@ -482,7 +483,15 @@ header {
 }
 
 .post-content {
-  margin-bottom: 10px;
+  max-height: 4.5em;
+  line-height: 1.5em;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  position: relative; /* Asegurar que el botón pueda posicionarse correctamente */
+}
+
+.post-content.expanded {
+  max-height: none;
 }
 
 .post-content p {
@@ -491,6 +500,21 @@ header {
   color: #000;
   line-height: 1.5;
   transition: color 0.3s ease;
+}
+
+.read-more {
+  color: #1976d2;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 5px;
+  display: inline-block !important; /* Forzar visibilidad */
+  padding: 5px; /* Añadir padding para hacerlo más visible */
+  z-index: 100; /* Asegurar que esté encima de otros elementos */
+  position: relative; /* Asegurar que no esté oculto por overflow */
+}
+
+.read-more:hover {
+  color: #1565c0;
 }
 
 .post-media {
@@ -738,7 +762,7 @@ header {
   padding: 15px 20px;
   border-radius: 8px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-  z-index: 6000; /* Por encima de todo */
+  z-index: 6000;
   display: none;
   align-items: center;
   gap: 10px;
@@ -923,7 +947,7 @@ header {
   width: 300px;
   max-height: 400px;
   overflow-y: auto;
-  z-index: 4000; /* Mantén este valor alto */
+  z-index: 4000;
   padding: 8px 0;
   font-family: 'Segoe UI', sans-serif;
   animation: slideDown 0.3s ease-in-out;
@@ -1008,6 +1032,15 @@ header {
 
 .load-more-notifications:hover {
   color: #1565c0;
+}
+
+.filter-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 15px 0;
+  text-align: center;
+  color: #000;
+  transition: color 0.3s ease;
 }
 
 body.dark-mode {
@@ -1131,6 +1164,14 @@ body.dark-mode .post-user-info .company-name {
 
 body.dark-mode .post-content p {
   color: #fff;
+}
+
+body.dark-mode .read-more {
+  color: #90caf9;
+}
+
+body.dark-mode .read-more:hover {
+  color: #64b5f6;
 }
 
 body.dark-mode .post-meta p {
@@ -1259,7 +1300,6 @@ body.dark-mode .load-more-notifications:hover {
   color: #64b5f6;
 }
 
-/* Ajustes para modo oscuro */
 body.dark-mode .notification {
   background-color: #4caf50;
   border: 1px solid #444444;
@@ -1269,6 +1309,7 @@ body.dark-mode .notification {
 body.dark-mode .notification.error {
   background-color: #f44336;
 }
+
 body.dark-mode .preview-image, body.dark-mode .preview-video {
   border-color: #555;
 }
@@ -1290,17 +1331,286 @@ body.dark-mode .modal-content {
   background: #222;
   color: #fff;
 }
-.filter-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 15px 0;
-  text-align: center;
-  color: #000;
-  transition: color 0.3s ease;
-}
 
 body.dark-mode .filter-title {
-  color: #fff; /* Asegura que el título sea visible en modo oscuro */
+  color: #fff;
+}
+
+/* Ajustes para móviles */
+@media (max-width: 768px) {
+  .container {
+    margin: 80px 10px 20px 10px;
+    padding: 10px;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 10px 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .logo {
+    font-size: 24px;
+  }
+
+  .header-icons {
+    width: 100%;
+    justify-content: space-between;
+    gap: 5px;
+  }
+
+  .header-icons input {
+    width: 100%;
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  .icon-button {
+    padding: 6px;
+    font-size: 16px;
+  }
+
+  #theme-toggle {
+    padding: 6px;
+    font-size: 16px;
+  }
+
+  .menu-desplegable, .language-desplegable, .categorias-desplegable, .notifications-desplegable {
+    width: 100%;
+    max-width: 250px;
+    right: 0;
+    top: 45px;
+  }
+
+  .menu-desplegable::before, .language-desplegable::before, .categorias-desplegable::before, .notifications-desplegable::before {
+    right: 10px;
+  }
+
+  .categorias-desplegable {
+    left: auto;
+    width: 100%;
+    max-height: 300px;
+  }
+
+  .publicar {
+    padding: 15px;
+    min-width: 100%;
+  }
+
+  .content-input {
+    font-size: 14px;
+    min-height: 60px;
+  }
+
+  .action-buttons {
+    justify-content: space-between;
+  }
+
+  .action-buttons .icon-button {
+    padding: 6px;
+    font-size: 14px;
+  }
+
+  .filtros-categorias {
+    flex: 1;
+    min-width: 100%;
+    padding: 15px;
+  }
+
+  .categoria-buttons {
+    gap: 5px;
+  }
+
+  .categoria-buttons .icon-button {
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+  }
+
+  .filter-title {
+    font-size: 16px;
+  }
+
+  .post {
+    padding: 15px;
+  }
+
+  .post-header {
+    gap: 8px;
+  }
+
+  .post-profile-pic-container {
+    width: 35px;
+    height: 35px;
+  }
+
+  .post-user-info .company-name {
+    font-size: 14px;
+  }
+
+  .post-content p {
+    font-size: 14px;
+  }
+
+  .post-media img, .post-media video {
+    max-width: 100%;
+  }
+
+  .post-meta p {
+    font-size: 12px;
+  }
+
+  .interest-button {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .interested-count {
+    font-size: 12px;
+  }
+
+  .comment-form {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .comment-input {
+    width: 100%;
+    font-size: 12px;
+    padding: 6px;
+  }
+
+  .comment-submit {
+    width: 100%;
+    font-size: 12px;
+    padding: 6px;
+  }
+
+  .comment-profile-pic-container {
+    width: 25px;
+    height: 25px;
+  }
+
+  .comment-user {
+    font-size: 12px;
+  }
+
+  .comment-text {
+    font-size: 12px;
+  }
+
+  .comment-meta {
+    font-size: 10px;
+  }
+
+  .notification {
+    top: 5px;
+    right: 10px;
+    padding: 10px;
+    font-size: 14px;
+    max-width: 90%;
+  }
+
+  .notifications-desplegable {
+    width: 100%;
+    max-width: 300px;
+    top: 45px;
+  }
+
+  .modal-content {
+    padding: 15px;
+    max-width: 90%;
+  }
+
+  .modal-content p {
+    font-size: 14px;
+  }
+
+  .modal-content button {
+    font-size: 14px;
+    padding: 8px 15px;
+  }
+}
+
+/* Ajustes para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .logo {
+    font-size: 20px;
+  }
+
+  .header-icons input {
+    font-size: 12px;
+    padding: 6px;
+  }
+
+  .icon-button {
+    padding: 5px;
+    font-size: 14px;
+  }
+
+  #theme-toggle {
+    padding: 5px;
+    font-size: 14px;
+  }
+
+  .publicar {
+    padding: 10px;
+  }
+
+  .content-input {
+    font-size: 12px;
+  }
+
+  .action-buttons .icon-button {
+    padding: 5px;
+    font-size: 12px;
+  }
+
+  .filtros-categorias {
+    padding: 10px;
+  }
+
+  .categoria-buttons .icon-button {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .filter-title {
+    font-size: 14px;
+  }
+
+  .post {
+    padding: 10px;
+  }
+
+  .post-content p {
+    font-size: 12px;
+  }
+
+  .post-media img, .post-media video {
+    max-width: 100%;
+  }
+
+  .post-meta p {
+    font-size: 10px;
+  }
+
+  .interest-button {
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+
+  .interested-count {
+    font-size: 10px;
+  }
+
+  .notification {
+    font-size: 12px;
+    padding: 8px;
+  }
 }
 </style>
 
@@ -1572,26 +1882,18 @@ let wsNotifications = null;
 
 // Formatear fechas según idioma y zona horaria CST (UTC-6)
 function formatDate(dateString, lang = 'es') {
-    // Manejar caso de fecha vacía o inválida
-    if (!dateString) return translations[lang].inicio.invalid_date || 'Fecha inválida';
-
-    // Parsear la fecha en formato "YYYY-MM-DD HH:MM:SS" asumiendo UTC
-    const date = luxon.DateTime.fromFormat(dateString, 'yyyy-MM-dd HH:mm:ss', { zone: 'utc' }).setZone('America/Chicago');
-    
-    // Verificar si la fecha es válida
-    if (!date.isValid) return translations[lang].inicio.invalid_date || 'Fecha inválida';
-
-    // Formatear la fecha según el idioma
-    const options = {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: lang === 'en',
-    };
-
-    return date.toLocaleString(lang === 'es' ? 'es-ES' : 'en-US', options);
+  if (!dateString) return translations[lang].inicio.invalid_date || 'Fecha inválida';
+  const date = luxon.DateTime.fromFormat(dateString, 'yyyy-MM-dd HH:mm:ss', { zone: 'utc' }).setZone('America/Chicago');
+  if (!date.isValid) return translations[lang].inicio.invalid_date || 'Fecha inválida';
+  const options = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: lang === 'en',
+  };
+  return date.toLocaleString(lang === 'es' ? 'es-ES' : 'en-US', options);
 }
 
 // Obtener ID del usuario actual
@@ -1645,35 +1947,43 @@ async function redirectToProfile(userId) {
 
 // Función para actualizar idioma
 function updateLanguage(lang) {
-    document.querySelectorAll("[data-translate]").forEach(element => {
-        const key = element.getAttribute("data-translate");
-        const [page, textKey] = key.split('.');
-        const translation = translations[lang][page][textKey];
-        if (element.tagName === 'INPUT' && textKey.includes('placeholder')) {
-            element.placeholder = translation;
-        } else if (element.tagName === 'BUTTON' || element.tagName === 'A') {
-            const span = element.querySelector('span');
-            if (span) span.textContent = translation;
-            else element.textContent = translation;
-        } else {
-            element.textContent = translation;
-        }
-    });
-    document.documentElement.lang = lang;
-    updatePlaceholder();
-  
-  // Actualizar fechas en publicaciones
-    document.querySelectorAll('.post-meta p[data-original-date]').forEach(p => {
-        const originalDate = p.dataset.originalDate;
-        p.textContent = originalDate ? formatDate(originalDate, lang) : translations[lang].inicio.invalid_date;
-    });
+  document.querySelectorAll("[data-translate]").forEach(element => {
+    const key = element.getAttribute("data-translate");
+    const [page, textKey] = key.split('.');
+    const translation = translations[lang][page][textKey];
+    if (element.tagName === 'INPUT' && textKey.includes('placeholder')) {
+      element.placeholder = translation;
+    } else if (element.tagName === 'BUTTON' || element.tagName === 'A') {
+      const span = element.querySelector('span');
+      if (span) span.textContent = translation;
+      else element.textContent = translation;
+    } else {
+      element.textContent = translation;
+    }
+  });
+  document.documentElement.lang = lang;
+  updatePlaceholder();
 
-    // Actualizar fechas en comentarios
-    document.querySelectorAll('.comment-meta[data-original-date]').forEach(p => {
-        const originalDate = p.dataset.originalDate;
-        p.textContent = originalDate ? formatDate(originalDate, lang) : translations[lang].inicio.invalid_date;
-    });
+  // Actualizar fechas en publicaciones
+  document.querySelectorAll('.post-meta p[data-original-date]').forEach(p => {
+    const originalDate = p.dataset.originalDate;
+    p.textContent = originalDate ? formatDate(originalDate, lang) : translations[lang].inicio.invalid_date;
+  });
+
+  // Actualizar fechas en comentarios
+  document.querySelectorAll('.comment-meta[data-original-date]').forEach(p => {
+    const originalDate = p.dataset.originalDate;
+    p.textContent = originalDate ? formatDate(originalDate, lang) : translations[lang].inicio.invalid_date;
+  });
+
+  // Actualizar texto de "Ver más/Ver menos" en publicaciones
+  document.querySelectorAll('.read-more').forEach(button => {
+    const isExpanded = button.parentElement.classList.contains('expanded');
+    button.textContent = isExpanded ? translations[lang].inicio.read_less : translations[lang].inicio.read_more;
+    button.setAttribute('data-translate', `inicio.${isExpanded ? 'read_less' : 'read_more'}`);
+  });
 }
+
 // Actualizar placeholders
 function updatePlaceholder() {
   const contentInput = document.getElementById('content-input');
@@ -2000,7 +2310,6 @@ async function loadNotifications() {
     const notificationsList = document.getElementById('notifications-list');
     const loadMoreButton = document.getElementById('load-more-notifications');
 
-    // Limpiar la lista solo si es la primera carga (offset === 0)
     if (notificationOffset === 0) {
       notificationsList.innerHTML = '';
     }
@@ -2013,7 +2322,6 @@ async function loadNotifications() {
     }
 
     notifications.forEach(notification => {
-      // Evitar duplicados
       if (notificationsList.querySelector(`[data-notification-id="${notification.id}"]`)) return;
 
       const notificationItem = document.createElement('div');
@@ -2043,7 +2351,6 @@ async function loadNotifications() {
     loadMoreButton.style.display = notificationOffset + notifications.length < total ? 'block' : 'none';
     notificationOffset += notifications.length;
 
-    // Añadir botón para marcar todas como leídas
     const markAllReadButton = document.getElementById('mark-all-read');
     if (!markAllReadButton && notifications.length > 0) {
       const button = document.createElement('button');
@@ -2106,6 +2413,42 @@ function scrollToPost(postId) {
   }
 }
 
+function checkContentHeight(postContent) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      // Forzar reflow
+      postContent.style.display = 'none';
+      postContent.offsetHeight; // Forzar recalculo
+      postContent.style.display = 'block';
+
+      const pElement = postContent.querySelector('p');
+      const mediaElements = postContent.parentElement.querySelector('.post-media').children.length > 0;
+      const maxHeight = parseFloat(getComputedStyle(postContent).lineHeight) * 3;
+      const scrollHeight = postContent.scrollHeight;
+      const hasContent = (pElement && pElement.textContent.trim().length > 0) || mediaElements;
+      console.log(`[checkContentHeight] Post ID: ${postContent.parentElement.dataset.postId}, Content: "${pElement?.textContent.slice(0, 50) || 'Sin texto'}...", scrollHeight: ${scrollHeight}, maxHeight: ${maxHeight}, hasContent: ${hasContent}, hasMedia: ${mediaElements}`);
+      resolve(hasContent && scrollHeight > maxHeight);
+    }, 300); // Aumentar el retraso a 300ms
+  });
+
+}
+
+// Alternar visibilidad del contenido
+function toggleContent(postId, button) {
+  const postContent = document.querySelector(`.post[data-post-id="${postId}"] .post-content`);
+  const lang = localStorage.getItem('language') || 'es';
+  console.log(`[toggleContent] Alternando para publicación ${postId}, expanded: ${postContent.classList.contains('expanded')}`); // Log para depuración
+  if (postContent.classList.contains('expanded')) {
+    postContent.classList.remove('expanded');
+    button.textContent = translations[lang].inicio.read_more;
+    button.setAttribute('data-translate', 'inicio.read_more');
+  } else {
+    postContent.classList.add('expanded');
+    button.textContent = translations[lang].inicio.read_less;
+    button.setAttribute('data-translate', 'inicio.read_less');
+  }
+}
+
 // Cargar una publicación específica
 async function loadSinglePost(postId) {
   try {
@@ -2157,7 +2500,7 @@ async function loadSinglePost(postId) {
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
-          <p>${formatDate(pub.fecha_creacion, lang)}</p>
+          <p data-original-date="${pub.fecha_creacion}">${formatDate(pub.fecha_creacion, lang)}</p>
           <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
             <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i>
             <span data-translate="inicio.${pub.interesado ? 'interested_button' : 'interest_button'}">${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
@@ -2176,6 +2519,17 @@ async function loadSinglePost(postId) {
 
       div.innerHTML = postContent;
       feedDiv.prepend(div);
+      const postContentElement = div.querySelector('.post-content');
+      const needsReadMore = await checkContentHeight(postContentElement); // Corrección: usar await
+      if (needsReadMore) {
+        const readMoreButton = document.createElement('span');
+        readMoreButton.classList.add('read-more');
+        readMoreButton.textContent = translations[lang].inicio.read_more;
+        readMoreButton.setAttribute('data-translate', 'inicio.read_more');
+        readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
+       postContentElement.insertAdjacentElement('afterend', readMoreButton);
+
+      }
       cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
       div.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -2254,6 +2608,19 @@ function startNotificationPolling() {
     }
   }, 30000);
 }
+// Verificar si el contenido excede el límite de altura
+function checkContentHeight(postContent) {
+  return new Promise(resolve => {
+    requestAnimationFrame(() => {
+      const pElement = postContent.querySelector('p');
+      const maxHeight = parseFloat(getComputedStyle(postContent).lineHeight) * 3; // Aproximadamente 3 líneas
+      const scrollHeight = postContent.scrollHeight;
+      const hasContent = pElement && pElement.textContent.trim().length > 0;
+      console.log(`[checkContentHeight] Post ID: ${postContent.parentElement.dataset.postId}, Content: "${pElement?.textContent.slice(0, 50) || 'Sin texto'}...", scrollHeight: ${scrollHeight}, maxHeight: ${maxHeight}, hasContent: ${hasContent}`);
+      resolve(hasContent && scrollHeight > maxHeight);
+    });
+  });
+}
 
 // Cargar feed
 async function cargarFeed() {
@@ -2288,15 +2655,14 @@ async function cargarFeed() {
 
     const feedDiv = document.getElementById('feed');
     const lang = localStorage.getItem('language') || 'es';
+for (const pub of publicaciones) {
+  if (loadedPostIds.has(pub.id)) continue;
+  loadedPostIds.add(pub.id);
+  if (pub.interesado) interestedPosts.add(pub.id);
 
-    publicaciones.forEach(pub => {
-      if (loadedPostIds.has(pub.id)) return;
-      loadedPostIds.add(pub.id);
-      if (pub.interesado) interestedPosts.add(pub.id);
-
-      const div = document.createElement('div');
-      div.classList.add('post');
-      div.setAttribute('data-post-id', pub.id);
+  const div = document.createElement('div');
+  div.classList.add('post');
+  div.setAttribute('data-post-id', pub.id);
 
       let postContent = `
         <div class="post-header">
@@ -2325,7 +2691,7 @@ async function cargarFeed() {
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
-          <p>${formatDate(pub.fecha_creacion, lang)}</p>
+          <p data-original-date="${pub.fecha_creacion}">${formatDate(pub.fecha_creacion, lang)}</p>
           <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
             <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i>
             <span data-translate="inicio.${pub.interesado ? 'interested_button' : 'interest_button'}">${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
@@ -2344,8 +2710,21 @@ async function cargarFeed() {
 
       div.innerHTML = postContent;
       feedDiv.appendChild(div);
+      const postContentElement = div.querySelector('.post-content');
+      const needsReadMore = await checkContentHeight(postContentElement);
+      if (needsReadMore) {
+        const readMoreButton = document.createElement('span');
+        readMoreButton.classList.add('read-more');
+        readMoreButton.textContent = translations[lang].inicio.read_more;
+        readMoreButton.setAttribute('data-translate', 'inicio.read_more');
+        readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
+        postContentElement.insertAdjacentElement('afterend', readMoreButton);
+
+      } else {
+        console.log(`No se añadió botón "Ver más" para publicación ${pub.id}: scrollHeight <= maxHeight o sin contenido`);
+      }
       cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
-    });
+    }
 
     offset += limit;
   } catch (error) {
@@ -2402,8 +2781,8 @@ async function search() {
 
     const lang = localStorage.getItem('language') || 'es';
 
-    publicaciones.forEach(pub => {
-      if (loadedPostIds.has(pub.id)) return;
+    for (const pub of publicaciones) {
+      if (loadedPostIds.has(pub.id)) continue;
       loadedPostIds.add(pub.id);
       if (pub.interesado) interestedPosts.add(pub.id);
 
@@ -2438,7 +2817,7 @@ async function search() {
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
-          <p>${formatDate(pub.fecha_creacion, lang)}</p>
+          <p data-original-date="${pub.fecha_creacion}">${formatDate(pub.fecha_creacion, lang)}</p>
           <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
             <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i>
             <span data-translate="inicio.${pub.interesado ? 'interested_button' : 'interest_button'}">${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
@@ -2457,8 +2836,21 @@ async function search() {
 
       div.innerHTML = postContent;
       feedDiv.appendChild(div);
+      const postContentElement = div.querySelector('.post-content');
+      const needsReadMore = await checkContentHeight(postContentElement);
+      if (needsReadMore) {
+        const readMoreButton = document.createElement('span');
+        readMoreButton.classList.add('read-more');
+        readMoreButton.textContent = translations[lang].inicio.read_more;
+        readMoreButton.setAttribute('data-translate', 'inicio.read_more');
+        readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
+       postContentElement.insertAdjacentElement('afterend', readMoreButton);
+
+      } else {
+        console.log(`No se añadió botón "Ver más" para publicación ${pub.id}: scrollHeight <= maxHeight o sin contenido`);
+      }
       cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
-    });
+    }
 
     offset += limit;
   } catch (error) {
@@ -2517,8 +2909,8 @@ async function filterByCategory(categoria) {
 
     const lang = localStorage.getItem('language') || 'es';
 
-    publicaciones.forEach(pub => {
-      if (loadedPostIds.has(pub.id)) return;
+    for (const pub of publicaciones) {
+      if (loadedPostIds.has(pub.id)) continue;
       loadedPostIds.add(pub.id);
       if (pub.interesado) interestedPosts.add(pub.id);
 
@@ -2553,7 +2945,7 @@ async function filterByCategory(categoria) {
         </div>
         <div class="post-meta">
           <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : translations[lang].inicio.no_tags}</p>
-          <p>${formatDate(pub.fecha_creacion, lang)}</p>
+          <p data-original-date="${pub.fecha_creacion}">${formatDate(pub.fecha_creacion, lang)}</p>
           <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
             <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i>
             <span data-translate="inicio.${pub.interesado ? 'interested_button' : 'interest_button'}">${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
@@ -2572,8 +2964,20 @@ async function filterByCategory(categoria) {
 
       div.innerHTML = postContent;
       feedDiv.appendChild(div);
+      const postContentElement = div.querySelector('.post-content');
+      const needsReadMore = await checkContentHeight(postContentElement);
+      if (needsReadMore) {
+        const readMoreButton = document.createElement('span');
+        readMoreButton.classList.add('read-more');
+        readMoreButton.textContent = translations[lang].inicio.read_more;
+        readMoreButton.setAttribute('data-translate', 'inicio.read_more');
+        readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
+        postContentElement.appendChild(readMoreButton);
+      } else {
+        console.log(`No se añadió botón "Ver más" para publicación ${pub.id}: scrollHeight <= maxHeight o sin contenido`);
+      }
       cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
-    });
+    }
 
     offset += limit;
   } catch (error) {
@@ -2702,14 +3106,11 @@ function toggleMenu(menuId, event) {
   event.stopPropagation();
   const menu = document.getElementById(menuId);
   const isOpen = menu.style.display === 'block';
-
-  // Cerrar todos los menús, excluyendo notificaciones si se está alternando otro menú
   closeAllMenus(menuId !== 'notifications-menu');
-
   if (!isOpen) {
     menu.style.display = 'block';
     if (menuId === 'notifications-menu') {
-      notificationOffset = 0; // Resetear el offset para cargar desde el inicio
+      notificationOffset = 0;
       loadNotifications();
     }
   } else {
@@ -2768,7 +3169,6 @@ form.addEventListener('submit', async (e) => {
   const video = videoInput.files[0];
   const etiquetas = etiquetasHidden.value.trim();
 
-  // Validación en el frontend
   if (!contenido && !imagen && !video && !etiquetas) {
     showNotification(translations[lang].inicio.post_error_empty, true);
     return;
