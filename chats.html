@@ -1686,7 +1686,7 @@ async function loadMessages(chatId) {
     data.mensajes.sort((a, b) => new Date(a.fecha_envio) - new Date(b.fecha_envio));
     lastMessageDate = null; // Reiniciar lastMessageDate
 
-    data.mensajes.forEach(msg => {
+    data.mensajes.forEach((msg, index) => {
       if (msg.emisor_id === undefined || msg.emisor_id === null) {
         console.warn('Mensaje sin emisor_id:', msg);
         msg.es_mio = false;
@@ -1707,20 +1707,18 @@ async function loadMessages(chatId) {
       const messageDate = convertToCST(new Date(msg.fecha_envio));
       const separatorText = formatDateSeparator(messageDate);
 
-      // Solo añadir un separador si el día cambia
+      // 🔹 Solo mostrar separador cuando el día cambie respecto al anterior
       if (!lastMessageDate || !isSameDay(messageDate, lastMessageDate)) {
-        // Verificar si el último separador coincide con el nuevo día
-        const lastSeparator = messagesContainer.querySelector('.date-separator:last-child');
-        if (!lastSeparator || lastSeparator.querySelector('span').textContent !== separatorText) {
-          const separator = document.createElement('div');
-          separator.className = 'date-separator';
-          separator.innerHTML = `<span>${separatorText}</span>`;
-          messagesContainer.appendChild(separator);
-        }
-        lastMessageDate = messageDate;
+        const separator = document.createElement('div');
+        separator.className = 'date-separator';
+        separator.innerHTML = `<span>${separatorText}</span>`;
+        messagesContainer.appendChild(separator);
+
+        lastMessageDate = messageDate; // actualizar referencia al último día mostrado
       }
 
-      appendMessage(msg, false); // Pasar false para no añadir separadores adicionales
+      // ⚠️ Aquí ya NO pasamos addSeparator = true, porque el control lo hace loadMessages
+      appendMessage(msg, false);
     });
 
     scrollToBottom();
@@ -1731,7 +1729,8 @@ async function loadMessages(chatId) {
 }
 
 
-function appendMessage(msg, addSeparator = true) {
+
+function appendMessage(msg, addSeparator = false) {
   console.log('Añadiendo mensaje:', {
     id: msg.id,
     es_mio: msg.es_mio,
@@ -1755,24 +1754,20 @@ function appendMessage(msg, addSeparator = true) {
     return;
   }
 
-  // Verificar si se debe añadir un separador de fecha
+  // ✅ SOLO añadir separador si se pide explícitamente
   if (addSeparator) {
     const messageDate = convertToCST(new Date(msg.fecha_envio));
     const separatorText = formatDateSeparator(messageDate);
 
-    // Buscar el último separador existente
     const lastSeparator = messagesContainer.querySelector('.date-separator:last-child');
     const lastSeparatorText = lastSeparator ? lastSeparator.querySelector('span').textContent : null;
 
-    // Solo añadir un separador si el día cambió o no hay un separador para este día
     if (!lastMessageDate || !isSameDay(messageDate, lastMessageDate) || lastSeparatorText !== separatorText) {
-      // Evitar duplicar el separador si ya existe para el mismo día
-      if (!lastSeparator || lastSeparatorText !== separatorText) {
-        const separator = document.createElement('div');
-        separator.className = 'date-separator';
-        separator.innerHTML = `<span>${separatorText}</span>`;
-        messagesContainer.appendChild(separator);
-      }
+      const separator = document.createElement('div');
+      separator.className = 'date-separator';
+      separator.innerHTML = `<span>${separatorText}</span>`;
+      messagesContainer.appendChild(separator);
+
       lastMessageDate = messageDate;
     }
   }
@@ -1810,6 +1805,7 @@ function appendMessage(msg, addSeparator = true) {
   messagesContainer.appendChild(messageEl);
   scrollToBottom();
 }
+
 
 async function updateChatList(msg) {
   const chatId = msg.chat_id;
@@ -1998,16 +1994,12 @@ async function sendMessage() {
   }
 
   try {
-    // Limpiar el mensaje "Sin mensajes"
     const messagesContainer = document.querySelector('.chat-messages');
     const noMessages = messagesContainer.querySelector('.no-messages');
-    if (noMessages) {
-      noMessages.remove();
-    }
+    if (noMessages) noMessages.remove();
 
-    // Enviar mensaje de texto si existe
+    // Enviar mensaje de texto
     if (message) {
-      // Añadir mensaje localmente primero (optimismo)
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const tempMessage = {
         id: tempId,
@@ -2017,7 +2009,12 @@ async function sendMessage() {
         tipo: 'texto',
         es_mio: true
       };
-      appendMessage(tempMessage, true); // Permitir separador si es necesario
+
+      // ✅ Detectar si debe agregarse separador
+      const messageDate = convertToCST(new Date(tempMessage.fecha_envio));
+      const debeAgregarSeparador = !lastMessageDate || !isSameDay(messageDate, lastMessageDate);
+
+      appendMessage(tempMessage, debeAgregarSeparador);
 
       const formData = new FormData();
       formData.append('contenido', message);
@@ -2028,23 +2025,26 @@ async function sendMessage() {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        // Remover mensaje temporal si falla
         const tempEl = document.querySelector(`.message[data-message-id="${tempId}"]`);
         if (tempEl) tempEl.remove();
         throw new Error(`HTTP error! Status: ${response.status}, Detail: ${errorData.detail || 'Unknown error'}`);
       }
       const msg = await response.json();
       msg.es_mio = true;
-      console.log('Respuesta del servidor (texto):', msg);
 
-      // Reemplazar mensaje temporal con el mensaje real
+      // Reemplazar temporal
       const tempEl = document.querySelector(`.message[data-message-id="${tempId}"]`);
       if (tempEl) tempEl.remove();
-      appendMessage(msg, true); // Permitir separador si es necesario
-      await updateChatList(msg); // Actualizar lista de chats
+
+      const msgDate = convertToCST(new Date(msg.fecha_envio));
+      const addSeparator = !lastMessageDate || !isSameDay(msgDate, lastMessageDate);
+      appendMessage(msg, addSeparator);
+
+      lastMessageDate = msgDate;
+      await updateChatList(msg);
     }
 
-    // Enviar archivos si existen
+    // Enviar archivos
     if (selectedFiles.length > 0) {
       if (selectedFiles.length > 10) {
         showNotification(translations[document.documentElement.lang].chat.too_many_files, true);
@@ -2055,7 +2055,7 @@ async function sendMessage() {
           showNotification(translations[document.documentElement.lang].chat.file_too_large.replace('{file}', file.name), true);
           continue;
         }
-        // Añadir archivo temporalmente
+
         const tempFileId = `temp_file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const tempFileMessage = {
           id: tempFileId,
@@ -2066,16 +2066,19 @@ async function sendMessage() {
           media_url: URL.createObjectURL(file),
           es_mio: true
         };
-        appendMessage(tempFileMessage, true); // Permitir separador si es necesario
+
+        const fileDate = convertToCST(new Date(tempFileMessage.fecha_envio));
+        const debeAgregarSeparador = !lastMessageDate || !isSameDay(fileDate, lastMessageDate);
+        appendMessage(tempFileMessage, debeAgregarSeparador);
 
         const formData = new FormData();
         formData.append('file', file);
         let endpoint = `/chats/${currentChatId}/media`;
-        let tipo = file.type.startsWith('image/') ? 'imagen' : file.type.startsWith('video/') ? 'video' : 'document';
         if (file.type.startsWith('application/') || file.type === 'text/plain') {
           formData.append('contenido', file.name);
           endpoint = `/chats/${currentChatId}/document`;
         }
+
         const response = await fetch(endpoint, {
           method: 'POST',
           credentials: 'include',
@@ -2089,27 +2092,31 @@ async function sendMessage() {
         }
         const msg = await response.json();
         msg.es_mio = true;
-        console.log('Respuesta del servidor (media):', msg);
 
-        // Reemplazar mensaje temporal
         const tempEl = document.querySelector(`.message[data-message-id="${tempFileId}"]`);
         if (tempEl) tempEl.remove();
-        appendMessage(msg, true); // Permitir separador si es necesario
-        await updateChatList(msg); // Actualizar lista de chats
+
+        const msgDate = convertToCST(new Date(msg.fecha_envio));
+        const addSeparator = !lastMessageDate || !isSameDay(msgDate, lastMessageDate);
+        appendMessage(msg, addSeparator);
+
+        lastMessageDate = msgDate;
+        await updateChatList(msg);
       }
     }
 
-    // Actualizar la interfaz
     scrollToBottom();
     input.value = '';
     selectedFiles = [];
     document.getElementById('media-preview').innerHTML = '';
     showNotification(translations[document.documentElement.lang].chat.message_sent);
+
   } catch (error) {
     console.error('Error al enviar mensaje:', error);
     showNotification(`${translations[document.documentElement.lang].chat.send_error}: ${error.message}`, true);
   }
 }
+
 
 function sendMedia(type) {
   if (!currentChatId || !currentRecipientId) {
