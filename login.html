@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="style.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
   <style>
     .login-container {
       max-width: 400px;
@@ -126,7 +127,6 @@
     .back-link:hover {
       text-decoration: underline;
     }
-    /* Estilos para el botón de términos y condiciones */
     .terms-link {
       display: block;
       margin-top: 10px;
@@ -138,7 +138,6 @@
     .terms-link:hover {
       text-decoration: underline;
     }
-    /* Estilos para el modal de términos y condiciones */
     .terms-modal {
       display: none;
       position: fixed;
@@ -199,7 +198,6 @@
     .terms-modal-content .close-btn:hover {
       background-color: #d0d0d0;
     }
-    /* Estilos para modo oscuro */
     body.dark-mode .terms-modal-content {
       background-color: #2a2a2a;
       color: #e0e0e0;
@@ -217,7 +215,11 @@
     body.dark-mode .terms-modal-content .close-btn:hover {
       background-color: #555555;
     }
-    /* Media Query para dispositivos móviles */
+    .g-recaptcha {
+      margin: 10px auto;
+      display: flex;
+      justify-content: center;
+    }
     @media (max-width: 768px) {
       .login-container {
         margin: 20px auto;
@@ -322,22 +324,26 @@
     </div>
 
     <!-- FORM LOGIN -->
-    <form id="email-form" class="email-form" action="/auth/email" method="POST">
+    <form id="email-form" class="email-form" action="/auth/email" method="POST" onsubmit="return validateCaptcha('email')">
       <input type="email" name="email" placeholder="Correo electrónico" required />
       <input type="password" name="password" placeholder="Contraseña" required />
       <input type="hidden" name="tipo" id="tipo" />
       <input type="hidden" name="target" id="target" />
+      <input type="hidden" name="g-recaptcha-response" id="email-recaptcha-response" />
+      <div class="g-recaptcha" data-sitekey="6Les4tgrAAAAAIuGLuqWt3N3K1I25X__PpUW5WuK" data-callback="onEmailCaptchaSubmit"></div>
       <button type="submit" data-translate="login.submit">Iniciar Sesión</button>
     </form>
 
     <!-- FORM REGISTRO -->
-    <form id="register-form" class="register-form" action="/auth/register" method="POST" onsubmit="return validarEdad()">
+    <form id="register-form" class="register-form" action="/auth/register" method="POST" onsubmit="return validateCaptcha('register') && validarEdad()">
       <input type="text" name="nombre" placeholder="Ingrese su nombre" required />
       <input type="email" name="email" placeholder="Correo electrónico" required />
       <input type="password" name="password" placeholder="Contraseña" required />
       <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" required />
       <input type="hidden" name="tipo" id="register-tipo" />
       <input type="hidden" name="target" id="register-target" />
+      <input type="hidden" name="g-recaptcha-response" id="register-recaptcha-response" />
+      <div class="g-recaptcha" data-sitekey="6Les4tgrAAAAAIuGLuqWt3N3K1I25X__PpUW5WuK" data-callback="onRegisterCaptchaSubmit"></div>
       <button type="submit" data-translate="login.register_submit">Registrarse</button>
     </form>
 
@@ -426,6 +432,7 @@
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
       registerForm.style.display = 'none';
       errorMessage.style.display = 'none';
+      grecaptcha.reset(); // Reiniciar CAPTCHA al cambiar formulario
     }
 
     // Mostrar/ocultar formulario de registro
@@ -436,6 +443,7 @@
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
       emailForm.style.display = 'none';
       errorMessage.style.display = 'none';
+      grecaptcha.reset(); // Reiniciar CAPTCHA al cambiar formulario
     }
 
     // Validar edad mínima de 18 años
@@ -461,6 +469,30 @@
       return true;
     }
 
+    // Validar CAPTCHA
+    function validateCaptcha(formType) {
+      const response = formType === 'email' 
+        ? document.getElementById('email-recaptcha-response').value 
+        : document.getElementById('register-recaptcha-response').value;
+      const errorMessage = document.getElementById('error-message');
+      
+      if (!response) {
+        errorMessage.style.display = 'block';
+        errorMessage.textContent = 'Por favor, completa el CAPTCHA.';
+        return false;
+      }
+      return true;
+    }
+
+    // Callbacks de reCAPTCHA
+    window.onEmailCaptchaSubmit = function(token) {
+      document.getElementById('email-recaptcha-response').value = token;
+    };
+
+    window.onRegisterCaptchaSubmit = function(token) {
+      document.getElementById('register-recaptcha-response').value = token;
+    };
+
     // Manejo de errores
     const errorMessage = document.getElementById('error-message');
     if (error) {
@@ -479,6 +511,12 @@
         errorMessage.textContent = 'Por favor, completa todos los campos requeridos.';
       } else if (error === 'google_account') {
         errorMessage.textContent = 'Este correo está registrado con Google. Por favor, inicia sesión con Google.';
+      } else if (error === 'captcha_failed') {
+        errorMessage.textContent = 'Verificación de CAPTCHA fallida. Intenta de nuevo.';
+      } else if (error === 'ip_blocked') {
+        errorMessage.textContent = 'Tu IP está bloqueada. Contacta al soporte.';
+      } else if (error === 'quarantined') {
+        errorMessage.textContent = 'Tu cuenta está en cuarentena. Contacta al soporte.';
       }
     }
 
