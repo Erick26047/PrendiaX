@@ -61,7 +61,7 @@ app.include_router(google_router)
 app.include_router(publicaciones_router)
 app.include_router(email_router)
 app.include_router(chats_router)
-app.include_router(resenas_router, prefix="/api")
+app.include_router(resenas_router)
 
 # --- Rutas principales ---
 @app.get("/")

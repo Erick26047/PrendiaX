@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import bcrypt
@@ -7,12 +8,54 @@ import os
 from dotenv import load_dotenv
 import httpx
 from datetime import datetime, timezone
+from typing import Optional
 
 load_dotenv()
 
 email_router = APIRouter()
 
-# 🔧 Conexión a la base de datos
+# ==========================================
+#  MODELOS DE DATOS (PYDANTIC)
+# ==========================================
+
+# Modelos para la WEB (Lo que ya tenías)
+class EmailAuthRequest(BaseModel):
+    email: str
+    password: str
+    tipo: str = "emprendedor"
+    target: str = "perfil"
+    g_recaptcha_response: str
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
+class RegisterRequest(BaseModel):
+    nombre: str
+    email: str
+    password: str
+    tipo: str = "emprendedor"
+    target: str = "perfil"
+    g_recaptcha_response: str
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
+# Modelos para la APP MÓVIL (Nuevos)
+class LoginRequestApp(BaseModel):
+    email: str
+    password: str
+    tipo: str = "emprendedor"
+    target: str = "perfil"
+
+class RegisterRequestApp(BaseModel):
+    nombre: str
+    email: str
+    password: str
+    tipo: str = "emprendedor"
+    target: str = "perfil"
+
+# ==========================================
+#  FUNCIONES AUXILIARES
+# ==========================================
+
 def get_db_connection():
     try:
         conn = psycopg2.connect(
@@ -23,14 +66,14 @@ def get_db_connection():
             port=os.getenv("DB_PORT", "5432"),
             cursor_factory=RealDictCursor
         )
-        print("[DEBUG] Conexión a la base de datos exitosa")
         return conn
     except Exception as e:
-        print(f"[ERROR] Error al conectar a la base de datos: {e}")
-        raise HTTPException(status_code=500, detail="Error al conectar a la base de datos")
+        print(f"[ERROR] DB Connection: {e}")
+        raise HTTPException(status_code=500, detail="Error de conexión a BD")
 
-# 🔍 Verificar reCAPTCHA
 async def verify_recaptcha(token: str, ip: str) -> bool:
+    # Si estás probando en local y no quieres validar captcha, descomenta:
+    # return True 
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -42,293 +85,383 @@ async def verify_recaptcha(token: str, ip: str) -> bool:
                 }
             )
             result = response.json()
-            print(f"[DEBUG] Respuesta de reCAPTCHA: {result}")
             return result.get("success", False) and result.get("score", 1.0) >= 0.5
     except Exception as e:
-        print(f"[ERROR] Error al verificar reCAPTCHA: {e}")
+        print(f"[ERROR] Recaptcha: {e}")
         return False
 
-# 🔍 Verificar si la IP está bloqueada
 def is_ip_blocked(ip: str, conn) -> bool:
     try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1 FROM ips_bloqueadas WHERE ip = %s", (ip,))
-        return cursor.fetchone() is not None
-    except Exception as e:
-        print(f"[ERROR] Error al verificar IP bloqueada: {e}")
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM ips_bloqueadas WHERE ip = %s", (ip,))
+            return cursor.fetchone() is not None
+    except:
         return False
-    finally:
-        cursor.close()
 
-# 🔍 Verificar si el usuario está en cuarentena
 def is_user_quarantined(email: str, conn) -> bool:
     try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT quarantined FROM usuarios WHERE email = %s", (email,))
-        user = cursor.fetchone()
-        return user and user["quarantined"]
-    except Exception as e:
-        print(f"[ERROR] Error al verificar cuarentena: {e}")
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT quarantined FROM usuarios WHERE email = %s", (email,))
+            user = cursor.fetchone()
+            return user and user["quarantined"]
+    except:
         return False
-    finally:
-        cursor.close()
 
-# 📝 Registrar intento fallido y manejar cuarentena
 def log_failed_attempt(email: str, ip: str, conn):
     try:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            INSERT INTO usuarios_cuarentena (id, nombre, email, password, verified, verification_token, created_at, ip_address, user_agent, quarantined, quarantined_at)
-            SELECT id, nombre, email, password, verified, verification_token, created_at, ip_address, user_agent, TRUE, %s
-            FROM usuarios WHERE email = %s
-            ON CONFLICT DO NOTHING
-            """,
-            (datetime.now(timezone.utc), email)
-        )
-        cursor.execute("UPDATE usuarios SET quarantined = TRUE WHERE email = %s", (email,))
-        conn.commit()
-        print(f"[DEBUG] Intento fallido registrado, usuario {email} en cuarentena")
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO usuarios_cuarentena (id, nombre, email, password, verified, verification_token, created_at, ip_address, user_agent, quarantined, quarantined_at)
+                SELECT id, nombre, email, password, verified, verification_token, created_at, ip_address, user_agent, TRUE, %s
+                FROM usuarios WHERE email = %s
+                ON CONFLICT DO NOTHING
+                """,
+                (datetime.now(timezone.utc), email)
+            )
+            cursor.execute("UPDATE usuarios SET quarantined = TRUE WHERE email = %s", (email,))
+            conn.commit()
     except Exception as e:
         conn.rollback()
-        print(f"[ERROR] Error al registrar intento fallido: {e}")
-    finally:
-        cursor.close()
+        print(f"[ERROR] Failed attempt log: {e}")
 
-# 🔁 Ruta de autenticación con email
+# ==========================================
+#  RUTAS WEB (EXISTENTES)
+# ==========================================
+
 @email_router.post("/auth/email")
-async def login_via_email(request: Request):
+async def login_via_email(data: EmailAuthRequest, request: Request):
     try:
-        form_data = await request.form()
-        email = form_data.get("email")
-        password = form_data.get("password")
-        tipo = form_data.get("tipo", "emprendedor")
-        target = form_data.get("target", "perfil")
-        captcha_response = form_data.get("g-recaptcha-response")
-        ip_address = request.client.host
-        user_agent = request.headers.get("user-agent")
+        ip_address = data.ip_address or request.client.host
+        user_agent = data.user_agent or request.headers.get("user-agent")
+        
+        # Validaciones básicas
+        if not data.email or not data.password or not data.g_recaptcha_response:
+             raise HTTPException(status_code=400, detail="Faltan datos")
 
-        print(f"[DEBUG] /auth/email: email={email}, tipo={tipo}, target={target}, ip={ip_address}, user_agent={user_agent}")
-
-        if not email or not password or not captcha_response:
-            print("[ERROR] /auth/email: Correo, contraseña o CAPTCHA no proporcionados")
-            return RedirectResponse(
-                url=f"/login?tipo={tipo}&target={target}&error=invalid_input",
-                status_code=302
-            )
-
-        # Verificar si la IP está bloqueada
         conn = get_db_connection()
+        
+        # Validaciones de seguridad (IP, Cuarentena, Captcha)
         if is_ip_blocked(ip_address, conn):
-            print("[ERROR] /auth/email: IP bloqueada")
             conn.close()
-            return RedirectResponse(
-                url=f"/login?tipo={tipo}&target={target}&error=ip_blocked",
-                status_code=302
-            )
-
-        # Verificar si el usuario está en cuarentena
-        if is_user_quarantined(email, conn):
-            print("[ERROR] /auth/email: Usuario en cuarentena")
+            raise HTTPException(status_code=403, detail="IP bloqueada")
+            
+        if is_user_quarantined(data.email, conn):
             conn.close()
-            return RedirectResponse(
-                url=f"/login?tipo={tipo}&target={target}&error=quarantined",
-                status_code=302
-            )
-
-        # Verificar reCAPTCHA
-        if not await verify_recaptcha(captcha_response, ip_address):
-            print("[ERROR] /auth/email: Verificación de CAPTCHA fallida")
-            log_failed_attempt(email, ip_address, conn)
+            raise HTTPException(status_code=403, detail="Usuario en cuarentena")
+            
+        if not await verify_recaptcha(data.g_recaptcha_response, ip_address):
+            log_failed_attempt(data.email, ip_address, conn)
             conn.close()
-            return RedirectResponse(
-                url=f"/login?tipo={tipo}&target={target}&error=captcha_failed",
-                status_code=302
-            )
+            raise HTTPException(status_code=400, detail="Captcha inválido")
 
+        # Lógica de Login Web
         try:
             cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT id, nombre, password, verified
-                FROM usuarios
-                WHERE email = %s
-                """,
-                (email,)
-            )
+            cursor.execute("SELECT id, nombre, password, verified, tipo FROM usuarios WHERE email = %s", (data.email,))
             user = cursor.fetchone()
 
-            if not user:
-                print("[ERROR] /auth/email: Correo no registrado")
-                log_failed_attempt(email, ip_address, conn)
-                return RedirectResponse(
-                    url=f"/login?tipo={tipo}&target={target}&error=invalid_credentials",
-                    status_code=302
-                )
+            if not user or not user["password"] or not bcrypt.checkpw(data.password.encode('utf-8'), user["password"].encode('utf-8')):
+                log_failed_attempt(data.email, ip_address, conn)
+                raise HTTPException(status_code=400, detail="Credenciales incorrectas")
 
-            if user["password"] is None:
-                print("[ERROR] /auth/email: Correo registrado con Google")
-                return RedirectResponse(
-                    url=f"/login?tipo={tipo}&target={target}&error=google_account",
-                    status_code=302
-                )
-
-            if not bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
-                print("[ERROR] /auth/email: Contraseña incorrecta")
-                log_failed_attempt(email, ip_address, conn)
-                return RedirectResponse(
-                    url=f"/login?tipo={tipo}&target={target}&error=invalid_credentials",
-                    status_code=302
-                )
-
-            # Actualizar IP y user agent
+            # Actualizar datos de sesión
             cursor.execute(
-                """
-                UPDATE usuarios
-                SET ip_address = %s, user_agent = %s, verified = TRUE
-                WHERE email = %s
-                """,
-                (ip_address, user_agent, email)
+                "UPDATE usuarios SET ip_address = %s, user_agent = %s, verified = TRUE WHERE email = %s",
+                (ip_address, user_agent, data.email)
             )
             conn.commit()
 
-            user_id = user["id"]
-            name = user["nombre"]
-            print(f"[DEBUG] /auth/email: Email válido, user_id={user_id}, nombre={name}")
+            # Determinar redirección
+            cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s;", (user["id"],))
+            tiene_datos = cursor.fetchone() is not None
+            
+            redirect_url = "/perfil-especifico" if data.tipo == "explorador" else ("/perfil" if tiene_datos else "/dashboard")
 
-            request.session["user"] = {"id": user_id, "email": email, "name": name, "tipo": tipo}
-            print(f"[DEBUG] /auth/email: Sesión creada: {request.session}")
-
-            if tipo == "explorador":
-                print("[DEBUG] /auth/email: Redirigiendo a /perfil-especifico por tipo=explorador")
-                cursor.execute("DELETE FROM datos_usuario WHERE user_id = %s;", (user_id,))
-                conn.commit()
-                return RedirectResponse(url="/perfil-especifico", status_code=302)
-
-            cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s;", (user_id,))
-            ya_tiene_datos = cursor.fetchone()
-            print(f"[DEBUG] /auth/email: ¿Usuario tiene datos?: {ya_tiene_datos is not None}")
-
-            if ya_tiene_datos:
-                print("[DEBUG] /auth/email: Redirigiendo a /perfil (datos existentes)")
-                return RedirectResponse(url="/perfil", status_code=302)
-            else:
-                print("[DEBUG] /auth/email: Redirigiendo a /dashboard (sin datos)")
-                return RedirectResponse(url="/dashboard", status_code=302)
+            return {
+                "user_id": user["id"],
+                "email": data.email,
+                "name": user["nombre"],
+                "tipo": data.tipo,
+                "token": "fake_web_token", # Reemplazar con JWT real
+                "redirect_url": redirect_url
+            }
 
         except Exception as e:
             conn.rollback()
-            print(f"[ERROR] /auth/email: Error en la base de datos: {e}")
-            raise HTTPException(status_code=500, detail=f"Error en la base de datos: {str(e)}")
+            raise e
         finally:
-            cursor.close()
             conn.close()
 
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        print(f"[ERROR] /auth/email: Error general en la autenticación: {e}")
-        return RedirectResponse(
-            url=f"/login?tipo={tipo}&target={target}&error=auth_failed&details=general_error:{str(e)}",
-            status_code=302
-        )
+        print(f"[ERROR WEB] {e}")
+        raise HTTPException(status_code=500, detail="Error interno")
 
-# 🔁 Ruta de registro con email
 @email_router.post("/auth/register")
-async def register_via_email(request: Request):
+async def register_via_email(data: RegisterRequest, request: Request):
     try:
-        form_data = await request.form()
-        email = form_data.get("email")
-        password = form_data.get("password")
-        nombre = form_data.get("nombre")
-        tipo = form_data.get("tipo", "emprendedor")
-        target = form_data.get("target", "perfil")
-        captcha_response = form_data.get("g-recaptcha-response")
-        ip_address = request.client.host
-        user_agent = request.headers.get("user-agent")
+        ip_address = data.ip_address or request.client.host
+        user_agent = data.user_agent or request.headers.get("user-agent")
 
-        print(f"[DEBUG] /auth/register: email={email}, nombre={nombre}, tipo={tipo}, target={target}, ip={ip_address}, user_agent={user_agent}")
-
-        if not email or not password or not nombre or not captcha_response:
-            print("[ERROR] /auth/register: Campos incompletos")
-            return RedirectResponse(
-                url=f"/login?tipo={tipo}&target={target}&error=invalid_input",
-                status_code=302
-            )
-
-        # Verificar si la IP está bloqueada
         conn = get_db_connection()
+
         if is_ip_blocked(ip_address, conn):
-            print("[ERROR] /auth/register: IP bloqueada")
             conn.close()
-            return RedirectResponse(
-                url=f"/login?tipo={tipo}&target={target}&error=ip_blocked",
-                status_code=302
-            )
+            raise HTTPException(status_code=403, detail="IP bloqueada")
 
-        # Verificar reCAPTCHA
-        if not await verify_recaptcha(captcha_response, ip_address):
-            print("[ERROR] /auth/register: Verificación de CAPTCHA fallida")
-            log_failed_attempt(email, ip_address, conn)
+        if not await verify_recaptcha(data.g_recaptcha_response, ip_address):
             conn.close()
-            return RedirectResponse(
-                url=f"/login?tipo={tipo}&target={target}&error=captcha_failed",
-                status_code=302
-            )
+            raise HTTPException(status_code=400, detail="Captcha inválido")
 
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        hashed = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
         try:
             cursor = conn.cursor()
-            cursor.execute("SELECT id FROM usuarios WHERE email = %s", (email,))
+            cursor.execute("SELECT id FROM usuarios WHERE email = %s", (data.email,))
             if cursor.fetchone():
-                print("[ERROR] /auth/register: El correo ya está registrado")
-                return RedirectResponse(
-                    url=f"/login?tipo={tipo}&target={target}&error=email_exists",
-                    status_code=302
-                )
+                raise HTTPException(status_code=400, detail="El correo ya existe")
 
             cursor.execute(
                 """
-                INSERT INTO usuarios (nombre, email, password, ip_address, user_agent, verified)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO usuarios (nombre, email, password, ip_address, user_agent, verified, created_at)
+                VALUES (%s, %s, %s, %s, %s, TRUE, NOW())
                 RETURNING id
                 """,
-                (nombre, email, hashed_password, ip_address, user_agent, True)
+                (data.nombre, data.email, hashed, ip_address, user_agent)
             )
             user_id = cursor.fetchone()["id"]
-            print(f"[DEBUG] /auth/register: Nuevo usuario creado, user_id={user_id}")
-
             conn.commit()
-            request.session["user"] = {"id": user_id, "email": email, "name": nombre, "tipo": tipo}
-            print(f"[DEBUG] /auth/register: Sesión creada: {request.session}")
 
-            if tipo == "explorador":
-                print("[DEBUG] /auth/register: Redirigiendo a /perfil-especifico por tipo=explorador")
-                cursor.execute("DELETE FROM datos_usuario WHERE user_id = %s;", (user_id,))
-                conn.commit()
-                return RedirectResponse(url="/perfil-especifico", status_code=302)
+            redirect_url = "/perfil-especifico" if data.tipo == "explorador" else "/dashboard"
 
-            cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s;", (user_id,))
-            ya_tiene_datos = cursor.fetchone()
-            print(f"[DEBUG] /auth/register: ¿Usuario tiene datos?: {ya_tiene_datos is not None}")
-
-            if ya_tiene_datos:
-                print("[DEBUG] /auth/register: Redirigiendo a /perfil (datos existentes)")
-                return RedirectResponse(url="/perfil", status_code=302)
-            else:
-                print("[DEBUG] /auth/register: Redirigiendo a /dashboard (sin datos)")
-                return RedirectResponse(url="/dashboard", status_code=302)
+            return {
+                "user_id": user_id,
+                "email": data.email,
+                "name": data.nombre,
+                "tipo": data.tipo,
+                "token": "fake_web_token",
+                "redirect_url": redirect_url
+            }
 
         except Exception as e:
             conn.rollback()
-            print(f"[ERROR] /auth/register: Error en la base de datos: {e}")
-            raise HTTPException(status_code=500, detail=f"Error en la base de datos: {str(e)}")
+            raise e
         finally:
-            cursor.close()
             conn.close()
 
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        print(f"[ERROR] /auth/register: Error general en el registro: {e}")
-        return RedirectResponse(
-            url=f"/login?tipo={tipo}&target={target}&error=auth_failed&details=general_error:{str(e)}",
-            status_code=302
+        print(f"[ERROR WEB REG] {e}")
+        raise HTTPException(status_code=500, detail="Error interno")
+
+# ==========================================
+#  RUTAS APP (API REST PARA FLUTTER)
+#  Estas son las que arreglan tu error 404
+# REEMPLAZA TU FUNCIÓN login_via_email_app CON ESTA VERSIÓN MEJORADA
+
+@email_router.post("/api/auth/email")
+async def login_via_email_app(datos: LoginRequestApp):
+    print(f"[APP LOGIN] Iniciando sesión para: {datos.email}")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        # 1. Buscamos al usuario (Sin pedir columna 'tipo' para no causar error)
+        cursor.execute("SELECT id, nombre, password, email FROM usuarios WHERE email = %s", (datos.email,))
+        user = cursor.fetchone()
+
+        if not user:
+            print("[APP LOGIN] Usuario no encontrado en tabla usuarios")
+            raise HTTPException(status_code=401, detail="Usuario no encontrado")
+        
+        if not user["password"]:
+             raise HTTPException(status_code=400, detail="Esta cuenta usa Google/Apple Login")
+
+        if not bcrypt.checkpw(datos.password.encode('utf-8'), user["password"].encode('utf-8')):
+             print("[APP LOGIN] Contraseña incorrecta")
+             raise HTTPException(status_code=401, detail="Contraseña incorrecta")
+
+        # 2. Verificar si tiene datos de negocio (PERFIL)
+        # Aquí estaba el problema: antes silenciábamos cualquier error.
+        user_id = user['id']
+        print(f"[APP LOGIN] Usuario ID: {user_id}. Verificando tabla datos_usuario...")
+        
+        cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s", (user_id,))
+        resultado_datos = cursor.fetchone()
+        
+        tiene_datos = resultado_datos is not None
+        print(f"[APP LOGIN] ¿Tiene datos de negocio?: {'SÍ' if tiene_datos else 'NO'}")
+
+        # 3. Decidir a dónde mandarlo
+        if datos.tipo == "explorador":
+            redirect_url = "/perfil-especifico"
+        elif tiene_datos:
+            redirect_url = "/perfil"  # <--- Si tiene datos, va aquí
+        else:
+            redirect_url = "/dashboard" # <--- Solo si NO tiene datos, va aquí
+
+        # Generar Token
+        fake_token = f"jwt_app_{user_id}"
+
+        return {
+            "status": "ok",
+            "token": fake_token,
+            "user_id": user_id,
+            "email": user["email"],
+            "name": user["nombre"],
+            "tipo": datos.tipo, 
+            "redirect_url": redirect_url
+        }
+
+    except psycopg2.Error as db_error:
+        print(f"[DB ERROR CRÍTICO] {db_error}")
+        # Esto te avisará si tu tabla datos_usuario no existe o tiene otro nombre
+        raise HTTPException(status_code=500, detail="Error de base de datos al verificar perfil")
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"[APP ERROR GENERAL] {e}") 
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
+    finally:
+        conn.close()
+
+@email_router.post("/api/auth/register")
+async def register_via_email_app(datos: RegisterRequestApp):
+    print(f"[APP REGISTER] Intento: {datos.email}")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        # 1. Verificar existencia
+        cursor.execute("SELECT id FROM usuarios WHERE email = %s", (datos.email,))
+        if cursor.fetchone():
+            raise HTTPException(status_code=400, detail="El correo ya está registrado")
+
+        # 2. Hashear password
+        hashed_pw = bcrypt.hashpw(datos.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+        # 3. Insertar
+        cursor.execute(
+            """
+            INSERT INTO usuarios (nombre, email, password, verified, created_at, user_agent)
+            VALUES (%s, %s, %s, TRUE, NOW(), 'PrendiaX-App')
+            RETURNING id
+            """,
+            (datos.nombre, datos.email, hashed_pw)
         )
+        user_id = cursor.fetchone()["id"]
+        conn.commit()
+
+        # 4. Respuesta Exitosa (200 OK)
+        redirect_url = "/perfil-especifico" if datos.tipo == "explorador" else "/dashboard"
+        
+        return {
+            "status": "ok",
+            "token": f"jwt_app_{user_id}",
+            "user_id": user_id,
+            "email": datos.email,
+            "name": datos.nombre,
+            "tipo": datos.tipo,
+            "redirect_url": redirect_url
+        }
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        conn.rollback()
+        print(f"[APP ERROR REGISTER] {e}")
+        raise HTTPException(status_code=500, detail=f"Error al registrar: {str(e)}")
+    finally:
+        conn.close()
+
+
+# REEMPLAZA TODA LA FUNCIÓN get_current_user_api CON ESTA:
+
+@email_router.get("/api/auth/current_user") # <--- AQUI AGREGUÉ LA BARRA "/" AL INICIO
+async def get_current_user_api(request: Request):
+    """
+    Endpoint específico para la APP MÓVIL que devuelve JSON.
+    Soporta tanto Sesión (Web) como Token Fake (App).
+    """
+    conn = None
+    try:
+        user_id = None
+        tipo = "explorador" # Default
+
+        # 1. INTENTO POR SESIÓN (Para cuando entras desde la Web)
+        user_session = request.session.get("user")
+        if user_session:
+            user_id = user_session.get("id")
+            tipo = user_session.get("tipo", "explorador")
+        
+        # 2. INTENTO POR TOKEN (Para la App Flutter)
+        # La App manda: "Authorization: Bearer jwt_app_15"
+        if not user_id:
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                token = auth_header.split(" ")[1] # Obtenemos "jwt_app_15"
+                
+                # Lógica para leer tu token falso
+                if token.startswith("jwt_app_"):
+                    try:
+                        # Extraemos el ID del string (ej: de "jwt_app_15" sacamos "15")
+                        user_id_str = token.replace("jwt_app_", "")
+                        user_id = int(user_id_str)
+                        # Nota: En un sistema real, aquí decodificarías el JWT real
+                    except ValueError:
+                        print("[AUTH ERROR] Token mal formado")
+        
+        # Si después de intentar Cookie y Token no hay ID, adiós.
+        if not user_id:
+             print(f"[DEBUG] Headers recibidos: {request.headers}")
+             raise HTTPException(status_code=401, detail="No autenticado")
+
+        # 3. BUSCAR EN BASE DE DATOS
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtenemos los datos frescos
+        cursor.execute("""
+            SELECT id, nombre, email, verified
+            FROM usuarios
+            WHERE id = %s
+        """, (user_id,))
+        
+        user = cursor.fetchone()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        # Intentamos buscar imagen si existe la tabla
+        imagen_url = None
+        try:
+            cursor.execute("SELECT imagen_url FROM datos_usuario WHERE user_id = %s", (user_id,))
+            data = cursor.fetchone()
+            if data:
+                imagen_url = data.get("imagen_url")
+        except:
+            pass 
+
+        # 4. RESPUESTA JSON
+        return JSONResponse(content={
+            "id": user["id"],
+            "usuario_nombre": user["nombre"],
+            "email": user["email"],
+            "tipo": tipo, 
+            "imagen_url": imagen_url
+        })
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"[ERROR] /auth/current_user: {e}")
+        return JSONResponse(
+            status_code=500, 
+            content={"detail": f"Error interno: {str(e)}"}
+        )
+    finally:
+        if conn:
+            conn.close()

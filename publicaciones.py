@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException
+from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException, Header
 from fastapi.responses import RedirectResponse, HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 import psycopg2
@@ -51,20 +51,34 @@ class ReviewRequest(BaseModel):
     texto: str
     calificacion: int
 
+# --- FUNCIÓN HÍBRIDA: Detecta si es App (Token) o Web (Sesión) ---
+def get_user_id_hybrid(request: Request):
+    # 1. Intentar Token de App Móvil (Header Authorization)
+    auth_header = request.headers.get("Authorization")
+    if auth_header and "jwt_app_" in auth_header:
+        try:
+            # El header llega así: "Bearer jwt_app_45"
+            token_part = auth_header.split("jwt_app_")[1]
+            if token_part.isdigit():
+                return int(token_part)
+        except Exception as e:
+            logging.error(f"Error al leer token híbrido: {e}")
+            pass
+    
+    # 2. Intentar Sesión Web (Cookie)
+    if 'user' in request.session and 'id' in request.session['user']:
+        return int(request.session['user']['id'])
+        
+    return None
+
+
 # Ruta para renderizar perfil-especifico.html
 @router.get("/perfil-especifico", response_class=HTMLResponse)
 async def perfil_especifico(request: Request):
     try:
-        if 'user' not in request.session or 'id' not in request.session['user']:
-            logging.warning("Sesión no encontrada en /perfil-especifico, redirigiendo a /login")
-            return RedirectResponse(url="/login", status_code=302)
-
-        try:
-            user_id = int(request.session['user']['id'])
-            logging.debug(f"User ID enviado a perfil-especifico.html: {user_id}, tipo: {type(user_id)}")
-        except (ValueError, TypeError) as e:
-            logging.error(f"Error: user_id no es un entero válido. Valor: {request.session['user']['id']}, Error: {e}")
-            request.session.clear()
+        user_id = get_user_id_hybrid(request)
+        if not user_id:
+            logging.warning("Usuario no autenticado en /perfil-especifico, redirigiendo a /login")
             return RedirectResponse(url="/login", status_code=302)
 
         viewed_user_id = request.query_params.get('user_id')
@@ -94,9 +108,9 @@ async def get_foto_perfil(user_id: int):
         cur = conn.cursor()
         cur.execute("""
             SELECT CASE 
-                       WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor'
-                       ELSE 'explorador'
-                   END AS tipo_usuario
+                        WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor'
+                        ELSE 'explorador'
+                    END AS tipo_usuario
             FROM usuarios u
             LEFT JOIN datos_usuario du ON u.id = du.user_id
             WHERE u.id = %s
@@ -128,15 +142,15 @@ async def get_foto_perfil(user_id: int):
             logging.debug("Conexión a la base de datos cerrada")
 
 # Ruta para servir multimedia de publicaciones
-@router.get("/media/{post_id}")
-async def get_media(post_id: int, request: Request):
-    try:
-        if 'user' not in request.session or 'id' not in request.session['user']:
-            logging.warning("Sesión no encontrada en /media/{post_id}")
-            raise HTTPException(status_code=401, detail="No autorizado")
+# BUSCA ESTA RUTA EN publicaciones.py Y REEMPLÁZALA:
 
-        user_id = int(request.session['user']['id'])
-        logging.debug(f"Obteniendo multimedia para post_id: {post_id}, user_id: {user_id}")
+@router.get("/media/{post_id}")
+async def get_media(post_id: int):
+    # NOTA: Hemos quitado 'request: Request' y la validación de usuario.
+    # Las imágenes deben ser accesibles para que la App las pueda cargar 
+    # sin necesidad de enviar headers complejos en cada widget de imagen.
+    try:
+        logging.debug(f"Solicitando multimedia pública para post_id: {post_id}")
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
@@ -153,41 +167,37 @@ async def get_media(post_id: int, request: Request):
             raise HTTPException(status_code=404, detail="Publicación no encontrada")
 
         imagen_data, video_data = result
+        
         if imagen_data:
-            logging.debug(f"Sirviendo imagen para post_id: {post_id}, tamaño: {len(imagen_data)} bytes")
             return StreamingResponse(
                 content=io.BytesIO(imagen_data),
                 media_type="image/jpeg",
                 headers={"Content-Disposition": f"inline; filename=post_{post_id}_image.jpg"}
             )
         elif video_data:
-            logging.debug(f"Sirviendo video para post_id: {post_id}, tamaño: {len(video_data)} bytes")
             return StreamingResponse(
                 content=io.BytesIO(video_data),
                 media_type="video/mp4",
                 headers={"Content-Disposition": f"inline; filename=post_{post_id}_video.mp4"}
             )
         else:
-            logging.warning(f"Archivo multimedia no encontrado para post_id: {post_id}")
+            # Si el post existe pero no tiene media (raro, pero posible)
+            # Podemos devolver un 404 o una imagen vacía
+            logging.warning(f"El post {post_id} existe pero no tiene archivo multimedia")
             raise HTTPException(status_code=404, detail="Archivo multimedia no encontrado")
+
     except Exception as e:
         logging.error(f"Error al servir multimedia para post_id {post_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al servir multimedia: {str(e)}")
+        # Si es un error de DB, lanzamos 500
+        raise HTTPException(status_code=500, detail="Error interno al servir imagen")
 
 # Ruta para renderizar inicio.html
 @router.get("/inicio", response_class=HTMLResponse)
 async def inicio(request: Request, limit: int = 10, offset: int = 0):
     try:
-        if 'user' not in request.session or 'id' not in request.session['user']:
-            logging.warning("Sesión no encontrada o sin user_id, redirigiendo a /login")
-            return RedirectResponse(url="/login", status_code=302)
-
-        try:
-            user_id = int(request.session['user']['id'])
-            logging.debug(f"User ID enviado a inicio.html: {user_id}, tipo: {type(user_id)}")
-        except (ValueError, TypeError) as e:
-            logging.error(f"Error: user_id no es un entero válido. Valor: {request.session['user']['id']}, Error: {e}")
-            request.session.clear()
+        user_id = get_user_id_hybrid(request)
+        if not user_id:
+            logging.warning("Usuario no autenticado en /inicio, redirigiendo a /login")
             return RedirectResponse(url="/login", status_code=302)
 
         conn = None
@@ -231,7 +241,6 @@ async def inicio(request: Request, limit: int = 10, offset: int = 0):
         finally:
             if conn:
                 conn.close()
-                logging.debug("Conexión a la base de datos cerrada")
 
         publicaciones_list = [
             {
@@ -260,7 +269,7 @@ async def inicio(request: Request, limit: int = 10, offset: int = 0):
         logging.error(f"Error en /inicio: {e}")
         return RedirectResponse(url="/login", status_code=302)
 
-# Ruta para publicar
+# Ruta para publicar (Soporta App y Web)
 @router.post("/publicar")
 async def publicar(
     request: Request,
@@ -270,11 +279,13 @@ async def publicar(
     etiquetas: str = Form(None)
 ):
     try:
-        if 'user' not in request.session or 'id' not in request.session['user']:
-            logging.warning("Sesión no encontrada en /publicar, redirigiendo a /login")
+        user_id = get_user_id_hybrid(request)
+        if not user_id:
+            # Si es la App (por el header), damos 401. Si es web, redirect.
+            if request.headers.get("Authorization"):
+                raise HTTPException(status_code=401, detail="No autorizado")
             return RedirectResponse(url="/login", status_code=302)
 
-        user_id = int(request.session['user']['id'])
         logging.debug(f"Publicando con user_id: {user_id}")
 
         if not contenido and (not imagen or imagen.size == 0) and (not video or video.size == 0):
@@ -282,35 +293,27 @@ async def publicar(
             raise HTTPException(status_code=400, detail="Debe incluir al menos contenido, una imagen o un video")
 
         if imagen and imagen.size > MAX_FILE_SIZE:
-            logging.warning(f"Imagen demasiado grande, tamaño: {imagen.size}")
             raise HTTPException(status_code=400, detail=f"La imagen excede el tamaño máximo de {MAX_FILE_SIZE // (1024 * 1024)} MB")
 
         if video and video.size > MAX_FILE_SIZE:
-            logging.warning(f"Video demasiado grande, tamaño: {video.size}")
             raise HTTPException(status_code=400, detail=f"El video excede el tamaño máximo de {MAX_FILE_SIZE // (1024 * 1024)} MB")
 
         if imagen and video:
-            logging.warning("No se permite cargar imagen y video al mismo tiempo")
             raise HTTPException(status_code=400, detail="No se puede cargar una imagen y un video al mismo tiempo")
 
         etiquetas_lista = [e.strip() for e in etiquetas.split(",") if e.strip()] if etiquetas else []
-        logging.debug(f"Etiquetas procesadas: {etiquetas_lista}")
 
         imagen_data = None
         video_data = None
         if imagen and imagen.size > 0:
             if not imagen.content_type.startswith('image/'):
-                logging.warning(f"Tipo de archivo no soportado para imagen: {imagen.content_type}")
                 raise HTTPException(status_code=400, detail="Solo se permiten imágenes")
             imagen_data = await imagen.read()
-            logging.debug(f"Imagen cargada, tamaño: {len(imagen_data)} bytes")
 
         if video and video.size > 0:
             if not video.content_type.startswith('video/'):
-                logging.warning(f"Tipo de archivo no soportado para video: {video.content_type}")
                 raise HTTPException(status_code=400, detail="Solo se permiten videos")
             video_data = await video.read()
-            logging.debug(f"Video cargado, tamaño: {len(video_data)} bytes")
 
         conn = None
         try:
@@ -319,7 +322,6 @@ async def publicar(
 
             cur.execute("SELECT id FROM usuarios WHERE id = %s", (user_id,))
             if not cur.fetchone():
-                logging.error(f"Usuario no encontrado: {user_id}")
                 raise HTTPException(status_code=400, detail="Usuario no encontrado")
 
             query = """
@@ -335,31 +337,24 @@ async def publicar(
         except Exception as e:
             if conn:
                 conn.rollback()
-            logging.error(f"Error al guardar publicación: {e}")
             raise HTTPException(status_code=500, detail=f"Error al guardar publicación: {str(e)}")
         finally:
             if conn:
                 conn.close()
-                logging.debug("Conexión a la base de datos cerrada")
 
+        # Para web redirigimos. La App puede leer el 302 o podemos adaptar luego.
         return RedirectResponse(url="/inicio", status_code=302)
     except Exception as e:
         logging.error(f"Error en /publicar: {e}")
         raise HTTPException(status_code=500, detail=f"Error al guardar publicación: {str(e)}")
 
-# Ruta para el feed
+# Ruta para el feed (API JSON para App y Web AJAX)
 @router.get("/feed")
 async def feed(limit: int = 10, offset: int = 0, request: Request = None):
     conn = None
     try:
-        current_user = None
-        if request and 'user' in request.session and 'id' in request.session['user']:
-            try:
-                current_user = int(request.session['user']['id'])
-                logging.debug(f"User_id obtenido de la sesión: {current_user}")
-            except (ValueError, TypeError) as e:
-                logging.error(f"Error al obtener user_id de la sesión: {e}")
-                current_user = None
+        current_user = get_user_id_hybrid(request) if request else None
+        logging.debug(f"Generando feed. Usuario actual: {current_user}")
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -392,7 +387,6 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
             LIMIT %s OFFSET %s
         """, (current_user if current_user else -1, limit, offset))
         publicaciones = cur.fetchall()
-        logging.debug(f"Se obtuvieron {len(publicaciones)} publicaciones para el feed")
         cur.close()
 
         publicaciones_list = [
@@ -412,7 +406,6 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
             }
             for row in publicaciones
         ]
-        logging.debug(f"Feed retornado: {publicaciones_list}")
         return publicaciones_list
     except Exception as e:
         logging.error(f"Error al cargar feed: {e}")
@@ -420,26 +413,17 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
     finally:
         if conn:
             conn.close()
-            logging.debug("Conexión a la base de datos cerrada")
 
 # Ruta para buscar publicaciones
 @router.get("/search")
 async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, request: Request = None):
     query = query.strip().lower()
     if not query:
-        logging.warning("Query vacío en /search")
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
     conn = None
     try:
-        current_user = None
-        if request and 'user' in request.session and 'id' in request.session['user']:
-            try:
-                current_user = int(request.session['user']['id'])
-                logging.debug(f"User_id obtenido de la sesión para búsqueda: {current_user}")
-            except (ValueError, TypeError) as e:
-                logging.error(f"Error al obtener user_id de la sesión: {e}")
-                current_user = None
+        current_user = get_user_id_hybrid(request) if request else None
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -478,7 +462,6 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
             LIMIT %s OFFSET %s
         """, (current_user if current_user else -1, f"%{query}%", f"%{query}%", limit, offset))
         publicaciones = cur.fetchall()
-        logging.debug(f"Se obtuvieron {len(publicaciones)} resultados para query: {query}")
         cur.close()
 
         publicaciones_list = [
@@ -498,7 +481,6 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
             }
             for row in publicaciones
         ]
-        logging.debug(f"Resultados de búsqueda para query '{query}': {publicaciones_list}")
         return publicaciones_list
     except Exception as e:
         logging.error(f"Error al buscar publicaciones: {e}")
@@ -506,22 +488,14 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
     finally:
         if conn:
             conn.close()
-            logging.debug("Conexión a la base de datos cerrada")
 
 # Ruta para el feed del perfil
 @router.get("/perfil/feed")
 async def perfil_feed(request: Request, limit: int = 10, offset: int = 0):
     try:
-        if 'user' not in request.session or 'id' not in request.session['user']:
-            logging.warning("Sesión no encontrada en /perfil/feed, retornando error")
+        user_id = get_user_id_hybrid(request)
+        if not user_id:
             raise HTTPException(status_code=401, detail="No autorizado")
-
-        try:
-            user_id = int(request.session['user']['id'])
-            logging.debug(f"Obteniendo feed para user_id: {user_id}, tipo: {type(user_id)}")
-        except (ValueError, TypeError) as e:
-            logging.error(f"Error: user_id no es un entero válido. Valor: {request.session['user']['id']}, Error: {e}")
-            raise HTTPException(status_code=400, detail="ID de usuario inválido")
 
         conn = None
         try:
@@ -549,15 +523,12 @@ async def perfil_feed(request: Request, limit: int = 10, offset: int = 0):
                 LIMIT %s OFFSET %s
             """, (user_id, limit, offset))
             publicaciones = cur.fetchall()
-            logging.debug(f"Se obtuvieron {len(publicaciones)} publicaciones para el perfil de user_id: {user_id}")
             cur.close()
         except Exception as e:
-            logging.error(f"Error al obtener publicaciones del perfil: {e}")
             raise HTTPException(status_code=500, detail="Error al obtener publicaciones")
         finally:
             if conn:
                 conn.close()
-                logging.debug("Conexión a la base de datos cerrada")
 
         publicaciones_list = [
             {
@@ -574,7 +545,6 @@ async def perfil_feed(request: Request, limit: int = 10, offset: int = 0):
             }
             for row in publicaciones
         ]
-        logging.debug(f"Feed del perfil retornado para user_id {user_id}: {publicaciones_list}")
         return publicaciones_list
     except Exception as e:
         logging.error(f"Error en /perfil/feed: {e}")
@@ -584,15 +554,8 @@ async def perfil_feed(request: Request, limit: int = 10, offset: int = 0):
 @router.get("/publicacion/{post_id}")
 async def get_publicacion(post_id: int, request: Request):
     try:
-        current_user = None
-        if request and 'user' in request.session and 'id' in request.session['user']:
-            try:
-                current_user = int(request.session['user']['id'])
-                logging.debug(f"User_id obtenido de la sesión: {current_user}")
-            except (ValueError, TypeError) as e:
-                logging.error(f"Error al obtener user_id de la sesión: {e}")
-                current_user = None
-
+        current_user = get_user_id_hybrid(request)
+        
         conn = None
         try:
             conn = get_db_connection()
@@ -626,7 +589,6 @@ async def get_publicacion(post_id: int, request: Request):
             """, (current_user if current_user else -1, post_id))
             row = cur.fetchone()
             if not row:
-                logging.warning(f"Publicación no encontrada: {post_id}")
                 raise HTTPException(status_code=404, detail="Publicación no encontrada")
             cur.close()
 
@@ -644,15 +606,12 @@ async def get_publicacion(post_id: int, request: Request):
                 "interesados_count": int(row[9]),
                 "interesado": row[10]
             }
-            logging.debug(f"Publicación retornada para post_id {post_id}: {publicacion}")
             return publicacion
         except Exception as e:
-            logging.error(f"Error al obtener publicación {post_id}: {e}")
             raise HTTPException(status_code=500, detail="Error al obtener publicación")
         finally:
             if conn:
                 conn.close()
-                logging.debug("Conexión a la base de datos cerrada")
     except Exception as e:
         logging.error(f"Error en /publicacion/{post_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Error al obtener publicación: {str(e)}")
@@ -688,7 +647,6 @@ async def get_user(user_id: int):
         """, (user_id,))
         result = cur.fetchone()
         if not result:
-            logging.warning(f"Usuario no encontrado: {user_id}")
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         cur.close()
 
@@ -707,7 +665,6 @@ async def get_user(user_id: int):
             "servicios": result[11] if result[11] else "",
             "sitio_web": result[12] if result[12] else ""
         }
-        logging.debug(f"Datos del usuario retornados para user_id {user_id}: {user_data}")
         return user_data
     except Exception as e:
         logging.error(f"Error al obtener datos del usuario para user_id {user_id}: {e}")
@@ -715,21 +672,14 @@ async def get_user(user_id: int):
     finally:
         if conn:
             conn.close()
-            logging.debug("Conexión a la base de datos cerrada")
 
 # Ruta para obtener publicaciones de un usuario
 @router.get("/user/{user_id}/publicaciones")
 async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0, request: Request = None):
+    base_url = str(request.base_url).rstrip("/") if request else ""
     conn = None
     try:
-        current_user = None
-        if request and 'user' in request.session and 'id' in request.session['user']:
-            try:
-                current_user = int(request.session['user']['id'])
-                logging.debug(f"User_id obtenido de la sesión: {current_user}")
-            except (ValueError, TypeError) as e:
-                logging.error(f"Error al obtener user_id de la sesión: {e}")
-                current_user = None
+        current_user = get_user_id_hybrid(request) if request else None
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -763,7 +713,6 @@ async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0,
             LIMIT %s OFFSET %s
         """, (current_user if current_user else -1, user_id, limit, offset))
         publicaciones = cur.fetchall()
-        logging.debug(f"Se obtuvieron {len(publicaciones)} publicaciones para user_id: {user_id}")
         cur.close()
 
         publicaciones_list = [
@@ -771,11 +720,11 @@ async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0,
                 "id": row[0],
                 "user_id": int(row[1]),
                 "contenido": row[2] if row[2] else "",
-                "imagen_url": f"/media/{row[0]}" if row[7] else "",
-                "video_url": f"/media/{row[0]}" if row[8] else "",
+                "imagen_url": f"{base_url}/media/{row[0]}" if row[7] else "",
+                "video_url": f"{base_url}/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] if row[3] else [],
                 "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
-                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
+                "foto_perfil_url": f"{base_url}/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
                 "nombre_empresa": row[5],
                 "tipo_usuario": row[6],
                 "interesados_count": int(row[9]),
@@ -783,7 +732,6 @@ async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0,
             }
             for row in publicaciones
         ]
-        logging.debug(f"Publicaciones retornadas para user_id {user_id}: {publicaciones_list}")
         return publicaciones_list
     except Exception as e:
         logging.error(f"Error al obtener publicaciones para user_id {user_id}: {e}")
@@ -791,175 +739,126 @@ async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0,
     finally:
         if conn:
             conn.close()
-            logging.debug("Conexión a la base de datos cerrada")
 
-# Ruta para obtener reseñas
+# ---------------------------------------------------------
+# RESEÑAS - INTACTO (Como solicitaste)
+# ---------------------------------------------------------
 @router.get("/api/perfil/{perfil_id}/resenas")
 async def get_user_resenas(perfil_id: int, request: Request, limit: int = 10, offset: int = 0):
-    try:
-        if 'user' not in request.session or 'id' not in request.session['user']:
-            logging.warning("Sesión no encontrada en /api/perfil/{perfil_id}/resenas")
-            raise HTTPException(status_code=401, detail="No autorizado")
+    user_id = get_user_id_hybrid(request)
+    logging.debug(f"Cargando reseñas perfil {perfil_id}. Usuario detectado: {user_id}")
 
-        try:
-            user_id = int(request.session['user']['id'])
-            logging.debug(f"Obteniendo reseñas para perfil_id: {perfil_id}, solicitado por user_id: {user_id}")
-        except (ValueError, TypeError) as e:
-            logging.error(f"Error al convertir user_id a entero: {request.session['user']['id']}, Error: {e}")
-            raise HTTPException(status_code=400, detail=f"ID de usuario inválido: {str(e)}")
-
-        conn = None
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-
-            cur.execute("SELECT id FROM usuarios WHERE id = %s", (perfil_id,))
-            if not cur.fetchone():
-                logging.warning(f"Perfil no encontrado: {perfil_id}")
-                raise HTTPException(status_code=404, detail="Perfil no encontrado")
-
-            cur.execute("""
-                SELECT r.id, r.user_id, r.perfil_id, r.texto, r.calificacion, r.fecha_creacion,
-                       COALESCE(du.nombre_empresa, u.nombre) AS display_name,
-                       CASE 
-                           WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor'
-                           ELSE 'explorador'
-                       END AS tipo_usuario
-                FROM resenas r
-                JOIN usuarios u ON r.user_id = u.id
-                LEFT JOIN datos_usuario du ON r.user_id = du.user_id
-                WHERE r.perfil_id = %s
-                ORDER BY r.fecha_creacion DESC
-                LIMIT %s OFFSET %s
-            """, (perfil_id, limit, offset))
-            resenas = cur.fetchall()
-            logging.debug(f"Se obtuvieron {len(resenas)} reseñas para perfil_id: {perfil_id}")
-
-            cur.close()
-
-            resenas_list = [
-                {
-                    "id": row[0],
-                    "user_id": int(row[1]),
-                    "perfil_id": int(row[2]),
-                    "texto": row[3],
-                    "calificacion": row[4],
-                    "fecha_creacion": row[5].strftime("%Y-%m-%d %H:%M:%S"),
-                    "nombre_empresa": row[6] or "Anónimo",
-                    "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[7] == 'emprendedor' else "",
-                    "tipo_usuario": row[7]
-                }
-                for row in resenas
-            ]
-            logging.debug(f"Reseñas retornadas para perfil_id {perfil_id}: {resenas_list}")
-            return resenas_list
-        except psycopg2.Error as e:
-            logging.error(f"Error en la base de datos para perfil_id {perfil_id}: {e.pgcode} - {e.pgerror}")
-            raise HTTPException(status_code=500, detail=f"Error en la base de datos: {str(e)}")
-        finally:
-            if conn:
-                conn.close()
-                logging.debug("Conexión a la base de datos cerrada")
-    except Exception as e:
-        logging.error(f"Error general en /api/perfil/{perfil_id}/resenas: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error al cargar reseñas: {str(e)}")
-
-# Ruta para crear reseña
-@router.post("/api/perfil/{perfil_id}/resenas")
-async def create_review(perfil_id: int, request: ReviewRequest, http_request: Request):
     conn = None
     try:
-        if 'user' not in http_request.session or 'id' not in http_request.session['user']:
-            logging.warning("Sesión no encontrada en /api/perfil/{perfil_id}/resenas")
-            raise HTTPException(status_code=401, detail="Debes iniciar sesión para dejar una reseña")
-
-        user_id = int(http_request.session['user']['id'])
-        texto = request.texto.strip()
-        calificacion = request.calificacion
-
-        if user_id == perfil_id:
-            logging.warning(f"Usuario {user_id} intentó dejar una reseña en su propio perfil")
-            raise HTTPException(status_code=400, detail="No puedes dejar una reseña en tu propio perfil")
-
-        if not texto:
-            logging.warning("Reseña vacía en /api/perfil/{perfil_id}/resenas")
-            raise HTTPException(status_code=400, detail="El comentario no puede estar vacío")
-
-        if not (1 <= calificacion <= 5):
-            logging.warning(f"Calificación inválida: {calificacion}")
-            raise HTTPException(status_code=400, detail="La calificación debe estar entre 1 y 5")
-
         conn = get_db_connection()
         cur = conn.cursor()
 
         cur.execute("SELECT id FROM usuarios WHERE id = %s", (perfil_id,))
         if not cur.fetchone():
-            logging.warning(f"Perfil no encontrado: {perfil_id}")
+            raise HTTPException(status_code=404, detail="Perfil no encontrado")
+
+        cur.execute("""
+            SELECT r.id, r.user_id, r.perfil_id, r.texto, r.calificacion, r.fecha_creacion,
+                   COALESCE(du.nombre_empresa, u.nombre),
+                   CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END,
+                   du.foto
+            FROM resenas r
+            JOIN usuarios u ON r.user_id = u.id
+            LEFT JOIN datos_usuario du ON r.user_id = du.user_id
+            WHERE r.perfil_id = %s
+            ORDER BY r.fecha_creacion DESC
+            LIMIT %s OFFSET %s
+        """, (perfil_id, limit, offset))
+        
+        rows = cur.fetchall()
+        cur.close()
+
+        data = []
+        for r in rows:
+            foto_url = ""
+            if r[7] == 'emprendedor' and r[8]:
+                foto_url = f"/foto_perfil/{r[1]}"
+
+            data.append({
+                "id": r[0], "user_id": r[1], "perfil_id": r[2], "texto": r[3],
+                "calificacion": r[4], "fecha_creacion": r[5].strftime("%Y-%m-%d %H:%M:%S"),
+                "nombre_empresa": r[6] or "Anónimo", "tipo_usuario": r[7],
+                "foto_perfil": foto_url
+            })
+        return data
+
+    except Exception as e:
+        logging.error(f"Error reseñas: {e}")
+        if isinstance(e, HTTPException): raise e
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn: conn.close()
+
+@router.post("/api/perfil/{perfil_id}/resenas")
+async def create_review(perfil_id: int, request: ReviewRequest, http_request: Request):
+    user_id = get_user_id_hybrid(http_request)
+    
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Inicia sesión para comentar")
+
+    texto = request.texto.strip()
+    if user_id == perfil_id:
+        raise HTTPException(status_code=400, detail="No puedes reseñarte a ti mismo")
+    if not texto:
+        raise HTTPException(status_code=400, detail="Texto vacío")
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        cur.execute("SELECT id FROM usuarios WHERE id = %s", (perfil_id,))
+        if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Perfil no encontrado")
 
         cur.execute("""
             INSERT INTO resenas (user_id, perfil_id, texto, calificacion, fecha_creacion)
             VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
-            RETURNING id, user_id, perfil_id, texto, calificacion, fecha_creacion
-        """, (user_id, perfil_id, texto, calificacion))
-        review = cur.fetchone()
+            RETURNING id, fecha_creacion
+        """, (user_id, perfil_id, texto, request.calificacion))
+        new_data = cur.fetchone()
         conn.commit()
 
         cur.execute("""
-            SELECT COALESCE(du.nombre_empresa, u.nombre) AS display_name,
-                   CASE 
-                       WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor'
-                       ELSE 'explorador'
-                   END AS tipo_usuario
-            FROM usuarios u
-            LEFT JOIN datos_usuario du ON u.id = du.user_id
-            WHERE u.id = %s
+            SELECT COALESCE(du.nombre_empresa, u.nombre), 
+                   CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END,
+                   du.foto
+            FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s
         """, (user_id,))
-        autor_data = cur.fetchone()
-        display_name = autor_data[0]
-        tipo_usuario = autor_data[1]
-
+        autor = cur.fetchone()
         cur.close()
 
-        review_dict = {
-            "id": review[0],
-            "user_id": review[1],
-            "perfil_id": review[2],
-            "texto": review[3],
-            "calificacion": review[4],
-            "fecha_creacion": review[5].strftime("%Y-%m-%d %H:%M:%S"),
-            "nombre_empresa": display_name or "Anónimo",
-            "foto_perfil_url": f"/foto_perfil/{user_id}" if tipo_usuario == 'emprendedor' else "",
-            "tipo_usuario": tipo_usuario
-        }
+        foto_url = f"/foto_perfil/{user_id}" if (autor[1] == 'emprendedor' and autor[2]) else ""
 
-        logging.debug(f"Reseña creada: {review_dict}")
-        return review_dict
-    except psycopg2.Error as e:
-        if conn:
-            conn.rollback()
-        logging.error(f"Error en la base de datos al crear reseña para perfil_id {perfil_id}: {e.pgcode} - {e.pgerror}")
-        raise HTTPException(status_code=500, detail=f"Error en la base de datos: {str(e)}")
+        return {
+            "id": new_data[0], "user_id": user_id, "perfil_id": perfil_id,
+            "texto": texto, "calificacion": request.calificacion,
+            "fecha_creacion": new_data[1].strftime("%Y-%m-%d %H:%M:%S"),
+            "nombre_empresa": autor[0] or "Anónimo", "tipo_usuario": autor[1],
+            "foto_perfil": foto_url
+        }
     except Exception as e:
-        if conn:
-            conn.rollback()
-        logging.error(f"Error al crear reseña para perfil_id {perfil_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error al crear reseña: {str(e)}")
+        if conn: conn.rollback()
+        logging.error(f"Error crear reseña: {e}")
+        if isinstance(e, HTTPException): raise e
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
-        if conn:
-            conn.close()
-            logging.debug("Conexión a la base de datos cerrada")
+        if conn: conn.close()
 
 # Ruta para obtener usuario actual
 @router.get("/current_user")
 async def get_current_user(request: Request):
     try:
-        if 'user' not in request.session or 'id' not in request.session['user']:
-            logging.warning("Sesión no encontrada en /current_user, retornando null")
+        user_id = get_user_id_hybrid(request)
+        if not user_id:
             return {"user_id": None, "tipo": None}
         
         try:
-            user_id = int(request.session['user']['id'])
             conn = None
             try:
                 conn = get_db_connection()
@@ -976,19 +875,15 @@ async def get_current_user(request: Request):
                 result = cur.fetchone()
                 user_tipo = result[0] if result else 'explorador'
                 cur.close()
-                logging.debug(f"Tipo de usuario determinado: {user_tipo} para user_id: {user_id}")
             except Exception as e:
                 logging.error(f"Error al determinar el tipo de usuario en /current_user: {e}")
                 user_tipo = 'explorador'
             finally:
                 if conn:
                     conn.close()
-                    logging.debug("Conexión a la base de datos cerrada")
 
-            logging.debug(f"User ID retornado por /current_user: {user_id}, tipo: {user_tipo}")
             return {"user_id": user_id, "tipo": user_tipo}
-        except (ValueError, TypeError) as e:
-            logging.error(f"Error: user_id no es un entero válido en /current_user. Valor: {request.session['user']['id']}, Error: {e}")
+        except Exception as e:
             return {"user_id": None, "tipo": None}
     except Exception as e:
         logging.error(f"Error en /current_user: {e}")
@@ -1005,11 +900,10 @@ async def salir(request: Request):
 @router.delete("/borrar_publicacion/{post_id}")
 async def borrar_publicacion(post_id: int, request: Request):
     try:
-        if 'user' not in request.session or 'id' not in request.session['user']:
-            logging.warning("Sesión no encontrada en /borrar_publicacion, retornando error")
+        user_id = get_user_id_hybrid(request)
+        if not user_id:
             raise HTTPException(status_code=401, detail="No autorizado")
 
-        user_id = int(request.session['user']['id'])
         logging.debug(f"Intento de borrar publicación {post_id} por user_id: {user_id}")
 
         conn = None
@@ -1020,10 +914,8 @@ async def borrar_publicacion(post_id: int, request: Request):
             cur.execute("SELECT user_id FROM publicaciones WHERE id = %s", (post_id,))
             result = cur.fetchone()
             if not result:
-                logging.warning(f"Publicación no encontrada: {post_id}")
                 raise HTTPException(status_code=404, detail="Publicación no encontrada")
             if result[0] != user_id:
-                logging.warning(f"Usuario {user_id} no tiene permiso para borrar la publicación {post_id}")
                 raise HTTPException(status_code=403, detail="No tienes permiso para borrar esta publicación")
 
             cur.execute("DELETE FROM publicaciones WHERE id = %s", (post_id,))
@@ -1039,7 +931,6 @@ async def borrar_publicacion(post_id: int, request: Request):
         finally:
             if conn:
                 conn.close()
-                logging.debug("Conexión a la base de datos cerrada")
     except Exception as e:
         logging.error(f"Error en /borrar_publicacion: {e}")
         raise HTTPException(status_code=500, detail=f"Error al borrar publicación: {str(e)}")
@@ -1053,7 +944,6 @@ async def list_comments(post_id: int, limit: int = 5, offset: int = 0):
         cur = conn.cursor()
         cur.execute("SELECT id FROM publicaciones WHERE id = %s", (post_id,))
         if not cur.fetchone():
-            logging.warning(f"Publicación no encontrada: {post_id}")
             raise HTTPException(status_code=404, detail="Publicación no encontrada")
 
         cur.execute("SELECT COUNT(*) FROM comentarios WHERE publicacion_id = %s", (post_id,))
@@ -1078,7 +968,6 @@ async def list_comments(post_id: int, limit: int = 5, offset: int = 0):
             LIMIT %s OFFSET %s
         """, ("/foto_perfil/", post_id, limit, offset))
         comentarios = cur.fetchall()
-        logging.debug(f"Se obtuvieron {len(comentarios)} comentarios para la publicación {post_id}")
 
         comentarios_list = [
             {
@@ -1102,30 +991,24 @@ async def list_comments(post_id: int, limit: int = 5, offset: int = 0):
     finally:
         if conn:
             conn.close()
-            logging.debug("Conexión a la base de datos cerrada")
 
 # Ruta para publicar comentario
 @router.post("/publicacion/{post_id}/comentar")
 async def post_comment(post_id: int, request: CommentRequest, http_request: Request):
     conn = None
     try:
-        if 'user' not in http_request.session or 'id' not in http_request.session['user']:
-            logging.warning("Sesión no encontrada en /publicacion/{post_id}/comentar")
+        user_id = get_user_id_hybrid(http_request)
+        if not user_id:
             raise HTTPException(status_code=401, detail="Debes iniciar sesión para comentar")
-
-        user_id = int(http_request.session['user']['id'])
-        logging.debug(f"User_id intentando comentar: {user_id}")
 
         contenido = request.contenido.strip()
         if not contenido:
-            logging.warning(f"Comentario vacío en /publicacion/{post_id}/comentar")
             raise HTTPException(status_code=400, detail="El comentario no puede estar vacío")
 
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT id FROM publicaciones WHERE id = %s", (post_id,))
         if not cur.fetchone():
-            logging.warning(f"Publicación no encontrada: {post_id}")
             raise HTTPException(status_code=404, detail="Publicación no encontrada")
 
         cur.execute("""
@@ -1138,7 +1021,7 @@ async def post_comment(post_id: int, request: CommentRequest, http_request: Requ
 
         # Crear notificación
         await crear_notificacion(
-            user_id=user_id,  # No usado directamente, se obtiene el dueño de la publicación internamente
+            user_id=user_id,
             publicacion_id=post_id,
             tipo="comentario",
             actor_id=user_id,
@@ -1160,7 +1043,6 @@ async def post_comment(post_id: int, request: CommentRequest, http_request: Requ
             WHERE u.id = %s
         """, ("/foto_perfil/", user_id, user_id))
         user_data = cur.fetchone()
-
         cur.close()
 
         comment_dict = {
@@ -1173,8 +1055,6 @@ async def post_comment(post_id: int, request: CommentRequest, http_request: Requ
             "foto_perfil_url": user_data[1],
             "tipo_usuario": user_data[2]
         }
-
-        logging.debug(f"Comentario creado: {comment_dict}")
         return comment_dict
     except Exception as e:
         if conn:
@@ -1184,32 +1064,27 @@ async def post_comment(post_id: int, request: CommentRequest, http_request: Requ
     finally:
         if conn:
             conn.close()
-            logging.debug("Conexión a la base de datos cerrada")
 
 # Ruta para gestionar interés
 @router.post("/publicacion/{post_id}/interesar")
 async def toggle_interest(post_id: int, request: InterestRequest, http_request: Request):
     conn = None
     try:
-        if 'user' not in http_request.session or 'id' not in http_request.session['user']:
-            logging.warning("Sesión no encontrada en /publicacion/{post_id}/interesar")
+        user_id = get_user_id_hybrid(http_request)
+        if not user_id:
             raise HTTPException(status_code=401, detail="No autorizado")
 
-        user_id = int(http_request.session['user']['id'])
         if user_id != request.user_id:
-            logging.warning(f"Discrepancia de user_id: session={user_id}, request={request.user_id}")
             raise HTTPException(status_code=403, detail="ID de usuario no coincide con la sesión")
 
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT id FROM publicaciones WHERE id = %s", (post_id,))
         if not cur.fetchone():
-            logging.warning(f"Publicación no encontrada: {post_id}")
             raise HTTPException(status_code=404, detail="Publicación no encontrada")
 
         cur.execute("SELECT id FROM usuarios WHERE id = %s", (user_id,))
         if not cur.fetchone():
-            logging.warning(f"Usuario no encontrado: {user_id}")
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
         cur.execute("""
@@ -1221,16 +1096,14 @@ async def toggle_interest(post_id: int, request: InterestRequest, http_request: 
             cur.execute("""
                 DELETE FROM intereses WHERE publicacion_id = %s AND user_id = %s
             """, (post_id, user_id))
-            logging.debug(f"Interés eliminado para publicación {post_id} por user_id: {user_id}")
         else:
             cur.execute("""
                 INSERT INTO intereses (publicacion_id, user_id, fecha_creacion)
                 VALUES (%s, %s, CURRENT_TIMESTAMP)
             """, (post_id, user_id))
-            logging.debug(f"Interés añadido para publicación {post_id} por user_id: {user_id}")
             # Crear notificación
             await crear_notificacion(
-                user_id=user_id,  # No usado directamente, se obtiene el dueño de la publicación internamente
+                user_id=user_id,
                 publicacion_id=post_id,
                 tipo="interes",
                 actor_id=user_id
@@ -1255,8 +1128,6 @@ async def toggle_interest(post_id: int, request: InterestRequest, http_request: 
             "interesados_count": interesados_count,
             "interesado": interesado
         }
-    except HTTPException as he:
-        raise he
     except Exception as e:
         if conn:
             conn.rollback()
@@ -1265,18 +1136,16 @@ async def toggle_interest(post_id: int, request: InterestRequest, http_request: 
     finally:
         if conn:
             conn.close()
-            logging.debug("Conexión a la base de datos cerrada")
 
 # Ruta para borrar comentario
 @router.delete("/borrar_comentario/{comentario_id}")
 async def borrar_comentario(comentario_id: int, request: Request):
     conn = None
     try:
-        if 'user' not in request.session or 'id' not in request.session['user']:
-            logging.warning("Sesión no encontrada en /borrar_comentario")
+        user_id = get_user_id_hybrid(request)
+        if not user_id:
             raise HTTPException(status_code=401, detail="No autorizado")
 
-        user_id = int(request.session['user']['id'])
         logging.debug(f"Intentando borrar comentario_id: {comentario_id}, user_id: {user_id}")
 
         conn = get_db_connection()
@@ -1287,11 +1156,9 @@ async def borrar_comentario(comentario_id: int, request: Request):
         """, (comentario_id,))
         comment = cur.fetchone()
         if not comment:
-            logging.warning(f"Comentario no encontrado: {comentario_id}")
             raise HTTPException(status_code=404, detail="Comentario no encontrado")
 
         if comment[0] != user_id:
-            logging.warning(f"No autorizado para borrar comentario {comentario_id}, user_id {user_id}")
             raise HTTPException(status_code=403, detail="No autorizado para borrar este comentario")
 
         cur.execute("""
@@ -1310,18 +1177,16 @@ async def borrar_comentario(comentario_id: int, request: Request):
     finally:
         if conn:
             conn.close()
-            logging.debug("Conexión a la base de datos cerrada")
 
 # Ruta para eliminar reseña
 @router.delete("/api/perfil/{perfil_id}/resenas/{resena_id}")
 async def delete_review(perfil_id: int, resena_id: int, request: Request):
     conn = None
     try:
-        if 'user' not in request.session or 'id' not in request.session['user']:
-            logging.warning(f"Sesión no encontrada en /api/perfil/{perfil_id}/resenas/{resena_id}")
+        user_id = get_user_id_hybrid(request)
+        if not user_id:
             raise HTTPException(status_code=401, detail="Debes iniciar sesión para eliminar una reseña")
 
-        user_id = int(request.session['user']['id'])
         logging.debug(f"Intentando eliminar reseña {resena_id} para perfil_id: {perfil_id} por user_id: {user_id}")
 
         conn = get_db_connection()
@@ -1333,43 +1198,28 @@ async def delete_review(perfil_id: int, resena_id: int, request: Request):
             WHERE id = %s
         """, (resena_id,))
         resena = cur.fetchone()
-        logging.debug(f"Resultado de la consulta para reseña id={resena_id}: {resena}")
 
         if not resena:
-            logging.warning(f"Reseña {resena_id} no encontrada")
             raise HTTPException(status_code=404, detail="Reseña no encontrada")
 
         resena_id_db, resena_user_id, resena_perfil_id, texto, calificacion, fecha_creacion = resena
-        logging.debug(f"Reseña {resena_id} encontrada: id={resena_id_db}, user_id={resena_user_id}, perfil_id={resena_perfil_id}, texto={texto}, calificacion={calificacion}")
 
         if resena_user_id != user_id:
-            logging.warning(f"Usuario {user_id} intentó eliminar reseña {resena_id} que no le pertenece")
             raise HTTPException(status_code=403, detail="No tienes permiso para eliminar esta reseña")
-
-        if resena_perfil_id != perfil_id:
-            logging.warning(f"Advertencia: Reseña {resena_id} no está asociada a perfil_id {perfil_id}, encontrado perfil_id {resena_perfil_id}. Procediendo con eliminación.")
 
         cur.execute("DELETE FROM resenas WHERE id = %s", (resena_id,))
         conn.commit()
-
         cur.close()
-        logging.debug(f"Reseña {resena_id} eliminada correctamente")
         return {"message": "Reseña eliminada correctamente"}
 
-    except psycopg2.Error as e:
-        if conn:
-            conn.rollback()
-        logging.error(f"Error en la base de datos al eliminar reseña {resena_id}: {e.pgcode} - {e.pgerror}")
-        raise HTTPException(status_code=500, detail=f"Error en la base de datos: {str(e)}")
     except Exception as e:
         if conn:
             conn.rollback()
-        logging.error(f"Error al eliminar reseña {resena_id} para perfil_id {perfil_id}: {str(e)}")
+        logging.error(f"Error al eliminar reseña {resena_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error al eliminar reseña: {str(e)}")
     finally:
         if conn:
             conn.close()
-            logging.debug("Conexión a la base de datos cerrada")
 
 # Ruta para crear notificación (interno, no expuesto directamente)
 async def crear_notificacion(user_id: int, publicacion_id: int, tipo: str, actor_id: int, mensaje: str = None):
@@ -1377,7 +1227,6 @@ async def crear_notificacion(user_id: int, publicacion_id: int, tipo: str, actor
         logging.debug(f"Creando notificación: user_id={user_id}, publicacion_id={publicacion_id}, tipo={tipo}, actor_id={actor_id}, mensaje={mensaje}")
         
         if tipo not in ['interes', 'comentario']:
-            logging.warning(f"Tipo de notificación no válido: {tipo}")
             raise HTTPException(status_code=400, detail="Tipo de notificación no válido")
 
         conn = get_db_connection()
@@ -1387,12 +1236,10 @@ async def crear_notificacion(user_id: int, publicacion_id: int, tipo: str, actor
             cur.execute("SELECT user_id FROM publicaciones WHERE id = %s", (publicacion_id,))
             publicacion = cur.fetchone()
             if not publicacion:
-                logging.warning(f"Publicación no encontrada: publicacion_id={publicacion_id}")
                 raise HTTPException(status_code=404, detail="Publicación no encontrada")
 
             receptor_id = publicacion[0]
             if receptor_id == actor_id:
-                logging.warning(f"Intento de notificación propia: receptor_id={receptor_id}, actor_id={actor_id}")
                 return None  # No creamos notificación si el actor es el dueño
 
             # Obtener el nombre del actor
@@ -1414,7 +1261,6 @@ async def crear_notificacion(user_id: int, publicacion_id: int, tipo: str, actor
             notificacion = cur.fetchone()
             conn.commit()
 
-            logging.debug(f"Notificación creada: id={notificacion[0]}, receptor_id={receptor_id}, publicacion_id={publicacion_id}, tipo={tipo}, actor_id={actor_id}")
             return {
                 "id": notificacion[0],
                 "user_id": receptor_id,
@@ -1428,7 +1274,6 @@ async def crear_notificacion(user_id: int, publicacion_id: int, tipo: str, actor
             }
         except Exception as e:
             conn.rollback()
-            logging.error(f"Error al crear notificación: {e}")
             raise HTTPException(status_code=500, detail=f"Error al crear notificación: {str(e)}")
         finally:
             cur.close()
@@ -1441,12 +1286,9 @@ async def crear_notificacion(user_id: int, publicacion_id: int, tipo: str, actor
 @router.get("/notificaciones")
 async def obtener_notificaciones(request: Request, limit: int = 10, offset: int = 0):
     try:
-        if 'user' not in request.session or 'id' not in request.session['user']:
-            logging.warning("Sesión no encontrada en /notificaciones")
+        user_id = get_user_id_hybrid(request)
+        if not user_id:
             raise HTTPException(status_code=401, detail="No autorizado")
-
-        user_id = int(request.session['user']['id'])
-        logging.debug(f"Obteniendo notificaciones para user_id={user_id}, limit={limit}, offset={offset}")
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -1504,7 +1346,6 @@ async def obtener_notificaciones(request: Request, limit: int = 10, offset: int 
             }
         except Exception as e:
             conn.rollback()
-            logging.error(f"Error al obtener notificaciones: {e}")
             raise HTTPException(status_code=500, detail=f"Error al obtener notificaciones: {str(e)}")
         finally:
             cur.close()
@@ -1517,12 +1358,9 @@ async def obtener_notificaciones(request: Request, limit: int = 10, offset: int 
 @router.post("/notificaciones/{notificacion_id}/leida")
 async def marcar_notificacion_leida(notificacion_id: int, request: Request):
     try:
-        if 'user' not in request.session or 'id' not in request.session['user']:
-            logging.warning("Sesión no encontrada en /notificaciones/{notificacion_id}/leida")
+        user_id = get_user_id_hybrid(request)
+        if not user_id:
             raise HTTPException(status_code=401, detail="No autorizado")
-
-        user_id = int(request.session['user']['id'])
-        logging.debug(f"Marcando notificación {notificacion_id} como leída para user_id={user_id}")
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -1531,10 +1369,8 @@ async def marcar_notificacion_leida(notificacion_id: int, request: Request):
             cur.execute("SELECT user_id FROM notifications WHERE id = %s", (notificacion_id,))
             notificacion = cur.fetchone()
             if not notificacion:
-                logging.warning(f"Notificación no encontrada: {notificacion_id}")
                 raise HTTPException(status_code=404, detail="Notificación no encontrada")
             if notificacion[0] != user_id:
-                logging.warning(f"Usuario {user_id} no autorizado para marcar notificación {notificacion_id}")
                 raise HTTPException(status_code=403, detail="No autorizado para marcar esta notificación")
 
             # Marcar como leída
@@ -1545,11 +1381,9 @@ async def marcar_notificacion_leida(notificacion_id: int, request: Request):
             """, (notificacion_id,))
             conn.commit()
 
-            logging.debug(f"Notificación {notificacion_id} marcada como leída")
             return {"message": "Notificación marcada como leída"}
         except Exception as e:
             conn.rollback()
-            logging.error(f"Error al marcar notificación como leída: {e}")
             raise HTTPException(status_code=500, detail=f"Error al marcar notificación: {str(e)}")
         finally:
             cur.close()
@@ -1562,12 +1396,9 @@ async def marcar_notificacion_leida(notificacion_id: int, request: Request):
 @router.get("/notificaciones/no_leidas")
 async def contar_notificaciones_no_leidas(request: Request):
     try:
-        if 'user' not in request.session or 'id' not in request.session['user']:
-            logging.warning("Sesión no encontrada en /notificaciones/no_leidas")
+        user_id = get_user_id_hybrid(request)
+        if not user_id:
             raise HTTPException(status_code=401, detail="No autorizado")
-
-        user_id = int(request.session['user']['id'])
-        logging.debug(f"Contando notificaciones no leídas para user_id={user_id}")
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -1575,11 +1406,9 @@ async def contar_notificaciones_no_leidas(request: Request):
             cur.execute("SELECT COUNT(*) FROM notifications WHERE user_id = %s AND leida = FALSE", (user_id,))
             no_leidas = cur.fetchone()[0]
             conn.commit()
-            logging.debug(f"Notificaciones no leídas para user_id={user_id}: {no_leidas}")
             return {"no_leidas": no_leidas}
         except Exception as e:
             conn.rollback()
-            logging.error(f"Error al contar notificaciones no leídas: {e}")
             raise HTTPException(status_code=500, detail=f"Error al contar notificaciones no leídas: {str(e)}")
         finally:
             cur.close()
