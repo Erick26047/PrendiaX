@@ -1,8 +1,13 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.pydantic import BaseModel
 from authlib.integrations.starlette_client import OAuth
+from google.auth.transport.requests import Request as GoogleRequest
+from google.oauth2 import id_token
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from typing import Optional
+import requests
 
 router = APIRouter()
 
@@ -298,6 +303,40 @@ async def save_dashboard(request: Request):
     finally:
         cursor.close()
         conn.close()
+
+# EN TU BACKEND PYTHON (auth_google.py)
+
+class GoogleLoginApp(BaseModel):
+    id_token: str
+    tipo: str = "explorador"
+    target: str = "perfil"
+    user_agent: Optional[str] = None
+
+@router.post("/api/auth/google") # <--- OJO CON LA RUTA /api/
+async def google_login_app(data: GoogleLoginApp):
+    try:
+        # 1. Validar el token con Google
+        idinfo = id_token.verify_oauth2_token(data.id_token, requests.Request(), "TU_CLIENT_ID_DE_GOOGLE")
+
+        email = idinfo['email']
+        name = idinfo.get('name', 'Usuario Google')
+        
+        # 2. Lógica de Base de Datos (Buscar o Crear usuario)
+        # ... (Tu lógica para buscar usuario por email) ...
+        # ... Si no existe, lo creas ...
+
+        # 3. Generar respuesta JSON para Flutter
+        # return {
+        #    "token": "jwt_app_...",
+        #    "user_id": user_id,
+        #    "redirect_url": "/perfil..."
+        # }
+        
+        # SI NECESITAS EL CÓDIGO PYTHON COMPLETO DE ESTE ENDPOINT, AVÍSAME.
+        pass 
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Token de Google inválido")
+
 
 # 🔚 Ruta para cerrar sesión
 @router.post("/logout")
