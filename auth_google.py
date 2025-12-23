@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
-from fastapi import BaseModel
+from pydantic import BaseModel  # <--- ESTO ES LO CORRECTO import BaseModel
 from authlib.integrations.starlette_client import OAuth
 from google.auth.transport.requests import Request as GoogleRequest
 from google.oauth2 import id_token
