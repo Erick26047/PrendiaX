@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
   <html lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -1339,7 +1339,7 @@
       document.querySelector('.chat-list').innerHTML = '';
       await loadChats();
     } else if (data.tipo === 'chat_deleted') {
-    
+      
     } else {
       if (!document.querySelector(`.message[data-message-id="${data.id}"]`)) {
         if (data.chat_id === currentChatId) {
@@ -1532,8 +1532,8 @@
     const d1 = convertToCST(new Date(date1));
     const d2 = convertToCST(new Date(date2));
     return d1.getFullYear() === d2.getFullYear() &&
-          d1.getMonth() === d2.getMonth() &&
-          d1.getDate() === d2.getDate();
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
   }
 
   function getDayDifference(date1, date2) {
@@ -1763,8 +1763,32 @@
     messageEl.dataset.fechaEnvio = msg.fecha_envio;
 
     let content = '';
+    const mediaUrl = msg.media_url ? (msg.media_url.startsWith('blob:') ? msg.media_url : `${BASE_URL}${msg.media_url}`) : '';
+
     if (msg.tipo === 'texto') {
       content = `<span>${msg.contenido}</span>`;
+    } else if (msg.tipo === 'imagen') {
+      content = `<img src="${mediaUrl}" onclick="openMedia('${mediaUrl}')" alt="Imagen">`;
+    } else if (msg.tipo === 'video') {
+      content = `<video src="${mediaUrl}" controls></video>`;
+    } else if (msg.tipo === 'voz') {
+      content = `<div class="audio-container">
+                   <audio controls>
+                     <source src="${mediaUrl}" type="audio/webm">
+                     <source src="${mediaUrl}" type="audio/mp3">
+                     Tu navegador no soporta audio.
+                   </audio>
+                 </div>`;
+    } else if (msg.tipo === 'document') {
+      const extension = msg.contenido ? msg.contenido.split('.').pop().toLowerCase() : 'file';
+      let iconClass = 'fa-file';
+      let docTypeClass = 'txt';
+      if (extension === 'pdf') { iconClass = 'fa-file-pdf'; docTypeClass = 'pdf'; }
+      else if (['doc', 'docx'].includes(extension)) { iconClass = 'fa-file-word'; docTypeClass = 'docx'; }
+
+      content = `<a href="${mediaUrl}" target="_blank" class="document-link ${docTypeClass}" download>
+                   <i class="fas ${iconClass}"></i> <span>${msg.contenido || 'Documento'}</span>
+                 </a>`;
     }
 
     messageEl.innerHTML = `${content}<div class="time">${convertToCST(new Date(msg.fecha_envio)).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div>`;
