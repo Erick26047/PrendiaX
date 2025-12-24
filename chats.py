@@ -1,15 +1,12 @@
-from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect, Depends, Header
+from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
-from starlette.requests import Request as StarletteRequest
-from starlette.middleware.sessions import SessionMiddleware
-from starlette.middleware.cors import CORSMiddleware
 import psycopg2
 from datetime import datetime
 import logging
 import json
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List
 import io
 
 # Configurar el logger
@@ -28,20 +25,6 @@ router = APIRouter(prefix="/chats", tags=["chats"])
 # Configurar Jinja2 para buscar plantillas en el directorio raíz
 templates = Jinja2Templates(directory=".")
 
-# --- NOTA: Comenté la creación de 'app' aquí. 
-# Normalmente este archivo se importa en tu main.py. 
-# Si lo ejecutas solo, descoméntalo. ---
-# from fastapi import FastAPI
-# app = FastAPI()
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"], # Permitir todo para pruebas móviles
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-# app.add_middleware(SessionMiddleware, secret_key="Elbicho7")
-
 # Conexión a la base de datos
 def get_db_connection():
     """Establece una conexión a la base de datos PostgreSQL."""
@@ -52,14 +35,13 @@ def get_db_connection():
             user="postgres",
             password="Elbicho7",
         )
-        # logging.debug("Conexión a la base de datos establecida correctamente")
         return conn
     except Exception as e:
         logging.error(f"Error al conectar a la base de datos: {e}")
         raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
 
-# Tamaño máximo de archivo (10 MB)
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB en bytes
+# Tamaño máximo de archivo (20 MB para dar margen)
+MAX_FILE_SIZE = 20 * 1024 * 1024 
 
 # Diccionario para almacenar conexiones WebSocket activas
 websocket_connections: Dict[int, WebSocket] = {}
@@ -70,8 +52,6 @@ def sanitize_filename(filename: str) -> str:
     clean_name = re.sub(r'[^a-zA-Z0-9\.\-_]', '_', filename)
     clean_name = re.sub(r'_+', '_', clean_name)
     return clean_name.strip('_')
-
-# BUSCA ESTA FUNCIÓN EN TU chats.py Y REEMPLÁZALA POR COMPLETO:
 
 async def get_session(request: Request):
     """
@@ -84,16 +64,14 @@ async def get_session(request: Request):
         return request.session['user']['id']
     
     # --- 2. INTENTO APP (Token Automático) ---
-    # Tu App Flutter enviará: "Authorization: Bearer jwt_app_45"
     auth_header = request.headers.get("Authorization")
     
     if auth_header and "jwt_app_" in auth_header:
         try:
             # El header llega así: "Bearer jwt_app_45"
-            # Hacemos split para sacar solo el número 45
             token_part = auth_header.split("jwt_app_")[1] 
             user_id = int(token_part)
-            logging.debug(f"Usuario autenticado por Token APP: {user_id}")
+            # logging.debug(f"Usuario autenticado por Token APP: {user_id}")
             return user_id
         except (ValueError, IndexError):
             logging.error(f"Token mal formado: {auth_header}")
@@ -135,7 +113,7 @@ async def get_user(user_id: int, requesting_user_id: int = Depends(get_session))
             "nombre": user[1],
             "nombre_empresa": user[2],
             "categoria": user[3] if user[3] else "",
-            "foto_perfil_url": f"/chats/user/{user_id}/foto_perfil" if user[3] and user[4] else "" # Corregí la URL
+            "foto_perfil_url": f"/chats/user/{user_id}/foto_perfil" if user[3] and user[4] else ""
         }
     except Exception as e:
         logging.error(f"Error al obtener datos del usuario {user_id}: {e}")
@@ -153,7 +131,6 @@ async def get_chats_page(request: Request, user_id: int = Depends(get_session)):
         })
     except Exception as e:
         logging.error(f"Error al renderizar chats.html: {e}")
-        # Si es móvil y falla la sesión, retornamos JSON error en vez de redirect
         if "application/json" in request.headers.get("accept", ""):
              raise HTTPException(status_code=401, detail="No autorizado")
         return RedirectResponse(url="/login", status_code=302)
@@ -163,7 +140,7 @@ async def get_chats_page(request: Request, user_id: int = Depends(get_session)):
 async def get_media(mensaje_id: int, user_id: int = Depends(get_session)):
     """Sirve el contenido multimedia desde la base de datos."""
     try:
-        logging.debug(f"Obteniendo multimedia para mensaje_id: {mensaje_id}, user_id: {user_id}")
+        # logging.debug(f"Obteniendo multimedia para mensaje_id: {mensaje_id}, user_id: {user_id}")
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
@@ -184,23 +161,25 @@ async def get_media(mensaje_id: int, user_id: int = Depends(get_session)):
         content_type = {
             'imagen': 'image/jpeg',
             'video': 'video/mp4',
-            'voz': 'audio/webm',
+            'voz': 'audio/webm', # Servimos como webm por defecto, navegadores modernos lo manejan
             'document': 'application/pdf'
         }.get(tipo, 'application/octet-stream')
 
+        # Si es documento y sabemos el nombre original (guardado en contenido), lo usamos
+        filename = f"file_{mensaje_id}"
+        
         return StreamingResponse(
             content=io.BytesIO(media_content),
             media_type=content_type,
-            headers={"Content-Disposition": f"inline; filename=mensaje_{mensaje_id}"}
+            headers={"Content-Disposition": f"inline; filename={filename}"}
         )
     except Exception as e:
         logging.error(f"Error al servir multimedia para mensaje_id {mensaje_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Error al servir multimedia: {str(e)}")
 
-# Ruta para listar chats del usuario (WEB Y MÓVIL)
+# Ruta para listar chats del usuario
 @router.get("/list")
 async def list_chats(user_id: int = Depends(get_session), limit: int = 10, offset: int = 0):
-    """Lista los chats del usuario con paginación."""
     try:
         logging.debug(f"Listando chats para user_id: {user_id}")
         conn = get_db_connection()
@@ -245,7 +224,7 @@ async def list_chats(user_id: int = Depends(get_session), limit: int = 10, offse
                 "otro_usuario_id": int(row[1]),
                 "display_name": row[2],
                 "tipo_usuario": row[3],
-                "foto_perfil_url": f"/chats/user/{row[1]}/foto_perfil" if row[3] == 'emprendedor' and row[8] else "", # Corregí ruta
+                "foto_perfil_url": f"/chats/user/{row[1]}/foto_perfil" if row[3] == 'emprendedor' and row[8] else "",
                 "ultimo_mensaje": row[4] if row[4] else "",
                 "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
                 "tipo_ultimo_mensaje": row[6] if row[6] else "texto",
@@ -254,18 +233,15 @@ async def list_chats(user_id: int = Depends(get_session), limit: int = 10, offse
             }
             for row in chats
         ]
-        logging.debug(f"Se obtuvieron {len(chats_list)} chats para user_id: {user_id}")
         return chats_list
     except Exception as e:
         logging.error(f"Error al listar chats: {e}")
         raise HTTPException(status_code=500, detail=f"Error al listar chats: {str(e)}")
 
-# Ruta para obtener mensajes de un chat
+# Ruta para obtener mensajes
 @router.get("/{chat_id}/mensajes")
 async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), limit: int = 20, offset: int = 0):
-    """Obtiene los mensajes de un chat específico con paginación."""
     try:
-        logging.debug(f"Obteniendo mensajes para chat_id: {chat_id}, user_id: {user_id}")
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
@@ -275,8 +251,8 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
         """, (chat_id, user_id, user_id))
         chat = cur.fetchone()
         if not chat:
-            logging.warning(f"Chat no encontrado o no autorizado: chat_id {chat_id}, user_id {user_id}")
-            raise HTTPException(status_code=404, detail="Chat no encontrado o no autorizado")
+            logging.warning(f"Chat no encontrado: {chat_id}")
+            raise HTTPException(status_code=404, detail="Chat no encontrado")
 
         otro_usuario_id = chat[2] if chat[1] == user_id else chat[1]
         cur.execute("""
@@ -338,117 +314,98 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
             "mensajes": mensajes_list
         }
     except Exception as e:
-        logging.error(f"Error al obtener mensajes del chat {chat_id}: {e}")
+        logging.error(f"Error al obtener mensajes: {e}")
         raise HTTPException(status_code=500, detail=f"Error al obtener mensajes: {str(e)}")
 
 # Ruta para enviar mensaje de texto
 @router.post("/{chat_id}/mensaje")
 async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = Depends(get_session)):
-    """Envía un mensaje de texto a un chat."""
     try:
         contenido = contenido.strip()
         if not contenido:
-            logging.warning(f"Mensaje vacío en chat_id: {chat_id}")
-            raise HTTPException(status_code=400, detail="El mensaje no puede estar vacío")
+            raise HTTPException(status_code=400, detail="Mensaje vacío")
 
         conn = get_db_connection()
         cur = conn.cursor()
-        try:
-            cur.execute("""
-                SELECT id, usuario1_id, usuario2_id 
-                FROM chats 
-                WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)
-            """, (chat_id, user_id, user_id))
-            chat = cur.fetchone()
-            if not chat:
-                logging.warning(f"Chat no encontrado: chat_id {chat_id}, user_id {user_id}")
-                raise HTTPException(status_code=404, detail="Chat no encontrado")
+        
+        cur.execute("SELECT id, usuario1_id, usuario2_id FROM chats WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)", (chat_id, user_id, user_id))
+        chat = cur.fetchone()
+        if not chat:
+            raise HTTPException(status_code=404, detail="Chat no encontrado")
 
-            receptor_id = chat[2] if chat[1] == user_id else chat[1]
-            cur.execute("""
-                INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, contenido, tipo, fecha_envio)
-                VALUES (%s, %s, %s, %s, 'texto', CURRENT_TIMESTAMP)
-                RETURNING id, fecha_envio
-            """, (chat_id, user_id, receptor_id, contenido))
-            mensaje = cur.fetchone()
+        receptor_id = chat[2] if chat[1] == user_id else chat[1]
+        cur.execute("""
+            INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, contenido, tipo, fecha_envio)
+            VALUES (%s, %s, %s, %s, 'texto', CURRENT_TIMESTAMP)
+            RETURNING id, fecha_envio
+        """, (chat_id, user_id, receptor_id, contenido))
+        mensaje = cur.fetchone()
 
-            cur.execute("""
-                UPDATE chats 
-                SET ultimo_mensaje_id = %s 
-                WHERE id = %s
-            """, (mensaje[0], chat_id))
-            conn.commit()
+        cur.execute("UPDATE chats SET ultimo_mensaje_id = %s WHERE id = %s", (mensaje[0], chat_id))
+        conn.commit()
 
-            message_data = {
-                "id": mensaje[0],
-                "chat_id": chat_id,
-                "emisor_id": user_id,
-                "receptor_id": receptor_id,
-                "contenido": contenido,
-                "tipo": "texto",
-                "media_url": "",
-                "fecha_envio": mensaje[1].strftime("%Y-%m-%d %H:%M:%S"),
-                "leido": False,
-                "es_mio": True
-            }
-            if receptor_id in websocket_connections:
-                try:
-                    await websocket_connections[receptor_id].send_text(json.dumps(message_data))
-                    logging.debug(f"Notificación WebSocket enviada a receptor_id: {receptor_id}")
-                except Exception as e:
-                    logging.error(f"Error al enviar WebSocket a receptor_id {receptor_id}: {e}")
-                    del websocket_connections[receptor_id]
-        except Exception as e:
-            conn.rollback()
-            logging.error(f"Error al enviar mensaje en chat {chat_id}: {e}")
-            raise HTTPException(status_code=500, detail=f"Error al enviar mensaje: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
+        message_data = {
+            "id": mensaje[0], "chat_id": chat_id, "emisor_id": user_id, "receptor_id": receptor_id,
+            "contenido": contenido, "tipo": "texto", "media_url": "",
+            "fecha_envio": mensaje[1].strftime("%Y-%m-%d %H:%M:%S"), "leido": False, "es_mio": True
+        }
+        
+        if receptor_id in websocket_connections:
+            try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
+            except: del websocket_connections[receptor_id]
 
-        logging.debug(f"Mensaje enviado en chat_id: {chat_id}, mensaje_id: {mensaje[0]}")
+        cur.close()
+        conn.close()
         return message_data
     except Exception as e:
-        logging.error(f"Error al enviar mensaje en chat {chat_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al enviar mensaje: {str(e)}")
+        logging.error(f"Error enviando mensaje: {e}")
+        if 'conn' in locals(): conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+# ==================================================================================
+# RUTAS DE MULTIMEDIA CORREGIDAS (Soporte para tipos MIME genéricos en iOS/Simuladores)
+# ==================================================================================
 
 # Ruta para enviar multimedia (imagen o video)
 @router.post("/{chat_id}/media")
 async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = Depends(get_session)):
     try:
-        if not file or file.size == 0:
-            logging.warning(f"Archivo vacío en chat_id: {chat_id}")
-            raise HTTPException(status_code=400, detail="El archivo no puede estar vacío")
-        
-        if file.size > MAX_FILE_SIZE:
-            logging.warning(f"Archivo demasiado grande en chat_id: {chat_id}, tamaño: {file.size}")
-            raise HTTPException(status_code=400, detail=f"El archivo excede el tamaño máximo de {MAX_FILE_SIZE // (1024 * 1024)} MB")
+        # Validación de seguridad: Leer un poco para asegurar que hay archivo
+        if not file: raise HTTPException(status_code=400, detail="Archivo vacío")
 
-        content_type = file.content_type
-        if content_type.startswith('image/'):
-            tipo = 'imagen'
-        elif content_type.startswith('video/'):
-            tipo = 'video'
-        else:
-            logging.warning(f"Tipo de archivo no soportado: {content_type}")
-            raise HTTPException(status_code=400, detail="Solo se permiten imágenes y videos")
+        # --- LÓGICA DE DETECCIÓN INTELIGENTE ---
+        content_type = file.content_type or ""
+        filename = file.filename.lower() if file.filename else ""
+        ext = filename.split('.')[-1] if '.' in filename else ''
+        tipo = None
+
+        # 1. Verificar Headers
+        if content_type.startswith('image/'): tipo = 'imagen'
+        elif content_type.startswith('video/'): tipo = 'video'
+
+        # 2. Respaldo por Extensión (Para iOS/Simulador que envían application/octet-stream)
+        if not tipo:
+            if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'bmp']: tipo = 'imagen'
+            elif ext in ['mp4', 'mov', 'avi', 'mkv', 'webm']: tipo = 'video'
+
+        if not tipo:
+            logging.warning(f"Tipo archivo rechazado: {content_type}, ext: {ext}")
+            raise HTTPException(status_code=400, detail=f"Formato no soportado ({ext or content_type})")
 
         file_content = await file.read()
+        if len(file_content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="Archivo excede 20MB")
 
+        # Guardar en BD
         conn = get_db_connection()
         cur = conn.cursor()
         try:
-            cur.execute("""
-                SELECT id, usuario1_id, usuario2_id 
-                FROM chats 
-                WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)
-            """, (chat_id, user_id, user_id))
+            cur.execute("SELECT id, usuario1_id, usuario2_id FROM chats WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)", (chat_id, user_id, user_id))
             chat = cur.fetchone()
-            if not chat:
-                logging.warning(f"Chat no encontrado: chat_id {chat_id}, user_id {user_id}")
-                raise HTTPException(status_code=404, detail="Chat no encontrado")
+            if not chat: raise HTTPException(status_code=404, detail="Chat no encontrado")
 
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
+            
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, media_content, fecha_envio)
                 VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
@@ -456,79 +413,65 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
             """, (chat_id, user_id, receptor_id, tipo, psycopg2.Binary(file_content)))
             mensaje = cur.fetchone()
 
-            cur.execute("""
-                UPDATE chats 
-                SET ultimo_mensaje_id = %s 
-                WHERE id = %s
-            """, (mensaje[0], chat_id))
+            cur.execute("UPDATE chats SET ultimo_mensaje_id = %s WHERE id = %s", (mensaje[0], chat_id))
             conn.commit()
 
             message_data = {
-                "id": mensaje[0],
-                "chat_id": chat_id,
-                "emisor_id": user_id,
-                "receptor_id": receptor_id,
-                "contenido": "",
-                "tipo": tipo,
-                "media_url": f"/chats/media/{mensaje[0]}",
-                "fecha_envio": mensaje[1].strftime("%Y-%m-%d %H:%M:%S"),
-                "leido": False,
-                "es_mio": True
+                "id": mensaje[0], "chat_id": chat_id, "emisor_id": user_id, "receptor_id": receptor_id,
+                "contenido": "", "tipo": tipo, "media_url": f"/chats/media/{mensaje[0]}",
+                "fecha_envio": mensaje[1].strftime("%Y-%m-%d %H:%M:%S"), "leido": False, "es_mio": True
             }
             if receptor_id in websocket_connections:
-                try:
-                    await websocket_connections[receptor_id].send_text(json.dumps(message_data))
-                    logging.debug(f"Notificación WebSocket enviada a receptor_id: {receptor_id}")
-                except Exception as e:
-                    logging.error(f"Error al enviar WebSocket a receptor_id {receptor_id}: {e}")
-                    del websocket_connections[receptor_id]
+                try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
+                except: del websocket_connections[receptor_id]
+
+            return message_data
         except Exception as e:
             conn.rollback()
-            logging.error(f"Error al enviar multimedia en chat {chat_id}: {e}")
-            raise HTTPException(status_code=500, detail=f"Error al enviar multimedia: {str(e)}")
+            raise e
         finally:
             cur.close()
             conn.close()
 
-        logging.debug(f"Multimedia enviada en chat_id: {chat_id}, mensaje_id: {mensaje[0]}")
-        return message_data
+    except HTTPException as he: raise he
     except Exception as e:
-        logging.error(f"Error al enviar multimedia en chat {chat_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al enviar multimedia: {str(e)}")
+        logging.error(f"Error media: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para enviar nota de voz
+# Ruta para enviar nota de voz (CORREGIDA PARA iOS)
 @router.post("/{chat_id}/voz")
 async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: int = Depends(get_session)):
     try:
-        if not file or file.size == 0:
-            logging.warning(f"Archivo vacío en chat_id: {chat_id}")
-            raise HTTPException(status_code=400, detail="El archivo no puede estar vacío")
-        
-        if file.size > MAX_FILE_SIZE:
-            logging.warning(f"Archivo demasiado grande en chat_id: {chat_id}, tamaño: {file.size}")
-            raise HTTPException(status_code=400, detail=f"El archivo excede el tamaño máximo de {MAX_FILE_SIZE // (1024 * 1024)} MB")
+        if not file: raise HTTPException(status_code=400, detail="Archivo vacío")
 
-        content_type = file.content_type
-        if not content_type.startswith('audio/'):
-            logging.warning(f"Tipo de archivo no soportado: {content_type}")
-            raise HTTPException(status_code=400, detail="Solo se permiten archivos de audio")
+        # --- LÓGICA DE DETECCIÓN INTELIGENTE ---
+        content_type = file.content_type or ""
+        filename = file.filename.lower() if file.filename else ""
+        ext = filename.split('.')[-1] if '.' in filename else ''
+        
+        # iOS envía notas de voz .m4a a veces como video/mp4 o application/octet-stream
+        es_audio = False
+        if content_type.startswith('audio/'): es_audio = True
+        elif ext in ['m4a', 'mp3', 'wav', 'aac', 'webm', 'ogg', 'opus']: es_audio = True
+        elif content_type == 'video/mp4' and ext == 'm4a': es_audio = True # Caso específico iOS
+
+        if not es_audio:
+            logging.warning(f"Audio rechazado: {content_type}, ext: {ext}")
+            raise HTTPException(status_code=400, detail=f"No es un audio válido ({ext or content_type})")
 
         file_content = await file.read()
+        if len(file_content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="Audio muy grande")
 
         conn = get_db_connection()
         cur = conn.cursor()
         try:
-            cur.execute("""
-                SELECT id, usuario1_id, usuario2_id 
-                FROM chats 
-                WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)
-            """, (chat_id, user_id, user_id))
+            cur.execute("SELECT id, usuario1_id, usuario2_id FROM chats WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)", (chat_id, user_id, user_id))
             chat = cur.fetchone()
-            if not chat:
-                logging.warning(f"Chat no encontrado: chat_id {chat_id}, user_id {user_id}")
-                raise HTTPException(status_code=404, detail="Chat no encontrado")
+            if not chat: raise HTTPException(status_code=404, detail="Chat no encontrado")
 
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
+            
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, media_content, fecha_envio)
                 VALUES (%s, %s, %s, 'voz', %s, CURRENT_TIMESTAMP)
@@ -536,161 +479,119 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
             """, (chat_id, user_id, receptor_id, psycopg2.Binary(file_content)))
             mensaje = cur.fetchone()
 
-            cur.execute("""
-                UPDATE chats 
-                SET ultimo_mensaje_id = %s 
-                WHERE id = %s
-            """, (mensaje[0], chat_id))
+            cur.execute("UPDATE chats SET ultimo_mensaje_id = %s WHERE id = %s", (mensaje[0], chat_id))
             conn.commit()
 
             message_data = {
-                "id": mensaje[0],
-                "chat_id": chat_id,
-                "emisor_id": user_id,
-                "receptor_id": receptor_id,
-                "contenido": "",
-                "tipo": "voz",
-                "media_url": f"/chats/media/{mensaje[0]}",
-                "fecha_envio": mensaje[1].strftime("%Y-%m-%d %H:%M:%S"),
-                "leido": False,
-                "es_mio": True
+                "id": mensaje[0], "chat_id": chat_id, "emisor_id": user_id, "receptor_id": receptor_id,
+                "contenido": "", "tipo": "voz", "media_url": f"/chats/media/{mensaje[0]}",
+                "fecha_envio": mensaje[1].strftime("%Y-%m-%d %H:%M:%S"), "leido": False, "es_mio": True
             }
             if receptor_id in websocket_connections:
-                try:
-                    await websocket_connections[receptor_id].send_text(json.dumps(message_data))
-                    logging.debug(f"Notificación WebSocket enviada a receptor_id: {receptor_id}")
-                except Exception as e:
-                    logging.error(f"Error al enviar WebSocket a receptor_id {receptor_id}: {e}")
-                    del websocket_connections[receptor_id]
+                try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
+                except: del websocket_connections[receptor_id]
+
+            return message_data
         except Exception as e:
             conn.rollback()
-            logging.error(f"Error al enviar nota de voz en chat {chat_id}: {e}")
-            raise HTTPException(status_code=500, detail=f"Error al enviar nota de voz: {str(e)}")
+            raise e
         finally:
             cur.close()
             conn.close()
 
-        logging.debug(f"Nota de voz enviada en chat_id: {chat_id}, mensaje_id: {mensaje[0]}")
-        return message_data
+    except HTTPException as he: raise he
     except Exception as e:
-        logging.error(f"Error al enviar nota de voz en chat {chat_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al enviar nota de voz: {str(e)}")
+        logging.error(f"Error voz: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para enviar documentos
+# Ruta para enviar documentos (CORREGIDA)
 @router.post("/{chat_id}/document")
 async def send_document(chat_id: int, file: UploadFile = File(...), contenido: str = Form(None), user_id: int = Depends(get_session)):
     try:
-        if not file or file.size == 0:
-            logging.warning(f"Archivo vacío en chat_id: {chat_id}")
-            raise HTTPException(status_code=400, detail="El archivo no puede estar vacío")
-        
-        if file.size > MAX_FILE_SIZE:
-            logging.warning(f"Archivo demasiado grande en chat_id: {chat_id}, tamaño: {file.size}")
-            raise HTTPException(status_code=400, detail=f"El archivo excede el tamaño máximo de {MAX_FILE_SIZE // (1024 * 1024)} MB")
+        if not file: raise HTTPException(status_code=400, detail="Archivo vacío")
 
-        content_type = file.content_type
-        allowed_types = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
-        if content_type not in allowed_types:
-            logging.warning(f"Tipo de archivo no soportado: {content_type}")
-            raise HTTPException(status_code=400, detail="Solo se permiten documentos PDF, DOC, DOCX o TXT")
+        # --- LÓGICA DE DETECCIÓN INTELIGENTE ---
+        content_type = file.content_type or ""
+        filename = file.filename.lower() if file.filename else ""
+        ext = filename.split('.')[-1] if '.' in filename else ''
+        
+        allowed_extensions = ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx']
+        es_doc = False
+        
+        if content_type in ['application/pdf', 'application/msword', 'text/plain']: es_doc = True
+        elif ext in allowed_extensions: es_doc = True
+        elif 'application/' in content_type: es_doc = True # Permitir genéricos de oficina
+
+        if not es_doc:
+            logging.warning(f"Documento rechazado: {content_type}, ext: {ext}")
+            raise HTTPException(status_code=400, detail=f"Documento no permitido ({ext})")
 
         file_content = await file.read()
-        clean_filename = sanitize_filename(file.filename)
+        if len(file_content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="Documento excede 20MB")
 
+        doc_name = contenido if contenido else file.filename
+        
         conn = get_db_connection()
         cur = conn.cursor()
         try:
-            cur.execute("""
-                SELECT id, usuario1_id, usuario2_id 
-                FROM chats 
-                WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)
-            """, (chat_id, user_id, user_id))
+            cur.execute("SELECT id, usuario1_id, usuario2_id FROM chats WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)", (chat_id, user_id, user_id))
             chat = cur.fetchone()
-            if not chat:
-                logging.warning(f"Chat no encontrado: chat_id {chat_id}, user_id {user_id}")
-                raise HTTPException(status_code=404, detail="Chat no encontrado")
+            if not chat: raise HTTPException(status_code=404, detail="Chat no encontrado")
 
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
+            
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, contenido, tipo, media_content, fecha_envio)
                 VALUES (%s, %s, %s, %s, 'document', %s, CURRENT_TIMESTAMP)
                 RETURNING id, fecha_envio
-            """, (chat_id, user_id, receptor_id, contenido or clean_filename, psycopg2.Binary(file_content)))
+            """, (chat_id, user_id, receptor_id, doc_name, psycopg2.Binary(file_content)))
             mensaje = cur.fetchone()
 
-            cur.execute("""
-                UPDATE chats 
-                SET ultimo_mensaje_id = %s 
-                WHERE id = %s
-            """, (mensaje[0], chat_id))
+            cur.execute("UPDATE chats SET ultimo_mensaje_id = %s WHERE id = %s", (mensaje[0], chat_id))
             conn.commit()
 
             message_data = {
-                "id": mensaje[0],
-                "chat_id": chat_id,
-                "emisor_id": user_id,
-                "receptor_id": receptor_id,
-                "contenido": contenido or clean_filename,
-                "tipo": "document",
-                "media_url": f"/chats/media/{mensaje[0]}",
-                "fecha_envio": mensaje[1].strftime("%Y-%m-%d %H:%M:%S"),
-                "leido": False,
-                "es_mio": True
+                "id": mensaje[0], "chat_id": chat_id, "emisor_id": user_id, "receptor_id": receptor_id,
+                "contenido": doc_name, "tipo": "document", "media_url": f"/chats/media/{mensaje[0]}",
+                "fecha_envio": mensaje[1].strftime("%Y-%m-%d %H:%M:%S"), "leido": False, "es_mio": True
             }
             if receptor_id in websocket_connections:
-                try:
-                    await websocket_connections[receptor_id].send_text(json.dumps(message_data))
-                    logging.debug(f"Notificación WebSocket enviada a receptor_id: {receptor_id}")
-                except Exception as e:
-                    logging.error(f"Error al enviar WebSocket a receptor_id {receptor_id}: {e}")
-                    del websocket_connections[receptor_id]
+                try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
+                except: del websocket_connections[receptor_id]
+
+            return message_data
         except Exception as e:
             conn.rollback()
-            logging.error(f"Error al enviar documento en chat {chat_id}: {e}")
-            raise HTTPException(status_code=500, detail=f"Error al enviar documento: {str(e)}")
+            raise e
         finally:
             cur.close()
             conn.close()
 
-        logging.debug(f"Documento enviado en chat_id: {chat_id}, mensaje_id: {mensaje[0]}")
-        return message_data
+    except HTTPException as he: raise he
     except Exception as e:
-        logging.error(f"Error al enviar documento en chat {chat_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al enviar documento: {str(e)}")
+        logging.error(f"Error doc: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Ruta para buscar chats
 @router.get("/buscar")
 async def search_chats(query: str, user_id: int = Depends(get_session), limit: int = 10, offset: int = 0):
-    """Busca chats por nombre del usuario o empresa."""
     try:
         query = query.strip().lower()
-        if not query:
-            logging.warning("Query vacío en /chats/buscar")
-            raise HTTPException(status_code=400, detail="La búsqueda no puede estar vacía")
+        if not query: raise HTTPException(status_code=400, detail="Búsqueda vacía")
 
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             SELECT c.id, 
-                   CASE 
-                       WHEN c.usuario1_id = %s THEN c.usuario2_id 
-                       ELSE c.usuario1_id 
-                   END AS otro_usuario_id,
+                   CASE WHEN c.usuario1_id = %s THEN c.usuario2_id ELSE c.usuario1_id END AS otro_usuario_id,
                    COALESCE(du.nombre_empresa, u.nombre) AS display_name,
-                   CASE 
-                       WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor'
-                       ELSE 'explorador'
-                   END AS tipo_usuario,
-                   m.contenido AS ultimo_mensaje,
-                   m.fecha_envio,
-                   m.tipo AS tipo_ultimo_mensaje,
+                   CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END AS tipo_usuario,
+                   m.contenido AS ultimo_mensaje, m.fecha_envio, m.tipo AS tipo_ultimo_mensaje,
                    SUM(CASE WHEN m.leido = FALSE AND m.receptor_id = %s THEN 1 ELSE 0 END) AS unread_count,
                    du.foto IS NOT NULL AS has_foto
             FROM chats c
-            JOIN usuarios u ON (CASE 
-                                   WHEN c.usuario1_id = %s THEN c.usuario2_id 
-                                   ELSE c.usuario1_id 
-                               END) = u.id
+            JOIN usuarios u ON (CASE WHEN c.usuario1_id = %s THEN c.usuario2_id ELSE c.usuario1_id END) = u.id
             LEFT JOIN datos_usuario du ON u.id = du.user_id
             LEFT JOIN mensajes_chat m ON c.ultimo_mensaje_id = m.id
             WHERE (c.usuario1_id = %s OR c.usuario2_id = %s)
@@ -698,259 +599,154 @@ async def search_chats(query: str, user_id: int = Depends(get_session), limit: i
             GROUP BY c.id, c.usuario1_id, c.usuario2_id, u.nombre, du.nombre_empresa, du.categoria, m.contenido, m.fecha_envio, m.tipo, du.foto
             ORDER BY m.fecha_envio DESC NULLS LAST
             LIMIT %s OFFSET %s
-        """, (user_id, user_id, user_id, user_id, user_id, f"%{query}%", limit, offset))
+        """, (user_id, user_id, user_id, user_id, user_id, user_id, f"%{query}%", limit, offset))
         chats = cur.fetchall()
         cur.close()
         conn.close()
 
         chats_list = [
             {
-                "chat_id": row[0],
-                "otro_usuario_id": int(row[1]),
-                "display_name": row[2],
-                "tipo_usuario": row[3],
-                "foto_perfil_url": f"/chats/user/{row[1]}/foto_perfil" if row[3] == 'emprendedor' and row[8] else "", # Corregí ruta
-                "ultimo_mensaje": row[4] if row[4] else "",
-                "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
-                "tipo_ultimo_mensaje": row[6] if row[6] else "texto",
-                "unread_count": int(row[7])
-            }
-            for row in chats
+                "chat_id": row[0], "otro_usuario_id": int(row[1]), "display_name": row[2], "tipo_usuario": row[3],
+                "foto_perfil_url": f"/chats/user/{row[1]}/foto_perfil" if row[3] == 'emprendedor' and row[8] else "",
+                "ultimo_mensaje": row[4] if row[4] else "", "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
+                "tipo_ultimo_mensaje": row[6] if row[6] else "texto", "unread_count": int(row[7])
+            } for row in chats
         ]
-        logging.debug(f"Se encontraron {len(chats_list)} chats para query: {query}, user_id: {user_id}")
         return chats_list
     except Exception as e:
-        logging.error(f"Error al buscar chats: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al buscar chats: {str(e)}")
+        logging.error(f"Error buscar: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para iniciar un chat con otro usuario
+# Ruta para iniciar un chat
 @router.post("/iniciar/{otro_usuario_id}")
 async def start_chat(otro_usuario_id: int, user_id: int = Depends(get_session)):
-    """Inicia un nuevo chat con otro usuario."""
     try:
-        if user_id == otro_usuario_id:
-            logging.warning(f"Intento de iniciar chat consigo mismo: user_id {user_id}")
-            raise HTTPException(status_code=400, detail="No puedes iniciar un chat contigo mismo")
+        if user_id == otro_usuario_id: raise HTTPException(status_code=400, detail="No auto-chat")
 
         conn = get_db_connection()
         cur = conn.cursor()
-        try:
-            cur.execute("SELECT id FROM usuarios WHERE id = %s", (otro_usuario_id,))
-            if not cur.fetchone():
-                logging.warning(f"Usuario no encontrado: {otro_usuario_id}")
-                raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        cur.execute("SELECT id FROM usuarios WHERE id = %s", (otro_usuario_id,))
+        if not cur.fetchone(): raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-            cur.execute("""
-                SELECT id 
-                FROM chats 
-                WHERE (usuario1_id = %s AND usuario2_id = %s) OR (usuario1_id = %s AND usuario2_id = %s)
-            """, (user_id, otro_usuario_id, otro_usuario_id, user_id))
-            chat = cur.fetchone()
-            if chat:
-                logging.debug(f"Chat ya existe: chat_id {chat[0]}")
-                return {"chat_id": chat[0]}
-
-            cur.execute("""
-                INSERT INTO chats (usuario1_id, usuario2_id, creado_en)
-                VALUES (%s, %s, CURRENT_TIMESTAMP)
-                RETURNING id
-            """, (user_id, otro_usuario_id))
-            chat_id = cur.fetchone()[0]
-            conn.commit()
-
-            message_data = {
-                "chat_id": chat_id,
-                "otro_usuario_id": user_id,
-                "tipo": "nuevo_chat",
-                "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }
-            if otro_usuario_id in websocket_connections:
-                try:
-                    await websocket_connections[otro_usuario_id].send_text(json.dumps(message_data))
-                    logging.debug(f"Notificación WebSocket de nuevo chat enviada a receptor_id: {otro_usuario_id}")
-                except Exception as e:
-                    logging.error(f"Error al enviar WebSocket a receptor_id {otro_usuario_id}: {e}")
-                    del websocket_connections[otro_usuario_id]
-        except Exception as e:
-            conn.rollback()
-            logging.error(f"Error al iniciar chat con usuario {otro_usuario_id}: {e}")
-            raise HTTPException(status_code=500, detail=f"Error al iniciar chat: {str(e)}")
-        finally:
+        cur.execute("""
+            SELECT id FROM chats 
+            WHERE (usuario1_id = %s AND usuario2_id = %s) OR (usuario1_id = %s AND usuario2_id = %s)
+        """, (user_id, otro_usuario_id, otro_usuario_id, user_id))
+        chat = cur.fetchone()
+        if chat: 
             cur.close()
             conn.close()
+            return {"chat_id": chat[0]}
 
-        logging.debug(f"Nuevo chat creado: chat_id {chat_id}, user_id {user_id}, otro_usuario_id {otro_usuario_id}")
+        cur.execute("""
+            INSERT INTO chats (usuario1_id, usuario2_id, creado_en)
+            VALUES (%s, %s, CURRENT_TIMESTAMP)
+            RETURNING id
+        """, (user_id, otro_usuario_id))
+        chat_id = cur.fetchone()[0]
+        conn.commit()
+
+        message_data = {"chat_id": chat_id, "otro_usuario_id": user_id, "tipo": "nuevo_chat", "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        if otro_usuario_id in websocket_connections:
+            try: await websocket_connections[otro_usuario_id].send_text(json.dumps(message_data))
+            except: del websocket_connections[otro_usuario_id]
+
+        cur.close()
+        conn.close()
         return {"chat_id": chat_id}
     except Exception as e:
-        logging.error(f"Error al iniciar chat con usuario {otro_usuario_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al iniciar chat: {str(e)}")
+        logging.error(f"Error iniciar chat: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Ruta para eliminar un chat
 @router.delete("/{chat_id}")
 async def delete_chat(chat_id: int, user_id: int = Depends(get_session)):
-    """Elimina un chat y sus mensajes asociados."""
     try:
-        logging.debug(f"Intentando eliminar chat_id: {chat_id}, user_id: {user_id}")
         conn = get_db_connection()
         cur = conn.cursor()
-        try:
-            cur.execute("""
-                SELECT id, usuario1_id, usuario2_id 
-                FROM chats 
-                WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)
-            """, (chat_id, user_id, user_id))
-            chat = cur.fetchone()
-            if not chat:
-                logging.warning(f"Chat no encontrado o no autorizado: chat_id {chat_id}, user_id {user_id}")
-                raise HTTPException(status_code=404, detail="Chat no encontrado o no autorizado")
+        cur.execute("SELECT id, usuario1_id, usuario2_id FROM chats WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)", (chat_id, user_id, user_id))
+        chat = cur.fetchone()
+        if not chat: raise HTTPException(status_code=404, detail="Chat no encontrado")
 
-            receptor_id = chat[2] if chat[1] == user_id else chat[1]
-            cur.execute("DELETE FROM mensajes_chat WHERE chat_id = %s", (chat_id,))
-            cur.execute("DELETE FROM chats WHERE id = %s", (chat_id,))
-            conn.commit()
+        receptor_id = chat[2] if chat[1] == user_id else chat[1]
+        cur.execute("DELETE FROM mensajes_chat WHERE chat_id = %s", (chat_id,))
+        cur.execute("DELETE FROM chats WHERE id = %s", (chat_id,))
+        conn.commit()
 
-            message_data = {
-                "chat_id": chat_id,
-                "otro_usuario_id": user_id,
-                "tipo": "chat_deleted",
-                "fecha_eliminacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }
-            if receptor_id in websocket_connections:
-                try:
-                    await websocket_connections[receptor_id].send_text(json.dumps(message_data))
-                    logging.debug(f"Notificación WebSocket de eliminación enviada a receptor_id: {receptor_id}")
-                except Exception as e:
-                    logging.error(f"Error al enviar WebSocket a receptor_id {receptor_id}: {e}")
-                    del websocket_connections[receptor_id]
-        except Exception as e:
-            conn.rollback()
-            logging.error(f"Error al eliminar chat {chat_id}: {e}")
-            raise HTTPException(status_code=500, detail=f"Error al eliminar chat: {str(e)}")
-        finally:
-            cur.close()
-            conn.close()
+        message_data = {"chat_id": chat_id, "otro_usuario_id": user_id, "tipo": "chat_deleted", "fecha_eliminacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        if receptor_id in websocket_connections:
+            try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
+            except: del websocket_connections[receptor_id]
 
-        logging.debug(f"Chat eliminado exitosamente: chat_id {chat_id}")
-        return {"message": "Chat eliminado exitosamente"}
+        cur.close()
+        conn.close()
+        return {"message": "Chat eliminado"}
     except Exception as e:
-        logging.error(f"Error al eliminar chat {chat_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al eliminar chat: {str(e)}")
+        logging.error(f"Error eliminar chat: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para WebSocket con autenticación
-# En móvil conectarás a: ws://tudominio.com/chats/ws/{user_id}
+# Ruta WebSocket
 @router.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int):
-    """Maneja conexiones WebSocket para notificaciones en tiempo real."""
     await websocket.accept()
     try:
-        logging.debug(f"WebSocket conexión intentada para user_id: {user_id}")
-        
-        # --- Lógica simplificada para Web y Móvil ---
-        # Si viene de Web, tendrá cookie. Si viene de móvil, confiamos en el endpoint (por ahora).
-        session_cookie = websocket.cookies.get('session')
-        
-        # Validación básica de usuario en DB
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT id FROM usuarios WHERE id = %s", (user_id,))
-        user = cur.fetchone()
+        if not cur.fetchone():
+            await websocket.close(code=1008, reason="Usuario no encontrado")
+            return
         cur.close()
         conn.close()
 
-        if not user:
-            logging.warning(f"WebSocket rechazado: Usuario no encontrado para user_id {user_id}")
-            await websocket.close(code=1008, reason="No autorizado: Usuario no encontrado")
-            return
-
         websocket_connections[user_id] = websocket
-        logging.debug(f"WebSocket conectado exitosamente para user_id: {user_id}")
-
         try:
             while True:
-                data = await websocket.receive_text()
-                # logging.debug(f"Mensaje recibido por WebSocket de user_id {user_id}: {data}")
-                # Responder PING para mantener conexión viva
+                await websocket.receive_text()
                 await websocket.send_text(json.dumps({"type": "ping"}))
         except WebSocketDisconnect:
-            logging.debug(f"WebSocket desconectado para user_id {user_id}")
-            if user_id in websocket_connections:
-                del websocket_connections[user_id]
-        except Exception as e:
-            logging.error(f"Error en WebSocket para user_id {user_id}: {e}")
-            if user_id in websocket_connections:
-                del websocket_connections[user_id]
+            if user_id in websocket_connections: del websocket_connections[user_id]
+        except Exception:
+            if user_id in websocket_connections: del websocket_connections[user_id]
     except Exception as e:
-        logging.error(f"Error al autenticar WebSocket para user_id {user_id}: {e}")
-        await websocket.close(code=1008, reason=f"No autorizado: {str(e)}")
+        logging.error(f"Error WS: {e}")
+        await websocket.close(code=1008)
 
-# Ruta para servir la foto de perfil de un usuario
+# Ruta para servir foto de perfil
 @router.get("/user/{user_id}/foto_perfil")
 async def get_user_profile_picture(user_id: int):
-    """Sirve la foto de perfil de un usuario desde la base de datos."""
     try:
-        # logging.debug(f"Obteniendo foto de perfil para user_id: {user_id}")
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            SELECT CASE 
-                       WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor'
-                       ELSE 'explorador'
-                   END AS tipo_usuario,
-                   du.foto
-            FROM usuarios u
-            LEFT JOIN datos_usuario du ON u.id = du.user_id
-            WHERE u.id = %s
+            SELECT CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END, du.foto
+            FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s
         """, (user_id,))
         result = cur.fetchone()
         cur.close()
         conn.close()
 
-        # Si no hay foto o no es emprendedor, retorna default (Asegúrate de tener este archivo)
         if not result or result[0] != 'emprendedor' or not result[1]:
             try:
-                with open("default_profile.jpg", "rb") as f:
-                    default_foto = f.read()
-                return StreamingResponse(
-                    content=io.BytesIO(default_foto),
-                    media_type="image/jpeg",
-                    headers={"Content-Disposition": f"inline; filename=foto_perfil_default.jpg"}
-                )
-            except FileNotFoundError:
-                # Si no tienes la imagen default, retorna un 404 limpio
-                 raise HTTPException(status_code=404, detail="Foto no encontrada")
+                with open("default_profile.jpg", "rb") as f: default_foto = f.read()
+                return StreamingResponse(io.BytesIO(default_foto), media_type="image/jpeg")
+            except: raise HTTPException(status_code=404)
 
-        foto = result[1]
-        return StreamingResponse(
-            content=io.BytesIO(foto),
-            media_type="image/jpeg",
-            headers={"Content-Disposition": f"inline; filename=foto_perfil_{user_id}.jpg"}
-        )
-    except Exception as e:
-        logging.error(f"Error al servir foto de perfil para user_id {user_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al servir foto de perfil: {str(e)}")
+        return StreamingResponse(io.BytesIO(result[1]), media_type="image/jpeg")
+    except Exception: raise HTTPException(status_code=500)
 
 @router.get("/unread_count")
 async def get_unread_count(user_id: int = Depends(get_session)):
-    """Devuelve el número total de mensajes no leídos para el usuario."""
     try:
-        logging.debug(f"Obteniendo conteo de mensajes no leídos para user_id: {user_id}")
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            SELECT COUNT(*) 
-            FROM mensajes_chat m
-            JOIN chats c ON m.chat_id = c.id
-            WHERE m.receptor_id = %s AND m.leido = FALSE
-            AND (c.usuario1_id = %s OR c.usuario2_id = %s)
+            SELECT COUNT(*) FROM mensajes_chat m JOIN chats c ON m.chat_id = c.id
+            WHERE m.receptor_id = %s AND m.leido = FALSE AND (c.usuario1_id = %s OR c.usuario2_id = %s)
         """, (user_id, user_id, user_id))
-        unread_count = cur.fetchone()[0]
+        count = cur.fetchone()[0]
         cur.close()
         conn.close()
-        logging.debug(f"Se encontraron {unread_count} mensajes no leídos para user_id: {user_id}")
-        return {"unread_count": unread_count}
-    except Exception as e:
-        logging.error(f"Error al obtener conteo de mensajes no leídos: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al obtener conteo de mensajes no leídos: {str(e)}")
-
-# include_router se hace en el main.py, aquí no es necesario si importas 'router'
-# app.include_router(router)
+        return {"unread_count": count}
+    except Exception: raise HTTPException(status_code=500)
