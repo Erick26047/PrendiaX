@@ -161,7 +161,7 @@ async def get_media(mensaje_id: int, user_id: int = Depends(get_session)):
         content_type = {
             'imagen': 'image/jpeg',
             'video': 'video/mp4',
-            'voz': 'audio/webm', # Servimos como webm por defecto, navegadores modernos lo manejan
+            'voz': 'audio/mp4', # Servimos como webm por defecto, navegadores modernos lo manejan
             'document': 'application/pdf'
         }.get(tipo, 'application/octet-stream')
 
