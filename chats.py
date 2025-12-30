@@ -53,6 +53,78 @@ def sanitize_filename(filename: str) -> str:
     clean_name = re.sub(r'_+', '_', clean_name)
     return clean_name.strip('_')
 
+# ====================================================================
+# NUEVA FUNCIÓN HELPER: SOPORTE DE RANGOS (FIX PARA IOS)
+# ====================================================================
+def send_bytes_range_requests(
+    request: Request, 
+    file_bytes: bytes, 
+    content_type: str, 
+    filename: str
+):
+    """
+    Permite hacer streaming (Range Requests) de archivos binarios en memoria (desde BD).
+    Vital para que iOS reproduzca video/audio (Status 206).
+    """
+    file_size = len(file_bytes)
+    range_header = request.headers.get("range")
+
+    # Si no hay header Range, enviamos todo (Status 200)
+    if not range_header:
+        return StreamingResponse(
+            io.BytesIO(file_bytes),
+            media_type=content_type,
+            headers={"Content-Disposition": f"inline; filename={filename}"}
+        )
+
+    # Procesar header Range: "bytes=0-" o "bytes=0-1024"
+    try:
+        start, end = 0, None
+        match = range_header.strip().replace("bytes=", "").split("-")
+        if match[0]: 
+            start = int(match[0])
+        if len(match) > 1 and match[1]: 
+            end = int(match[1])
+            
+        if end is None: 
+            end = file_size - 1
+            
+        if start >= file_size:
+            # Si piden un rango fuera del archivo
+            raise HTTPException(status_code=416, detail="Range Not Satisfiable")
+
+        # Ajustar final
+        if end >= file_size: 
+            end = file_size - 1
+
+        chunk_length = end - start + 1
+        
+        # Cortamos los bytes exactos que pide el cliente
+        data_chunk = file_bytes[start : end + 1]
+
+        headers = {
+            "Content-Range": f"bytes {start}-{end}/{file_size}",
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(chunk_length),
+            "Content-Disposition": f"inline; filename={filename}",
+        }
+
+        return StreamingResponse(
+            io.BytesIO(data_chunk),
+            status_code=206, # Partial Content (CLAVE PARA IOS)
+            headers=headers,
+            media_type=content_type
+        )
+
+    except ValueError:
+        # Si el header Range viene mal formado, devolvemos todo
+        return StreamingResponse(
+            io.BytesIO(file_bytes),
+            media_type=content_type,
+            headers={"Content-Disposition": f"inline; filename={filename}"}
+        )
+# ====================================================================
+
 async def get_session(request: Request):
     """
     Obtiene el ID del usuario de forma híbrida:
@@ -135,9 +207,9 @@ async def get_chats_page(request: Request, user_id: int = Depends(get_session)):
              raise HTTPException(status_code=401, detail="No autorizado")
         return RedirectResponse(url="/login", status_code=302)
 
-# Ruta para servir archivos multimedia desde la base de datos
+# Ruta MODIFICADA para servir archivos multimedia desde la base de datos (con soporte Range)
 @router.get("/media/{mensaje_id}")
-async def get_media(mensaje_id: int, user_id: int = Depends(get_session)):
+async def get_media(request: Request, mensaje_id: int, user_id: int = Depends(get_session)):
     """Sirve el contenido multimedia desde la base de datos."""
     try:
         # logging.debug(f"Obteniendo multimedia para mensaje_id: {mensaje_id}, user_id: {user_id}")
@@ -161,18 +233,20 @@ async def get_media(mensaje_id: int, user_id: int = Depends(get_session)):
         content_type = {
             'imagen': 'image/jpeg',
             'video': 'video/mp4',
-            'voz': 'audio/mp4', # Servimos como webm por defecto, navegadores modernos lo manejan
+            'voz': 'audio/mp4',
             'document': 'application/pdf'
         }.get(tipo, 'application/octet-stream')
 
-        # Si es documento y sabemos el nombre original (guardado en contenido), lo usamos
+        # Definir nombre de archivo adecuado
         filename = f"file_{mensaje_id}"
+        if tipo == 'video': filename += ".mp4"
+        elif tipo == 'voz': filename += ".m4a"
+        elif tipo == 'imagen': filename += ".jpg"
+        elif tipo == 'document': filename += ".pdf"
         
-        return StreamingResponse(
-            content=io.BytesIO(media_content),
-            media_type=content_type,
-            headers={"Content-Disposition": f"inline; filename={filename}"}
-        )
+        # USAMOS LA NUEVA FUNCIÓN QUE SOPORTA RANGOS
+        return send_bytes_range_requests(request, media_content, content_type, filename)
+
     except Exception as e:
         logging.error(f"Error al servir multimedia para mensaje_id {mensaje_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Error al servir multimedia: {str(e)}")
@@ -363,7 +437,7 @@ async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = 
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 # ==================================================================================
-# RUTAS DE MULTIMEDIA CORREGIDAS (Soporte para tipos MIME genéricos en iOS/Simuladores)
+# RUTAS DE MULTIMEDIA
 # ==================================================================================
 
 # Ruta para enviar multimedia (imagen o video)
@@ -504,7 +578,7 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
         logging.error(f"Error voz: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para enviar documentos (CORREGIDA)
+# Ruta para enviar documentos
 @router.post("/{chat_id}/document")
 async def send_document(chat_id: int, file: UploadFile = File(...), contenido: str = Form(None), user_id: int = Depends(get_session)):
     try:
@@ -750,3 +824,4 @@ async def get_unread_count(user_id: int = Depends(get_session)):
         conn.close()
         return {"unread_count": count}
     except Exception: raise HTTPException(status_code=500)
+
