@@ -153,7 +153,7 @@ async def get_media(post_id: int, request: Request):
         raise HTTPException(status_code=404)
 
 # ==========================================
-#  API PARA LA APP MÓVIL (JSON)
+#  CORRECCIÓN EN API PERFIL (OPTIMIZACIÓN CRÍTICA)
 # ==========================================
 @router.get("/api/perfil/{user_id}")
 async def get_perfil_api(request: Request, user_id: int):
@@ -163,14 +163,14 @@ async def get_perfil_api(request: Request, user_id: int):
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Datos Usuario
+        # Datos Usuario (ESTO ESTABA BIEN)
         cur.execute("SELECT id, nombre, email FROM usuarios WHERE id = %s", (user_id,))
         user_row = cur.fetchone()
         
         if not user_row:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-        # Datos extra (empresa)
+        # Datos extra (empresa) (ESTO ESTABA BIEN)
         cur.execute("""
             SELECT nombre_empresa, categoria, descripcion, sitio_web, foto, ubicacion, ubicacion_google_maps, telefono, horario, otra_categoria, servicios 
             FROM datos_usuario WHERE user_id = %s
@@ -201,9 +201,12 @@ async def get_perfil_api(request: Request, user_id: int):
                 user_data["otra_categoria"] = otra_cat
                 user_data["servicios"] = serv
 
-        # Publicaciones
+        # --- AQUÍ ESTABA EL ERROR ---
+        # CAMBIAMOS 'p.imagen, p.video' POR 'p.imagen IS NOT NULL, p.video IS NOT NULL'
         cur.execute("""
-            SELECT p.id, p.user_id, p.contenido, p.imagen, p.video, 
+            SELECT p.id, p.user_id, p.contenido, 
+                   p.imagen IS NOT NULL, -- Devuelve True/False, no el archivo pesado
+                   p.video IS NOT NULL,  -- Devuelve True/False, no el archivo pesado
                    p.etiquetas, p.fecha_creacion
             FROM publicaciones p
             WHERE p.user_id = %s
@@ -217,6 +220,7 @@ async def get_perfil_api(request: Request, user_id: int):
                 "id": row[0],
                 "user_id": int(row[1]),
                 "contenido": row[2] if row[2] else "",
+                # La lógica Python sigue funcionando igual porque row[3] ahora es True/False
                 "imagen_url": f"/media/{row[0]}" if row[3] else "",
                 "video_url": f"/media/{row[0]}" if row[4] else "",
                 "etiquetas": row[5] if row[5] else [],
@@ -236,10 +240,6 @@ async def get_perfil_api(request: Request, user_id: int):
         raise HTTPException(status_code=500, detail="Error interno")
     finally:
         if conn: conn.close()
-
-# ==========================================
-#  OTRAS RUTAS NECESARIAS (Feed, Login, etc)
-# ==========================================
 
 # Foto Perfil
 @router.get("/foto_perfil/{user_id}")
