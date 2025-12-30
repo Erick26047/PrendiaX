@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException, Header
 from fastapi.responses import RedirectResponse, HTMLResponse, StreamingResponse, Response
 from fastapi.templating import Jinja2Templates
@@ -5,6 +6,7 @@ import psycopg2
 from datetime import datetime
 import logging
 import io
+import re # <--- AGREGADO: Necesario para procesar los videos
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -143,6 +145,7 @@ async def get_foto_perfil(user_id: int):
 
 # =======================================================================
 #  CORRECCIÓN 1: GET MEDIA CON SOPORTE PARA IPHONE (RANGE REQUESTS)
+#  ESTA ES LA ÚNICA FUNCIÓN QUE HE MODIFICADO PROFUNDAMENTE
 # =======================================================================
 @router.get("/media/{post_id}")
 async def get_media(post_id: int, request: Request):
@@ -158,7 +161,7 @@ async def get_media(post_id: int, request: Request):
         """, (post_id,))
         result = cur.fetchone()
         cur.close()
-        conn.close()
+        conn.close() # Cerramos conexión pronto
 
         if not result:
             logging.warning(f"Publicación no encontrada para post_id: {post_id}")
@@ -174,35 +177,48 @@ async def get_media(post_id: int, request: Request):
                 headers={"Content-Disposition": f"inline; filename=post_{post_id}_image.jpg"}
             )
         
-        # --- VIDEO (Se envía con Rangos para iOS) ---
+        # --- VIDEO (Se envía con Rangos para iOS/Android) ---
         elif video_data:
             file_size = len(video_data)
             range_header = request.headers.get("range")
 
+            # Headers base
+            headers = {
+                "Accept-Ranges": "bytes",
+                "Content-Disposition": f"inline; filename=post_{post_id}_video.mp4"
+            }
+
             # Si no hay header Range, enviamos todo (comportamiento legacy)
             if not range_header:
+                headers["Content-Length"] = str(file_size)
                 return StreamingResponse(
                     content=io.BytesIO(video_data),
                     media_type="video/mp4",
-                    headers={
-                        "Content-Length": str(file_size), 
-                        "Accept-Ranges": "bytes",
-                        "Content-Disposition": f"inline; filename=post_{post_id}_video.mp4"
-                    }
+                    headers=headers,
+                    status_code=200
                 )
 
             # Procesar el Range: bytes=0-1024
             try:
-                start, end = range_header.replace("bytes=", "").split("-")
-                start = int(start)
-                end = int(end) if end else file_size - 1
+                # Usamos regex para parsear bytes=start-end de forma segura
+                range_match = re.search(r'bytes=(\d+)-(\d*)', range_header)
+                if not range_match:
+                    raise ValueError("Rango inválido")
+                
+                start = int(range_match.group(1))
+                end_str = range_match.group(2)
+                if end_str:
+                    end = int(end_str)
+                else:
+                    end = file_size - 1
             except ValueError:
                 start = 0
                 end = file_size - 1
 
             if start >= file_size:
                 # Rango inválido
-                return Response(status_code=416, headers={"Content-Range": f"bytes */{file_size}"})
+                headers["Content-Range"] = f"bytes */{file_size}"
+                return Response(status_code=416, headers=headers)
 
             # Asegurar límites
             end = min(end, file_size - 1)
@@ -211,12 +227,9 @@ async def get_media(post_id: int, request: Request):
             # Cortar los bytes exactos
             chunk_data = video_data[start : end + 1]
 
-            headers = {
-                "Content-Range": f"bytes {start}-{end}/{file_size}",
-                "Accept-Ranges": "bytes",
-                "Content-Length": str(chunk_length),
-                "Content-Type": "video/mp4",
-            }
+            headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
+            headers["Content-Length"] = str(chunk_length)
+            headers["Content-Type"] = "video/mp4"
 
             return StreamingResponse(
                 io.BytesIO(chunk_data),
@@ -231,6 +244,8 @@ async def get_media(post_id: int, request: Request):
 
     except Exception as e:
         logging.error(f"Error al servir multimedia para post_id {post_id}: {e}")
+        # Asegurar cierre si falló antes
+        if conn and not conn.closed: conn.close()
         raise HTTPException(status_code=500, detail="Error interno al servir media")
 
 # Ruta para renderizar inicio.html
@@ -264,13 +279,14 @@ async def inicio(request: Request, limit: int = 10, offset: int = 0):
                     EXISTS (
                         SELECT 1 FROM intereses i 
                         WHERE i.publicacion_id = p.id AND i.user_id = %s
-                    ) AS interesado
+                    ) AS interesado,
+                    (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id) AS comentarios_count
                 FROM publicaciones p
                 JOIN usuarios u ON p.user_id = u.id
                 LEFT JOIN datos_usuario du ON p.user_id = du.user_id
                 LEFT JOIN intereses i ON p.id = i.publicacion_id
                 GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, 
-                         p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
+                          p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
                 ORDER BY p.fecha_creacion DESC
                 LIMIT %s OFFSET %s
             """, (user_id, limit, offset))
@@ -297,7 +313,8 @@ async def inicio(request: Request, limit: int = 10, offset: int = 0):
                 "nombre_empresa": row[5],
                 "tipo_usuario": row[6],
                 "interesados_count": int(row[9]),
-                "interesado": row[10]
+                "interesado": row[10],
+                "comentarios_count": int(row[11])
             }
             for row in publicaciones
         ]
@@ -429,7 +446,7 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
             LEFT JOIN datos_usuario du ON p.user_id = du.user_id
             LEFT JOIN intereses i ON p.id = i.publicacion_id
             GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, 
-                     p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
+                      p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
             ORDER BY p.fecha_creacion DESC
             LIMIT %s OFFSET %s
         """, (current_user, limit, offset))
@@ -510,7 +527,7 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
                    WHERE LOWER(etiqueta) LIKE %s
                )
             GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, 
-                     p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
+                      p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
             ORDER BY p.fecha_creacion DESC
             LIMIT %s OFFSET %s
         """, (current_user, f"%{query}%", f"%{query}%", limit, offset))
@@ -779,7 +796,7 @@ async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0,
             LEFT JOIN intereses i ON p.id = i.publicacion_id
             WHERE p.user_id = %s
             GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, 
-                     p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
+                      p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
             ORDER BY p.fecha_creacion DESC
             LIMIT %s OFFSET %s
         """, (current_user, user_id, limit, offset))
@@ -1492,3 +1509,4 @@ async def contar_notificaciones_no_leidas(request: Request):
         logging.error(f"Error al procesar solicitud /notificaciones/no_leidas: {e}")
         # Retornamos 0 en caso de error general para no romper la UI
         return {"no_leidas": 0}
+
