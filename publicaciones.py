@@ -757,11 +757,13 @@ async def get_user(user_id: int):
 
 # Ruta para obtener publicaciones de un usuario (API JSON)
 # =======================================================================
-#  CORRECCIÓN 5: PUBLICACIONES DE USUARIO CON CONTEO
+#  CORRECCIÓN 5: PUBLICACIONES DE USUARIO (RUTAS RELATIVAS)
 # =======================================================================
 @router.get("/user/{user_id}/publicaciones")
 async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0, request: Request = None):
-    base_url = str(request.base_url).rstrip("/") if request else ""
+    # ELIMINAMOS base_url PARA EVITAR CONFLICTOS DE LOCALHOST EN MOVILES
+    # base_url = str(request.base_url).rstrip("/") if request else "" 
+    
     conn = None
     try:
         current_user = get_user_id_hybrid(request) if request else -1
@@ -809,16 +811,17 @@ async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0,
                 "id": row[0],
                 "user_id": int(row[1]),
                 "contenido": row[2] if row[2] else "",
-                "imagen_url": f"{base_url}/media/{row[0]}" if row[7] else "",
-                "video_url": f"{base_url}/media/{row[0]}" if row[8] else "",
+                # CORRECCIÓN AQUÍ: Usamos rutas relativas (quitamos base_url)
+                "imagen_url": f"/media/{row[0]}" if row[7] else "",
+                "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] if row[3] else [],
                 "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
-                "foto_perfil_url": f"{base_url}/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
+                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
                 "nombre_empresa": row[5],
                 "tipo_usuario": row[6],
                 "interesados_count": int(row[9]),
                 "interesado": row[10],
-                "comentarios_count": int(row[11]) # Nuevo campo mapeado
+                "comentarios_count": int(row[11]) 
             }
             for row in publicaciones
         ]
@@ -829,7 +832,6 @@ async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0,
     finally:
         if conn:
             conn.close()
-
 # ---------------------------------------------------------
 # RESEÑAS - INTACTO (Como solicitaste)
 # ---------------------------------------------------------
