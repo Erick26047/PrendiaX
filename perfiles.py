@@ -70,7 +70,7 @@ def get_user_id_hybrid(request: Request):
     return None
 
 # =======================================================================
-#  LA SOLUCIÓN: GET MEDIA CON SOPORTE DE RANGOS (STREAMING)
+#  CORRECCIÓN DEFINITIVA: GET MEDIA PARA IOS (AVPLAYER)
 # =======================================================================
 @router.get("/media/{post_id}")
 async def get_media(post_id: int, request: Request):
@@ -81,88 +81,76 @@ async def get_media(post_id: int, request: Request):
         cur.execute("SELECT imagen, video FROM publicaciones WHERE id = %s", (post_id,))
         result = cur.fetchone()
         cur.close()
-        conn.close() # Cerramos rápido
+        conn.close()
 
         if not result:
-            raise HTTPException(status_code=404, detail="Publicación no encontrada")
+            raise HTTPException(status_code=404, detail="No encontrado")
 
         imagen_data, video_data = result
         
-        # --- CASO 1: IMAGEN (Se envía normal) ---
+        # --- IMAGEN ---
         if imagen_data:
             return StreamingResponse(
-                content=io.BytesIO(imagen_data),
-                media_type="image/jpeg",
-                headers={"Content-Disposition": "inline"}
+                io.BytesIO(imagen_data),
+                media_type="image/jpeg"
             )
         
-        # --- CASO 2: VIDEO (Lógica obligatoria para iOS/Flutter) ---
+        # --- VIDEO (MODO IOS STRICT) ---
         elif video_data:
             file_size = len(video_data)
             range_header = request.headers.get("range")
 
-            # Headers básicos
-            headers = {
-                "Accept-Ranges": "bytes",
-                "Content-Disposition": f"inline; filename=video_{post_id}.mp4"
-            }
-
-            # Si no pide rango, enviamos todo (legacy)
+            # Si no pide rango, enviamos todo pero DECIMOS que aceptamos rangos
             if not range_header:
-                headers["Content-Length"] = str(file_size)
                 return StreamingResponse(
                     io.BytesIO(video_data),
                     media_type="video/mp4",
-                    headers=headers,
+                    headers={
+                        "Content-Length": str(file_size),
+                        "Accept-Ranges": "bytes", # OBLIGATORIO PARA IOS
+                        "Content-Disposition": "inline"
+                    },
                     status_code=200
                 )
 
-            # Parsear el rango solicitado (ej: bytes=0-1024)
+            # Parseo seguro del rango
             try:
-                range_match = re.search(r'bytes=(\d+)-(\d*)', range_header)
-                if not range_match:
-                    raise ValueError("Rango inválido")
-                
-                start = int(range_match.group(1))
-                end_str = range_match.group(2)
-                
-                if end_str:
-                    end = int(end_str)
-                else:
-                    end = file_size - 1
+                # iOS suele pedir "bytes=0-1" al inicio para probar
+                start, end = range_header.replace("bytes=", "").split("-")
+                start = int(start)
+                end = int(end) if end else file_size - 1
             except ValueError:
                 start = 0
                 end = file_size - 1
 
-            # Validar límites
+            # Asegurar límites para no romper el pipe
             if start >= file_size:
-                headers["Content-Range"] = f"bytes */{file_size}"
-                return Response(status_code=416, headers=headers)
+                return Response(status_code=416, headers={"Content-Range": f"bytes */{file_size}"})
 
             end = min(end, file_size - 1)
             chunk_length = end - start + 1
-
-            # Cortar los bytes exactos que pide el celular
+            
+            # Extraer bytes exactos
             chunk_data = video_data[start : end + 1]
-
-            # Headers obligatorios para streaming (206 Partial Content)
-            headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
-            headers["Content-Length"] = str(chunk_length)
-            headers["Content-Type"] = "video/mp4"
 
             return StreamingResponse(
                 io.BytesIO(chunk_data),
-                status_code=206, # <--- ESTO ES LA CLAVE
-                headers=headers,
-                media_type="video/mp4"
+                status_code=206, # Partial Content
+                media_type="video/mp4",
+                headers={
+                    "Content-Range": f"bytes {start}-{end}/{file_size}",
+                    "Accept-Ranges": "bytes",
+                    "Content-Length": str(chunk_length),
+                    "Content-Disposition": "inline"
+                }
             )
-
         else:
-            raise HTTPException(status_code=404, detail="Archivo multimedia vacío")
+             raise HTTPException(status_code=404)
 
     except Exception as e:
-        logging.error(f"Error media {post_id}: {e}")
-        raise HTTPException(status_code=500, detail="Error interno")
+        logging.error(f"Error media: {e}")
+        # Retornar 404 en vez de 500 ayuda a que el player no crashee la app
+        raise HTTPException(status_code=404)
 
 # ==========================================
 #  API PARA LA APP MÓVIL (JSON)
