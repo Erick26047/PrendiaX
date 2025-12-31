@@ -148,7 +148,7 @@ async def get_foto_perfil(user_id: int):
 #  ESTA ES LA ÚNICA FUNCIÓN QUE HE MODIFICADO PROFUNDAMENTE
 # =======================================================================
 @router.get("/media/{post_id}")
-async def get_media(post_id: int, request: Request):
+def get_media(post_id: int, request: Request):
     conn = None
     try:
         logging.debug(f"Solicitando multimedia para post_id: {post_id}")
