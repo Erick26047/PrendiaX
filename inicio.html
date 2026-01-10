@@ -18,6 +18,81 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* --- ESTILOS RESPUESTAS Y MENCIONES (NUEVO) --- */
+.comment.reply {
+    margin-left: 40px; /* Sangría para respuestas */
+    border-left: 2px solid #e0e0e0;
+    padding-left: 10px;
+    background-color: rgba(0,0,0,0.02);
+    border-radius: 0 10px 10px 0;
+}
+
+.comment-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 5px;
+    font-size: 12px;
+}
+
+.reply-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-weight: 600;
+    padding: 0;
+    font-size: 12px;
+    transition: color 0.2s;
+}
+
+.reply-btn:hover {
+    color: #1976d2;
+    text-decoration: underline;
+}
+
+.reply-indicator {
+    display: none; /* Oculto por defecto */
+    background-color: #e3f2fd;
+    color: #1976d2;
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 10px 10px 0 0;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #bbdefb;
+    margin-bottom: -1px; /* Pegarlo al input */
+    position: relative;
+    z-index: 1;
+}
+
+.reply-indicator button {
+    background: none;
+    border: none;
+    color: #1976d2;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.mention-link {
+    color: #1976d2;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.mention-link:hover {
+    text-decoration: underline;
+}
+
+/* Ajuste visual para el input cuando se está respondiendo */
+.comment-form.replying .comment-input {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: 1px solid #bbdefb;
+}
+
+/* --- FIN NUEVOS ESTILOS --- */
+
 .stars {
   position: fixed;
   top: 0;
@@ -487,7 +562,7 @@ header {
   line-height: 1.5em;
   overflow: hidden;
   transition: max-height 0.3s ease;
-  position: relative; /* Asegurar que el botón pueda posicionarse correctamente */
+  position: relative; 
 }
 
 .post-content.expanded {
@@ -507,10 +582,10 @@ header {
   font-size: 14px;
   cursor: pointer;
   margin-top: 5px;
-  display: inline-block !important; /* Forzar visibilidad */
-  padding: 5px; /* Añadir padding para hacerlo más visible */
-  z-index: 100; /* Asegurar que esté encima de otros elementos */
-  position: relative; /* Asegurar que no esté oculto por overflow */
+  display: inline-block !important; 
+  padding: 5px; 
+  z-index: 100; 
+  position: relative; 
 }
 
 .read-more:hover {
@@ -617,9 +692,15 @@ header {
 
 .comment-form {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column; /* Cambiado para soportar el indicador */
+  gap: 0;
   margin-bottom: 10px;
+}
+
+.comment-input-wrapper {
+    display: flex;
+    gap: 10px;
+    width: 100%;
 }
 
 .comment-input {
@@ -1046,6 +1127,37 @@ header {
 body.dark-mode {
   background-color: #000;
   color: #fff;
+}
+
+body.dark-mode .comment.reply {
+    background-color: rgba(255,255,255,0.05);
+    border-left: 2px solid #333;
+}
+
+body.dark-mode .reply-btn {
+    color: #999;
+}
+
+body.dark-mode .reply-btn:hover {
+    color: #90caf9;
+}
+
+body.dark-mode .reply-indicator {
+    background-color: #1e1e1e;
+    color: #90caf9;
+    border: 1px solid #333;
+}
+
+body.dark-mode .reply-indicator button {
+    color: #90caf9;
+}
+
+body.dark-mode .mention-link {
+    color: #90caf9;
+}
+
+body.dark-mode .comment-form.replying .comment-input {
+    border-top: 1px solid #333;
 }
 
 body.dark-mode .stars {
@@ -1631,8 +1743,7 @@ body.dark-mode .filter-title {
     <span data-translate="inicio.notifications_title">Notificaciones</span>
   </div>
   <div class="notifications-list" id="notifications-list">
-    <!-- Las notificaciones se cargarán aquí dinámicamente -->
-  </div>
+    </div>
   <button class="load-more-notifications" id="load-more-notifications" style="display: none;" data-translate="inicio.load_more_notifications">Cargar más</button>
 </div>
             <button class="icon-button" id="chats-toggle" title="Chats" onclick="window.location.href='chats.html'">
@@ -1669,7 +1780,7 @@ body.dark-mode .filter-title {
         </div>
       </div>
     </div>
-     <div class="notification" id="notification">
+      <div class="notification" id="notification">
       <i class="fas fa-check-circle"></i>
       <span id="notification-message"></span>
   </header>
@@ -1880,6 +1991,9 @@ let notificationOffset = 0;
 const notificationLimit = 10;
 let notificationCount = 0;
 let wsNotifications = null;
+
+// ESTADO DE RESPUESTA A COMENTARIOS
+let replyState = {}; // Guarda estado { postId: { commentId, userId, userName } }
 
 // Formatear fechas según idioma y zona horaria CST (UTC-6)
 function formatDate(dateString, lang = 'es') {
@@ -2100,6 +2214,50 @@ async function borrarComentario(commentId, commentElement) {
   });
 }
 
+// --- LOGICA DE RESPUESTA A COMENTARIOS ---
+
+function prepareReply(postId, commentId, userId, userName) {
+    // Buscar la caja de comentarios y el input de ese post
+    const commentsSection = document.getElementById(`comments-${postId}`).parentElement;
+    const inputWrapper = commentsSection.querySelector('.comment-form');
+    const input = inputWrapper.querySelector('.comment-input');
+    const indicator = inputWrapper.querySelector('.reply-indicator');
+    const indicatorText = indicator.querySelector('span');
+
+    // Guardar estado
+    replyState[postId] = {
+        parent_id: commentId,
+        reply_to_user_id: userId,
+        userName: userName
+    };
+
+    // Actualizar UI
+    indicator.style.display = 'flex';
+    indicatorText.textContent = `Respondiendo a @${userName}`;
+    inputWrapper.classList.add('replying');
+
+    // Poner el @Nombre en el input para que se vea pro
+    input.value = `@${userName} `;
+    input.focus();
+}
+
+function cancelReply(postId) {
+    const commentsSection = document.getElementById(`comments-${postId}`).parentElement;
+    const inputWrapper = commentsSection.querySelector('.comment-form');
+    const input = inputWrapper.querySelector('.comment-input');
+    const indicator = inputWrapper.querySelector('.reply-indicator');
+
+    // Limpiar estado
+    delete replyState[postId];
+
+    // Restaurar UI
+    indicator.style.display = 'none';
+    inputWrapper.classList.remove('replying');
+    input.value = '';
+}
+
+// ----------------------------------------
+
 // Cargar comentarios
 async function cargarComentarios(postId, commentsContainer, loadMoreLink, offset = 0) {
   try {
@@ -2125,14 +2283,30 @@ async function cargarComentarios(postId, commentsContainer, loadMoreLink, offset
     comentarios.comentarios.forEach(comentario => {
       const commentDiv = document.createElement('div');
       commentDiv.classList.add('comment');
+      // Si tiene padre, le ponemos la clase para sangría
+      if (comentario.parent_id) {
+          commentDiv.classList.add('reply');
+      }
+
+      // Procesar menciones en el contenido (Ej: @Pedro se pone azul)
+      let contenidoHtml = comentario.contenido;
+      if (comentario.nombre_respondido) {
+        // Simple regex para resaltar la primera mención
+        const mentionRegex = new RegExp(`@${comentario.nombre_respondido}`, 'i');
+        contenidoHtml = contenidoHtml.replace(mentionRegex, `<a href="#" class="mention-link">@${comentario.nombre_respondido}</a>`);
+      }
+
       let commentContent = `
         <div class="comment-profile-pic-container">
           ${comentario.foto_perfil_url ? `<img src="${comentario.foto_perfil_url}" alt="Foto de perfil" class="comment-profile-pic" onerror="this.parentNode.innerHTML = '<i class=\\'fas fa-user comment-profile-icon\\'></i>'">` : `<i class="fas fa-user comment-profile-icon"></i>`}
         </div>
         <div class="comment-content">
           <p class="comment-user" style="cursor: pointer;" onclick="redirectToProfile(${comentario.user_id})">${comentario.nombre_empresa}</p>
-          <p class="comment-text">${comentario.contenido}</p>
-          <p class="comment-meta">${formatDate(comentario.fecha_creacion, lang)}</p>
+          <p class="comment-text">${contenidoHtml}</p>
+          <div class="comment-actions">
+            <span class="comment-meta">${formatDate(comentario.fecha_creacion, lang)}</span>
+            <button class="reply-btn" onclick="prepareReply(${comentario.publicacion_id}, ${comentario.parent_id ? comentario.parent_id : comentario.id}, ${comentario.user_id}, '${comentario.nombre_empresa}')">Responder</button>
+          </div>
         </div>
       `;
 
@@ -2168,12 +2342,19 @@ async function submitComment(postId, inputElement, commentsContainer) {
     return;
   }
 
+  // Verificar si estamos respondiendo
+  const replyData = replyState[postId] || {};
+
   try {
     const response = await fetch(`/publicacion/${postId}/comentar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ contenido }),
+      body: JSON.stringify({ 
+          contenido: contenido,
+          parent_id: replyData.parent_id || null,
+          reply_to_user_id: replyData.reply_to_user_id || null
+      }),
     });
 
     if (response.ok) {
@@ -2181,37 +2362,40 @@ async function submitComment(postId, inputElement, commentsContainer) {
       const lang = localStorage.getItem('language') || 'es';
       const commentDiv = document.createElement('div');
       commentDiv.classList.add('comment');
+      if (comentario.parent_id) commentDiv.classList.add('reply');
+
+      // Procesar visualización de mención localmente
+      let contentDisplay = comentario.contenido;
+      // Si estábamos respondiendo, resaltamos el nombre
+      if (replyData.userName && contentDisplay.startsWith(`@${replyData.userName}`)) {
+          contentDisplay = contentDisplay.replace(`@${replyData.userName}`, `<a href="#" class="mention-link">@${replyData.userName}</a>`);
+      }
+
       let commentContent = `
         <div class="comment-profile-pic-container">
           ${comentario.foto_perfil_url ? `<img src="${comentario.foto_perfil_url}" alt="Foto de perfil" class="comment-profile-pic" onerror="this.parentNode.innerHTML = '<i class=\\'fas fa-user comment-profile-icon\\'></i>'">` : `<i class="fas fa-user comment-profile-icon"></i>`}
         </div>
         <div class="comment-content">
-          <p class="comment-user" style="cursor: pointer;" onclick="redirectToProfile(${comentario.user_id})">${comentario.nombre_usuario || comentario.nombre_empresa}</p>
-          <p class="comment-text">${comentario.contenido}</p>
-          <p class="comment-meta">${formatDate(comentario.fecha_creacion, lang)}</p>
+          <p class="comment-user" style="cursor: pointer;" onclick="redirectToProfile(${comentario.user_id})">${comentario.nombre_empresa}</p>
+          <p class="comment-text">${contentDisplay}</p>
+          <div class="comment-actions">
+            <p class="comment-meta">${formatDate(comentario.fecha_creacion, lang)}</p>
+            <button class="reply-btn" onclick="prepareReply(${comentario.publicacion_id}, ${comentario.parent_id ? comentario.parent_id : comentario.id}, ${comentario.user_id}, '${comentario.nombre_empresa}')">Responder</button>
+          </div>
         </div>
         <button class="comment-delete" onclick="borrarComentario(${comentario.id}, this.parentElement)" title="${translations[lang].inicio.delete_comment_title}">
           <i class="fas fa-trash"></i>
         </button>
       `;
       commentDiv.innerHTML = commentContent;
-      commentsContainer.insertBefore(commentDiv, commentsContainer.firstChild);
-      inputElement.value = '';
+      
+      // Si es respuesta, intentar ponerlo cerca del padre si es visible, sino al final
+      commentsContainer.appendChild(commentDiv); // Simple append for now
+      
+      // Limpiar estado
+      cancelReply(postId);
       showNotification(translations[lang].inicio.comment_success);
 
-      if (currentUserId !== comentario.user_id) {
-        console.log('Enviando notificación de comentario:', { tipo: 'comentario', publicacion_id: postId, actor_id: currentUserId });
-        await fetch(`/notificaciones/crear`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            tipo: 'comentario',
-            publicacion_id: postId,
-            actor_id: currentUserId,
-          }),
-        });
-      }
     } else {
       const data = await response.json();
       showNotification(`${translations[lang].inicio.comment_error}: ${data.detail || translations[lang].inicio.unknown_error}`, true);
@@ -2251,26 +2435,6 @@ async function toggleInterest(postId, button) {
         button.innerHTML = `<i class="fas fa-check"></i> <span data-translate="inicio.interested_button">${translations[lang].inicio.interested_button}</span>`;
         countSpan.textContent = translations[lang].inicio.interested_count_label.replace('0', data.interesados_count || 0);
 
-        const postResponse = await fetch(`/publicacion/${postId}`, {
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-        });
-        if (postResponse.ok) {
-          const post = await postResponse.json();
-          if (post.user_id !== currentUserId) {
-            console.log('Enviando notificación de interés:', { tipo: 'interes', publicacion_id: postId, actor_id: currentUserId });
-            await fetch(`/notificaciones/crear`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({
-                tipo: 'interes',
-                publicacion_id: postId,
-                actor_id: currentUserId,
-              }),
-            });
-          }
-        }
       }
     } else {
       const data = await response.json();
@@ -2330,14 +2494,24 @@ async function loadNotifications() {
       notificationItem.setAttribute('data-notification-id', notification.id);
       if (!notification.leida) notificationItem.classList.add('unread');
 
-      let iconClass = notification.tipo === 'comentario' ? 'fas fa-comment' : 'fas fa-plus';
-      let message = notification.tipo === 'comentario'
-        ? translations[lang].inicio.notification_comment.replace('{user}', notification.nombre_usuario || 'Usuario').replace('{post}', notification.publicacion_id)
-        : translations[lang].inicio.notification_interest.replace('{user}', notification.nombre_usuario || 'Usuario').replace('{post}', notification.publicacion_id);
+      let iconClass = 'fas fa-plus';
+      // Iconos según el tipo
+      if (notification.tipo === 'comentario') iconClass = 'fas fa-comment';
+      if (notification.tipo === 'respuesta') iconClass = 'fas fa-reply';
+      if (notification.tipo === 'mencion') iconClass = 'fas fa-at';
+
+      // Mensajes Personalizados
+      let message = notification.mensaje || "Nueva interacción";
+      if (notification.tipo === 'comentario') message = `comentó en tu publicación: "${notification.mensaje}"`;
+      if (notification.tipo === 'respuesta') message = `respondió a tu comentario: "${notification.mensaje}"`;
+      if (notification.tipo === 'mencion') message = `te mencionó: "${notification.mensaje}"`;
+      if (notification.tipo === 'interes') message = `le interesa tu publicación`;
+
+      const actorName = notification.nombre_usuario || 'Alguien';
 
       notificationItem.innerHTML = `
         <i class="${iconClass}"></i>
-        <span>${message}</span>
+        <span><strong>${actorName}</strong> ${message}</span>
         <p class="notification-meta">${formatDate(notification.fecha_creacion, lang)}</p>
       `;
       notificationItem.addEventListener('click', () => {
@@ -2510,8 +2684,14 @@ async function loadSinglePost(postId) {
         </div>
         <div class="comments-section">
           <div class="comment-form">
-            <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
-            <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
+            <div class="reply-indicator" style="display:none">
+                <span>Respondiendo a...</span>
+                <button onclick="cancelReply(${pub.id})">×</button>
+            </div>
+            <div class="comment-input-wrapper">
+                <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
+                <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
+            </div>
           </div>
           <div class="comments-list" id="comments-${pub.id}"></div>
           <div class="load-more-comments" style="display: none;" data-offset="0" onclick="cargarComentarios(${pub.id}, document.getElementById('comments-${pub.id}'), this)">${translations[lang].inicio.load_more_comments}</div>
@@ -2552,36 +2732,95 @@ async function initializeNotificationsWebSocket() {
     if (!data.user_id) throw new Error('Usuario no autenticado');
 
     wsNotifications = new WebSocket(`ws://${window.location.host}/notificaciones/ws/${data.user_id}`);
+    
     wsNotifications.onopen = () => console.log('WebSocket conectado para notificaciones');
+    
     wsNotifications.onmessage = async (event) => {
       const notification = JSON.parse(event.data);
       console.log('Notificación WebSocket recibida:', notification);
+      
+      // 1. Actualizar el menú de la campanita (Tu código original)
       const notificationsList = document.getElementById('notifications-list');
       const lang = localStorage.getItem('language') || 'es';
 
-      if (!notificationsList.querySelector(`[data-notification-id="${notification.id}"]`)) {
+      if (notificationsList && !notificationsList.querySelector(`[data-notification-id="${notification.id}"]`)) {
         const notificationItem = document.createElement('div');
         notificationItem.classList.add('notification-item', 'unread');
         notificationItem.setAttribute('data-notification-id', notification.id);
-        let iconClass = notification.tipo === 'comentario' ? 'fas fa-comment' : 'fas fa-plus';
-        let message = notification.tipo === 'comentario'
-          ? translations[lang].inicio.notification_comment.replace('{user}', notification.nombre_usuario || 'Usuario').replace('{post}', notification.publicacion_id)
-          : translations[lang].inicio.notification_interest.replace('{user}', notification.nombre_usuario || 'Usuario').replace('{post}', notification.publicacion_id);
+        
+        let iconClass = 'fas fa-plus';
+        if (notification.tipo === 'comentario') iconClass = 'fas fa-comment';
+        if (notification.tipo === 'respuesta') iconClass = 'fas fa-reply';
+        if (notification.tipo === 'mencion') iconClass = 'fas fa-at';
+
+        let message = notification.mensaje || "Nueva interacción";
+        // Personalizar mensajes
+        if (notification.tipo === 'comentario') message = `comentó en tu publicación: "${notification.mensaje}"`;
+        if (notification.tipo === 'respuesta') message = `respondió a tu comentario: "${notification.mensaje}"`;
+        if (notification.tipo === 'mencion') message = `te mencionó: "${notification.mensaje}"`;
+        if (notification.tipo === 'interes') message = `le interesa tu publicación`;
+
+        const actorName = notification.nombre_usuario || 'Alguien';
 
         notificationItem.innerHTML = `
           <i class="${iconClass}"></i>
-          <span>${message}</span>
+          <span><strong>${actorName}</strong> ${message}</span>
           <p class="notification-meta">${formatDate(notification.fecha_creacion, lang)}</p>
         `;
+        
         notificationItem.addEventListener('click', () => {
           markNotificationAsRead(notification.id);
           scrollToPost(notification.publicacion_id);
           document.getElementById('notifications-menu').style.display = 'none';
         });
+        
         notificationsList.prepend(notificationItem);
         updateNotificationCounter(notificationCount + 1);
       }
+
+      // --- MAGIA: INYECTAR COMENTARIO EN VIVO EN EL FEED ---
+      // Verificamos si es un comentario/respuesta y si la publicación está visible en pantalla
+      if (['comentario', 'respuesta', 'mencion'].includes(notification.tipo)) {
+        const commentsContainer = document.getElementById(`comments-${notification.publicacion_id}`);
+        
+        // Si el contenedor de comentarios existe (el usuario está viendo el post), inyectamos el HTML
+        if (commentsContainer) {
+            const commentDiv = document.createElement('div');
+            commentDiv.classList.add('comment');
+            // Si es respuesta, agregamos sangría visual
+            if (notification.tipo === 'respuesta' || notification.tipo === 'mencion') {
+                commentDiv.classList.add('reply');
+            }
+
+            // Construimos la URL de la foto (asumiendo lógica estándar)
+            const fotoUrl = `/foto_perfil/${notification.actor_id}`;
+            
+            // Creamos el HTML del comentario "falso" (visual)
+            commentDiv.innerHTML = `
+                <div class="comment-profile-pic-container">
+                  <img src="${fotoUrl}" alt="Foto" class="comment-profile-pic" onerror="this.parentNode.innerHTML = '<i class=\\'fas fa-user comment-profile-icon\\'></i>'">
+                </div>
+                <div class="comment-content">
+                  <p class="comment-user" style="cursor: pointer;" onclick="redirectToProfile(${notification.actor_id})">
+                    ${notification.nombre_usuario || 'Usuario'}
+                  </p>
+                  <p class="comment-text">${notification.mensaje}</p>
+                  <div class="comment-actions">
+                    <p class="comment-meta">Ahora</p>
+                    <button class="reply-btn" onclick="prepareReply(${notification.publicacion_id}, ${notification.comentario_id}, ${notification.actor_id}, '${notification.nombre_usuario}')">Responder</button>
+                  </div>
+                </div>
+            `;
+            
+            // Lo agregamos al principio o final según tu gusto (normalmente final para hilos, principio para nuevos)
+            // Aquí lo pondremos al principio para que se vea luego luego
+            commentsContainer.insertBefore(commentDiv, commentsContainer.firstChild);
+        }
+      }
+      // -----------------------------------------------------
+
     };
+    
     wsNotifications.onclose = () => {
       console.log('WebSocket de notificaciones desconectado, intentando reconectar...');
       setTimeout(initializeNotificationsWebSocket, 5000);
@@ -2701,8 +2940,14 @@ for (const pub of publicaciones) {
         </div>
         <div class="comments-section">
           <div class="comment-form">
-            <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
-            <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
+            <div class="reply-indicator" style="display:none">
+                <span>Respondiendo a...</span>
+                <button onclick="cancelReply(${pub.id})">×</button>
+            </div>
+            <div class="comment-input-wrapper">
+                <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
+                <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
+            </div>
           </div>
           <div class="comments-list" id="comments-${pub.id}"></div>
           <div class="load-more-comments" style="display: none;" data-offset="0" onclick="cargarComentarios(${pub.id}, document.getElementById('comments-${pub.id}'), this)">${translations[lang].inicio.load_more_comments}</div>
@@ -2719,8 +2964,7 @@ for (const pub of publicaciones) {
         readMoreButton.textContent = translations[lang].inicio.read_more;
         readMoreButton.setAttribute('data-translate', 'inicio.read_more');
         readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
-        postContentElement.insertAdjacentElement('afterend', readMoreButton);
-
+        postContentElement.appendChild(readMoreButton);
       } else {
         console.log(`No se añadió botón "Ver más" para publicación ${pub.id}: scrollHeight <= maxHeight o sin contenido`);
       }
@@ -2827,8 +3071,14 @@ async function search() {
         </div>
         <div class="comments-section">
           <div class="comment-form">
-            <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
-            <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
+            <div class="reply-indicator" style="display:none">
+                <span>Respondiendo a...</span>
+                <button onclick="cancelReply(${pub.id})">×</button>
+            </div>
+            <div class="comment-input-wrapper">
+                <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
+                <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
+            </div>
           </div>
           <div class="comments-list" id="comments-${pub.id}"></div>
           <div class="load-more-comments" style="display: none;" data-offset="0" onclick="cargarComentarios(${pub.id}, document.getElementById('comments-${pub.id}'), this)">${translations[lang].inicio.load_more_comments}</div>
@@ -2845,7 +3095,7 @@ async function search() {
         readMoreButton.textContent = translations[lang].inicio.read_more;
         readMoreButton.setAttribute('data-translate', 'inicio.read_more');
         readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
-       postContentElement.insertAdjacentElement('afterend', readMoreButton);
+        postContentElement.insertAdjacentElement('afterend', readMoreButton);
 
       } else {
         console.log(`No se añadió botón "Ver más" para publicación ${pub.id}: scrollHeight <= maxHeight o sin contenido`);
@@ -2955,8 +3205,14 @@ async function filterByCategory(categoria) {
         </div>
         <div class="comments-section">
           <div class="comment-form">
-            <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
-            <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
+            <div class="reply-indicator" style="display:none">
+                <span>Respondiendo a...</span>
+                <button onclick="cancelReply(${pub.id})">×</button>
+            </div>
+            <div class="comment-input-wrapper">
+                <input type="text" class="comment-input" placeholder="${translations[lang].inicio.comment_placeholder}" data-translate="inicio.comment_placeholder">
+                <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.parentElement.nextElementSibling)">${translations[lang].inicio.comment_button}</button>
+            </div>
           </div>
           <div class="comments-list" id="comments-${pub.id}"></div>
           <div class="load-more-comments" style="display: none;" data-offset="0" onclick="cargarComentarios(${pub.id}, document.getElementById('comments-${pub.id}'), this)">${translations[lang].inicio.load_more_comments}</div>
@@ -2973,7 +3229,8 @@ async function filterByCategory(categoria) {
         readMoreButton.textContent = translations[lang].inicio.read_more;
         readMoreButton.setAttribute('data-translate', 'inicio.read_more');
         readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
-        postContentElement.appendChild(readMoreButton);
+        postContentElement.insertAdjacentElement('afterend', readMoreButton);
+
       } else {
         console.log(`No se añadió botón "Ver más" para publicación ${pub.id}: scrollHeight <= maxHeight o sin contenido`);
       }
