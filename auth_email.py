@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import httpx
 from datetime import datetime, timezone
 from typing import Optional
+import traceback
 
 load_dotenv()
 
@@ -112,6 +113,9 @@ def log_failed_attempt(email: str, ip: str, conn):
 #  RUTAS WEB (MODIFICADAS PARA USAR FORM)
 # ==========================================
 
+# Asegúrate de tener esto arriba del todo:
+import traceback 
+
 @email_router.post("/auth/email")
 async def login_via_email(
     request: Request,
@@ -119,55 +123,77 @@ async def login_via_email(
     password: str = Form(...),
     tipo: str = Form("emprendedor"),
     target: str = Form("perfil"),
-    # Usamos alias porque en HTML el name es "g-recaptcha-response" (con guiones)
     g_recaptcha_response: str = Form(..., alias="g-recaptcha-response")
 ):
+    print(f"--- [DEBUG] Intento de Login Web: {email} ---")
     try:
         ip_address = request.client.host
         user_agent = request.headers.get("user-agent")
         
-        # Validaciones básicas
-        if not email or not password or not g_recaptcha_response:
-             raise HTTPException(status_code=400, detail="Faltan datos")
+        # 1. Validar Captcha (Ya sabemos que esto funciona, pero lo dejamos)
+        print("[DEBUG] Verificando Captcha...")
+        if not await verify_recaptcha(g_recaptcha_response, ip_address):
+            print("[DEBUG] Captcha falló")
+            conn = get_db_connection()
+            log_failed_attempt(email, ip_address, conn)
+            conn.close()
+            raise HTTPException(status_code=400, detail="Captcha inválido")
+        print("[DEBUG] Captcha OK")
 
+        # 2. Conectar a Base de Datos
+        print("[DEBUG] Conectando a BD...")
         conn = get_db_connection()
+        print("[DEBUG] Conexión BD exitosa")
         
         # Validaciones de seguridad
         if is_ip_blocked(ip_address, conn):
             conn.close()
+            print("[DEBUG] IP Bloqueada")
             raise HTTPException(status_code=403, detail="IP bloqueada")
             
         if is_user_quarantined(email, conn):
             conn.close()
+            print("[DEBUG] Usuario en Cuarentena")
             raise HTTPException(status_code=403, detail="Usuario en cuarentena")
-            
-        if not await verify_recaptcha(g_recaptcha_response, ip_address):
-            log_failed_attempt(email, ip_address, conn)
-            conn.close()
-            raise HTTPException(status_code=400, detail="Captcha inválido")
 
-        # Lógica de Login Web
+        # 3. Buscar Usuario
         try:
+            print("[DEBUG] Buscando usuario en tabla...")
             cursor = conn.cursor()
+            # OJO: Aquí pedimos 'tipo' y 'verified', asegúrate que esas columnas existan
             cursor.execute("SELECT id, nombre, password, verified, tipo FROM usuarios WHERE email = %s", (email,))
             user = cursor.fetchone()
 
-            if not user or not user["password"] or not bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
-                log_failed_attempt(email, ip_address, conn)
+            if not user:
+                print("[DEBUG] Usuario NO encontrado")
+                conn.close()
                 raise HTTPException(status_code=400, detail="Credenciales incorrectas")
 
-            # Actualizar datos de sesión
+            print(f"[DEBUG] Usuario encontrado: ID {user['id']}")
+
+            # 4. Verificar Password
+            print("[DEBUG] Verificando hash de contraseña...")
+            if not user["password"] or not bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
+                print("[DEBUG] Contraseña INCORRECTA")
+                log_failed_attempt(email, ip_address, conn)
+                raise HTTPException(status_code=400, detail="Credenciales incorrectas")
+            print("[DEBUG] Contraseña correcta")
+
+            # 5. Actualizar datos sesión
+            print("[DEBUG] Actualizando sesión en BD...")
             cursor.execute(
                 "UPDATE usuarios SET ip_address = %s, user_agent = %s, verified = TRUE WHERE email = %s",
                 (ip_address, user_agent, email)
             )
             conn.commit()
 
-            # Determinar redirección
+            # 6. Determinar redirección
+            print("[DEBUG] Verificando datos de perfil...")
             cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s;", (user["id"],))
             tiene_datos = cursor.fetchone() is not None
             
             redirect_url = "/perfil-especifico" if tipo == "explorador" else ("/perfil" if tiene_datos else "/dashboard")
+            print(f"[DEBUG] Todo OK. Redirigiendo a: {redirect_url}")
 
             return {
                 "user_id": user["id"],
@@ -180,6 +206,8 @@ async def login_via_email(
 
         except Exception as e:
             conn.rollback()
+            print(f"--- [ERROR DENTRO DEL TRY DE SQL] ---")
+            print(traceback.format_exc()) # ESTO ES LO QUE NECESITAMOS VER
             raise e
         finally:
             conn.close()
@@ -187,7 +215,8 @@ async def login_via_email(
     except HTTPException as he:
         raise he
     except Exception as e:
-        print(f"[ERROR WEB] {e}")
+        print(f"--- [ERROR CRÍTICO GENERAL] ---")
+        print(traceback.format_exc()) # O ESTO
         raise HTTPException(status_code=500, detail="Error interno")
 
 @email_router.post("/auth/register")
