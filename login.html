@@ -493,7 +493,7 @@
       document.getElementById('register-recaptcha-response').value = token;
     };
 
-    // --- FUNCIONES MEJORADAS (CON TRUCO DOBLE TOKEN) ---
+    // --- FUNCIONES CORREGIDAS (CON TRADUCCIÓN DE GUIONES) ---
 
     async function handleLogin(event) {
       event.preventDefault(); 
@@ -502,10 +502,10 @@
       const formData = new FormData(document.getElementById('email-form'));
       const data = Object.fromEntries(formData.entries());
 
-      // TRUCO: Enviamos el token con dos nombres comunes para asegurar que el backend lo reciba
+      // --- AQUÍ ESTÁ LA CORRECCIÓN MÁGICA ---
+      // Convertimos el nombre con guion medio (-) al nombre con guion bajo (_) que pide Python
       if (data['g-recaptcha-response']) {
-          data['recaptcha_token'] = data['g-recaptcha-response'];
-          data['token'] = data['g-recaptcha-response']; // Por si acaso se llama solo 'token'
+          data['g_recaptcha_response'] = data['g-recaptcha-response'];
       }
 
       try {
@@ -538,10 +538,9 @@
       const formData = new FormData(document.getElementById('register-form'));
       const data = Object.fromEntries(formData.entries());
 
-      // TRUCO: Enviamos el token con dos nombres
+      // --- AQUÍ ESTÁ LA CORRECCIÓN MÁGICA ---
       if (data['g-recaptcha-response']) {
-          data['recaptcha_token'] = data['g-recaptcha-response'];
-          data['token'] = data['g-recaptcha-response'];
+          data['g_recaptcha_response'] = data['g-recaptcha-response'];
       }
 
       try {
@@ -566,19 +565,17 @@
       }
     }
 
-    // Nueva función inteligente para leer errores de Pydantic/FastAPI
     function procesarErrorDelServidor(errorData) {
         let msg = 'Error en la solicitud.';
-        
         if (errorData.detail) {
              if (typeof errorData.detail === 'string') {
                  msg = errorData.detail;
              } else if (Array.isArray(errorData.detail)) {
-                 // Aquí le decimos que nos muestre QUÉ campo falta
                  msg = errorData.detail.map(e => {
-                     // e.loc suele ser ['body', 'nombre_campo']
                      const campo = e.loc ? e.loc[e.loc.length - 1] : 'Campo';
-                     return `${campo}: ${e.msg}`; // Ej: "email: Field required"
+                     // Traducimos el nombre técnico a algo legible si es el captcha
+                     if (campo === 'g_recaptcha_response') return 'Captcha inválido o faltante';
+                     return `${campo}: ${e.msg}`;
                  }).join('. ');
              } else {
                  msg = JSON.stringify(errorData.detail);
@@ -589,7 +586,6 @@
 
     // --- FIN FUNCIONES ---
 
-    // Manejo de errores por URL
     if (error) {
       let msg = `Error: ${error}`;
       if (error === 'no_email') msg = 'Por favor, permite compartir tu correo electrónico para iniciar sesión.';
@@ -604,7 +600,6 @@
       mostrarError(msg);
     }
 
-    // Funciones del modal
     function openTermsModal() {
       document.getElementById('terms-modal').style.display = 'flex';
     }
