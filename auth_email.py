@@ -196,8 +196,7 @@ async def register_via_email(
     nombre: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
-    # date no lo parseamos a objeto Date aquí para simplificar, entra como string 'YYYY-MM-DD'
-    fecha_nacimiento: str = Form(...), 
+    fecha_nacimiento: str = Form(...), # La recibimos pero no la guardamos en SQL
     tipo: str = Form("emprendedor"),
     target: str = Form("perfil"),
     g_recaptcha_response: str = Form(..., alias="g-recaptcha-response")
@@ -224,8 +223,8 @@ async def register_via_email(
             if cursor.fetchone():
                 raise HTTPException(status_code=400, detail="El correo ya existe")
 
-            # Nota: Asegúrate de que tu tabla usuarios tenga columna fecha_nacimiento si la vas a guardar,
-            # si no, omítela del INSERT. Aquí asumo que la estructura es la estándar.
+            # --- CORRECCIÓN: QUITAMOS fecha_nacimiento DEL INSERT ---
+            # Solo guardamos las columnas que SI existen en tu tabla
             cursor.execute(
                 """
                 INSERT INTO usuarios (nombre, email, password, ip_address, user_agent, verified, created_at)
@@ -250,6 +249,7 @@ async def register_via_email(
 
         except Exception as e:
             conn.rollback()
+            print(f"[ERROR SQL REGISTRO] {e}") # Si falla, aquí saldrá por qué
             raise e
         finally:
             conn.close()
@@ -257,9 +257,9 @@ async def register_via_email(
     except HTTPException as he:
         raise he
     except Exception as e:
-        print(f"[ERROR WEB REG] {e}")
+        print(f"[ERROR CRITICO] {e}")
         raise HTTPException(status_code=500, detail="Error interno")
-
+    
 # ==========================================
 #  RUTAS APP (API REST PARA FLUTTER)
 # ==========================================
