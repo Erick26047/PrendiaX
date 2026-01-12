@@ -323,7 +323,8 @@
       <a class="register-link" onclick="toggleRegisterForm()" data-translate="login.register">Registrarse</a>
     </div>
 
-    <form id="email-form" class="email-form" onsubmit="handleLogin(event)">
+    <!-- FORM LOGIN -->
+    <form id="email-form" class="email-form" action="/auth/email" method="POST" onsubmit="return validateCaptcha('email')">
       <input type="email" name="email" placeholder="Correo electrónico" required />
       <input type="password" name="password" placeholder="Contraseña" required />
       <input type="hidden" name="tipo" id="tipo" />
@@ -333,7 +334,8 @@
       <button type="submit" data-translate="login.submit">Iniciar Sesión</button>
     </form>
 
-    <form id="register-form" class="register-form" onsubmit="handleRegister(event)">
+    <!-- FORM REGISTRO -->
+    <form id="register-form" class="register-form" action="/auth/register" method="POST" onsubmit="return validateCaptcha('register') && validarEdad()">
       <input type="text" name="nombre" placeholder="Ingrese su nombre" required />
       <input type="email" name="email" placeholder="Correo electrónico" required />
       <input type="password" name="password" placeholder="Contraseña" required />
@@ -350,6 +352,7 @@
     <a class="terms-link" onclick="openTermsModal()" data-translate="login.terms_link">Consultar Términos y Condiciones</a>
   </div>
 
+  <!-- Modal para Términos y Condiciones -->
   <div class="terms-modal" id="terms-modal">
     <div class="terms-modal-content">
       <h2 data-translate="login.terms_title">PrendiaX - Políticas de Privacidad y Términos y Condiciones</h2>
@@ -429,7 +432,7 @@
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
       registerForm.style.display = 'none';
       errorMessage.style.display = 'none';
-      if(window.grecaptcha) grecaptcha.reset(); 
+      grecaptcha.reset(); // Reiniciar CAPTCHA al cambiar formulario
     }
 
     // Mostrar/ocultar formulario de registro
@@ -440,7 +443,7 @@
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
       emailForm.style.display = 'none';
       errorMessage.style.display = 'none';
-      if(window.grecaptcha) grecaptcha.reset();
+      grecaptcha.reset(); // Reiniciar CAPTCHA al cambiar formulario
     }
 
     // Validar edad mínima de 18 años
@@ -458,7 +461,9 @@
       }
 
       if (edad < 18) {
-        mostrarError('Debes tener al menos 18 años para registrarte.');
+        const errorMessage = document.getElementById('error-message');
+        errorMessage.style.display = 'block';
+        errorMessage.textContent = 'Debes tener al menos 18 años para registrarte.';
         return false;
       }
       return true;
@@ -469,19 +474,14 @@
       const response = formType === 'email' 
         ? document.getElementById('email-recaptcha-response').value 
         : document.getElementById('register-recaptcha-response').value;
+      const errorMessage = document.getElementById('error-message');
       
       if (!response) {
-        mostrarError('Por favor, completa el CAPTCHA.');
+        errorMessage.style.display = 'block';
+        errorMessage.textContent = 'Por favor, completa el CAPTCHA.';
         return false;
       }
       return true;
-    }
-
-    // Función auxiliar para mostrar errores
-    function mostrarError(mensaje) {
-        const errorDiv = document.getElementById('error-message');
-        errorDiv.style.display = 'block';
-        errorDiv.textContent = mensaje;
     }
 
     // Callbacks de reCAPTCHA
@@ -493,121 +493,45 @@
       document.getElementById('register-recaptcha-response').value = token;
     };
 
-    // --- FUNCIONES CORREGIDAS (CON TRADUCCIÓN DE GUIONES) ---
-
-    async function handleLogin(event) {
-      event.preventDefault(); 
-      if (!validateCaptcha('email')) return;
-
-      const formData = new FormData(document.getElementById('email-form'));
-      const data = Object.fromEntries(formData.entries());
-
-      // --- AQUÍ ESTÁ LA CORRECCIÓN MÁGICA ---
-      // Convertimos el nombre con guion medio (-) al nombre con guion bajo (_) que pide Python
-      if (data['g-recaptcha-response']) {
-          data['g_recaptcha_response'] = data['g-recaptcha-response'];
-      }
-
-      try {
-        const response = await fetch('/auth/email', { 
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json' 
-          },
-          body: JSON.stringify(data)
-        });
-
-        if (response.ok) {
-          const targetUrl = document.getElementById('target').value || '/perfil'; 
-          window.location.href = targetUrl.startsWith('/') ? targetUrl : `/${targetUrl}`;
-        } else {
-          const errorData = await response.json();
-          procesarErrorDelServidor(errorData);
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        mostrarError('Error de conexión con el servidor.');
-      }
-    }
-
-    async function handleRegister(event) {
-      event.preventDefault();
-      if (!validateCaptcha('register')) return;
-      if (!validarEdad()) return;
-
-      const formData = new FormData(document.getElementById('register-form'));
-      const data = Object.fromEntries(formData.entries());
-
-      // --- AQUÍ ESTÁ LA CORRECCIÓN MÁGICA ---
-      if (data['g-recaptcha-response']) {
-          data['g_recaptcha_response'] = data['g-recaptcha-response'];
-      }
-
-      try {
-        const response = await fetch('/auth/register', { 
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(data)
-        });
-
-        if (response.ok) {
-          const targetUrl = document.getElementById('register-target').value || '/perfil';
-          window.location.href = targetUrl.startsWith('/') ? targetUrl : `/${targetUrl}`;
-        } else {
-          const errorData = await response.json();
-          procesarErrorDelServidor(errorData);
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        mostrarError('Error de conexión con el servidor.');
-      }
-    }
-
-    function procesarErrorDelServidor(errorData) {
-        let msg = 'Error en la solicitud.';
-        if (errorData.detail) {
-             if (typeof errorData.detail === 'string') {
-                 msg = errorData.detail;
-             } else if (Array.isArray(errorData.detail)) {
-                 msg = errorData.detail.map(e => {
-                     const campo = e.loc ? e.loc[e.loc.length - 1] : 'Campo';
-                     // Traducimos el nombre técnico a algo legible si es el captcha
-                     if (campo === 'g_recaptcha_response') return 'Captcha inválido o faltante';
-                     return `${campo}: ${e.msg}`;
-                 }).join('. ');
-             } else {
-                 msg = JSON.stringify(errorData.detail);
-             }
-        }
-        mostrarError(msg);
-    }
-
-    // --- FIN FUNCIONES ---
-
+    // Manejo de errores
+    const errorMessage = document.getElementById('error-message');
     if (error) {
-      let msg = `Error: ${error}`;
-      if (error === 'no_email') msg = 'Por favor, permite compartir tu correo electrónico para iniciar sesión.';
-      else if (error === 'auth_failed') msg = `Error al autenticar: ${details || 'Intenta de nuevo.'}`;
-      else if (error === 'auth_init_failed') msg = 'Error al iniciar la autenticación.';
-      else if (error === 'invalid_credentials') msg = 'Correo o contraseña incorrectos.';
-      else if (error === 'email_exists') msg = 'El correo ya está registrado.';
-      else if (error === 'invalid_input') msg = 'Completa todos los campos requeridos.';
-      else if (error === 'google_account') msg = 'Este correo está registrado con Google.';
-      else if (error === 'captcha_failed') msg = 'Error de CAPTCHA.';
-      
-      mostrarError(msg);
+      errorMessage.style.display = 'block';
+      if (error === 'no_email') {
+        errorMessage.textContent = 'Por favor, permite compartir tu correo electrónico para iniciar sesión.';
+      } else if (error === 'auth_failed') {
+        errorMessage.textContent = `Error al autenticar: ${details || 'Intenta de nuevo.'}`;
+      } else if (error === 'auth_init_failed') {
+        errorMessage.textContent = 'Error al iniciar la autenticación. Contacta al soporte.';
+      } else if (error === 'invalid_credentials') {
+        errorMessage.textContent = 'Correo o contraseña incorrectos. Intenta de nuevo.';
+      } else if (error === 'email_exists') {
+        errorMessage.textContent = 'El correo ya está registrado. Inicia sesión o usa otro correo.';
+      } else if (error === 'invalid_input') {
+        errorMessage.textContent = 'Por favor, completa todos los campos requeridos.';
+      } else if (error === 'google_account') {
+        errorMessage.textContent = 'Este correo está registrado con Google. Por favor, inicia sesión con Google.';
+      } else if (error === 'captcha_failed') {
+        errorMessage.textContent = 'Verificación de CAPTCHA fallida. Intenta de nuevo.';
+      } else if (error === 'ip_blocked') {
+        errorMessage.textContent = 'Tu IP está bloqueada. Contacta al soporte.';
+      } else if (error === 'quarantined') {
+        errorMessage.textContent = 'Tu cuenta está en cuarentena. Contacta al soporte.';
+      }
     }
 
+    // Funciones para abrir y cerrar el modal de términos
     function openTermsModal() {
-      document.getElementById('terms-modal').style.display = 'flex';
+      const modal = document.getElementById('terms-modal');
+      modal.style.display = 'flex';
     }
 
     function closeTermsModal() {
-      document.getElementById('terms-modal').style.display = 'none';
+      const modal = document.getElementById('terms-modal');
+      modal.style.display = 'none';
     }
 
+    // Cerrar modal al hacer clic fuera
     document.getElementById('terms-modal').addEventListener('click', (event) => {
       if (event.target === document.getElementById('terms-modal')) {
         closeTermsModal();
@@ -616,4 +540,3 @@
   </script>
 </body>
 </html>
-
