@@ -429,7 +429,7 @@
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
       registerForm.style.display = 'none';
       errorMessage.style.display = 'none';
-      grecaptcha.reset(); 
+      if(window.grecaptcha) grecaptcha.reset(); 
     }
 
     // Mostrar/ocultar formulario de registro
@@ -440,7 +440,7 @@
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
       emailForm.style.display = 'none';
       errorMessage.style.display = 'none';
-      grecaptcha.reset();
+      if(window.grecaptcha) grecaptcha.reset();
     }
 
     // Validar edad mínima de 18 años
@@ -458,9 +458,7 @@
       }
 
       if (edad < 18) {
-        const errorMessage = document.getElementById('error-message');
-        errorMessage.style.display = 'block';
-        errorMessage.textContent = 'Debes tener al menos 18 años para registrarte.';
+        mostrarError('Debes tener al menos 18 años para registrarte.');
         return false;
       }
       return true;
@@ -471,14 +469,19 @@
       const response = formType === 'email' 
         ? document.getElementById('email-recaptcha-response').value 
         : document.getElementById('register-recaptcha-response').value;
-      const errorMessage = document.getElementById('error-message');
       
       if (!response) {
-        errorMessage.style.display = 'block';
-        errorMessage.textContent = 'Por favor, completa el CAPTCHA.';
+        mostrarError('Por favor, completa el CAPTCHA.');
         return false;
       }
       return true;
+    }
+
+    // Función auxiliar para mostrar errores
+    function mostrarError(mensaje) {
+        const errorDiv = document.getElementById('error-message');
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = mensaje;
     }
 
     // Callbacks de reCAPTCHA
@@ -490,10 +493,10 @@
       document.getElementById('register-recaptcha-response').value = token;
     };
 
-    // --- NUEVAS FUNCIONES PARA ENVIAR COMO JSON (SOLUCIÓN AL ERROR) ---
+    // --- FUNCIONES CORREGIDAS PARA LEER EL ERROR CORRECTAMENTE ---
 
     async function handleLogin(event) {
-      event.preventDefault(); // Evita que el formulario se envíe solo
+      event.preventDefault(); 
       if (!validateCaptcha('email')) return;
 
       const formData = new FormData(document.getElementById('email-form'));
@@ -503,27 +506,34 @@
         const response = await fetch('/auth/email', { 
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json' // <--- LA CLAVE MÁGICA 🔑
+            'Content-Type': 'application/json' 
           },
           body: JSON.stringify(data)
         });
 
         if (response.ok) {
-          // Si el login es exitoso, redirigimos a donde diga el target
           const targetUrl = document.getElementById('target').value || '/perfil'; 
           window.location.href = targetUrl.startsWith('/') ? targetUrl : `/${targetUrl}`;
         } else {
-          // Si hay error, lo mostramos
           const errorData = await response.json();
-          const errorDiv = document.getElementById('error-message');
-          errorDiv.style.display = 'block';
-          // Buscamos el mensaje de error en la respuesta del server
-          errorDiv.textContent = errorData.detail || 'Error al iniciar sesión. Verifica tus datos.';
+          let msg = 'Error al iniciar sesión.';
+          
+          // Lógica para leer el error sin que salga [object Object]
+          if (errorData.detail) {
+             if (typeof errorData.detail === 'string') {
+                 msg = errorData.detail;
+             } else if (Array.isArray(errorData.detail)) {
+                 // Si es una lista de errores (típico de FastAPI), tomamos el mensaje del primero
+                 msg = errorData.detail.map(e => e.msg).join('. ');
+             } else {
+                 msg = JSON.stringify(errorData.detail);
+             }
+          }
+          mostrarError(msg);
         }
       } catch (error) {
         console.error('Error:', error);
-        document.getElementById('error-message').textContent = 'Error de conexión con el servidor.';
-        document.getElementById('error-message').style.display = 'block';
+        mostrarError('Error de conexión con el servidor.');
       }
     }
 
@@ -545,63 +555,56 @@
         });
 
         if (response.ok) {
-          // Registro exitoso
           const targetUrl = document.getElementById('register-target').value || '/perfil';
           window.location.href = targetUrl.startsWith('/') ? targetUrl : `/${targetUrl}`;
         } else {
           const errorData = await response.json();
-          const errorDiv = document.getElementById('error-message');
-          errorDiv.style.display = 'block';
-          errorDiv.textContent = errorData.detail || 'Error al registrarse.';
+          let msg = 'Error al registrarse.';
+          
+          // Lógica corregida
+          if (errorData.detail) {
+             if (typeof errorData.detail === 'string') {
+                 msg = errorData.detail;
+             } else if (Array.isArray(errorData.detail)) {
+                 msg = errorData.detail.map(e => e.msg).join('. ');
+             } else {
+                 msg = JSON.stringify(errorData.detail);
+             }
+          }
+          mostrarError(msg);
         }
       } catch (error) {
         console.error('Error:', error);
-        document.getElementById('error-message').textContent = 'Error de conexión con el servidor.';
-        document.getElementById('error-message').style.display = 'block';
+        mostrarError('Error de conexión con el servidor.');
       }
     }
 
-    // --- FIN NUEVAS FUNCIONES ---
+    // --- FIN FUNCIONES ---
 
-    // Manejo de errores (Para errores que vienen por URL)
-    const errorMessage = document.getElementById('error-message');
+    // Manejo de errores por URL
     if (error) {
-      errorMessage.style.display = 'block';
-      if (error === 'no_email') {
-        errorMessage.textContent = 'Por favor, permite compartir tu correo electrónico para iniciar sesión.';
-      } else if (error === 'auth_failed') {
-        errorMessage.textContent = `Error al autenticar: ${details || 'Intenta de nuevo.'}`;
-      } else if (error === 'auth_init_failed') {
-        errorMessage.textContent = 'Error al iniciar la autenticación. Contacta al soporte.';
-      } else if (error === 'invalid_credentials') {
-        errorMessage.textContent = 'Correo o contraseña incorrectos. Intenta de nuevo.';
-      } else if (error === 'email_exists') {
-        errorMessage.textContent = 'El correo ya está registrado. Inicia sesión o usa otro correo.';
-      } else if (error === 'invalid_input') {
-        errorMessage.textContent = 'Por favor, completa todos los campos requeridos.';
-      } else if (error === 'google_account') {
-        errorMessage.textContent = 'Este correo está registrado con Google. Por favor, inicia sesión con Google.';
-      } else if (error === 'captcha_failed') {
-        errorMessage.textContent = 'Verificación de CAPTCHA fallida. Intenta de nuevo.';
-      } else if (error === 'ip_blocked') {
-        errorMessage.textContent = 'Tu IP está bloqueada. Contacta al soporte.';
-      } else if (error === 'quarantined') {
-        errorMessage.textContent = 'Tu cuenta está en cuarentena. Contacta al soporte.';
-      }
+      let msg = `Error: ${error}`;
+      if (error === 'no_email') msg = 'Por favor, permite compartir tu correo electrónico para iniciar sesión.';
+      else if (error === 'auth_failed') msg = `Error al autenticar: ${details || 'Intenta de nuevo.'}`;
+      else if (error === 'auth_init_failed') msg = 'Error al iniciar la autenticación.';
+      else if (error === 'invalid_credentials') msg = 'Correo o contraseña incorrectos.';
+      else if (error === 'email_exists') msg = 'El correo ya está registrado.';
+      else if (error === 'invalid_input') msg = 'Completa todos los campos requeridos.';
+      else if (error === 'google_account') msg = 'Este correo está registrado con Google.';
+      else if (error === 'captcha_failed') msg = 'Error de CAPTCHA.';
+      
+      mostrarError(msg);
     }
 
-    // Funciones para abrir y cerrar el modal de términos
+    // Funciones del modal
     function openTermsModal() {
-      const modal = document.getElementById('terms-modal');
-      modal.style.display = 'flex';
+      document.getElementById('terms-modal').style.display = 'flex';
     }
 
     function closeTermsModal() {
-      const modal = document.getElementById('terms-modal');
-      modal.style.display = 'none';
+      document.getElementById('terms-modal').style.display = 'none';
     }
 
-    // Cerrar modal al hacer clic fuera
     document.getElementById('terms-modal').addEventListener('click', (event) => {
       if (event.target === document.getElementById('terms-modal')) {
         closeTermsModal();
