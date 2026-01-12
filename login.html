@@ -323,8 +323,7 @@
       <a class="register-link" onclick="toggleRegisterForm()" data-translate="login.register">Registrarse</a>
     </div>
 
-    <!-- FORM LOGIN -->
-    <form id="email-form" class="email-form" action="/auth/email" method="POST" onsubmit="return validateCaptcha('email')">
+    <form id="email-form" class="email-form" onsubmit="handleLogin(event)">
       <input type="email" name="email" placeholder="Correo electrónico" required />
       <input type="password" name="password" placeholder="Contraseña" required />
       <input type="hidden" name="tipo" id="tipo" />
@@ -334,8 +333,7 @@
       <button type="submit" data-translate="login.submit">Iniciar Sesión</button>
     </form>
 
-    <!-- FORM REGISTRO -->
-    <form id="register-form" class="register-form" action="/auth/register" method="POST" onsubmit="return validateCaptcha('register') && validarEdad()">
+    <form id="register-form" class="register-form" onsubmit="handleRegister(event)">
       <input type="text" name="nombre" placeholder="Ingrese su nombre" required />
       <input type="email" name="email" placeholder="Correo electrónico" required />
       <input type="password" name="password" placeholder="Contraseña" required />
@@ -352,7 +350,6 @@
     <a class="terms-link" onclick="openTermsModal()" data-translate="login.terms_link">Consultar Términos y Condiciones</a>
   </div>
 
-  <!-- Modal para Términos y Condiciones -->
   <div class="terms-modal" id="terms-modal">
     <div class="terms-modal-content">
       <h2 data-translate="login.terms_title">PrendiaX - Políticas de Privacidad y Términos y Condiciones</h2>
@@ -432,7 +429,7 @@
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
       registerForm.style.display = 'none';
       errorMessage.style.display = 'none';
-      grecaptcha.reset(); // Reiniciar CAPTCHA al cambiar formulario
+      grecaptcha.reset(); 
     }
 
     // Mostrar/ocultar formulario de registro
@@ -443,7 +440,7 @@
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
       emailForm.style.display = 'none';
       errorMessage.style.display = 'none';
-      grecaptcha.reset(); // Reiniciar CAPTCHA al cambiar formulario
+      grecaptcha.reset();
     }
 
     // Validar edad mínima de 18 años
@@ -493,7 +490,80 @@
       document.getElementById('register-recaptcha-response').value = token;
     };
 
-    // Manejo de errores
+    // --- NUEVAS FUNCIONES PARA ENVIAR COMO JSON (SOLUCIÓN AL ERROR) ---
+
+    async function handleLogin(event) {
+      event.preventDefault(); // Evita que el formulario se envíe solo
+      if (!validateCaptcha('email')) return;
+
+      const formData = new FormData(document.getElementById('email-form'));
+      const data = Object.fromEntries(formData.entries());
+
+      try {
+        const response = await fetch('/auth/email', { 
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json' // <--- LA CLAVE MÁGICA 🔑
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+          // Si el login es exitoso, redirigimos a donde diga el target
+          const targetUrl = document.getElementById('target').value || '/perfil'; 
+          window.location.href = targetUrl.startsWith('/') ? targetUrl : `/${targetUrl}`;
+        } else {
+          // Si hay error, lo mostramos
+          const errorData = await response.json();
+          const errorDiv = document.getElementById('error-message');
+          errorDiv.style.display = 'block';
+          // Buscamos el mensaje de error en la respuesta del server
+          errorDiv.textContent = errorData.detail || 'Error al iniciar sesión. Verifica tus datos.';
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('error-message').textContent = 'Error de conexión con el servidor.';
+        document.getElementById('error-message').style.display = 'block';
+      }
+    }
+
+    async function handleRegister(event) {
+      event.preventDefault();
+      if (!validateCaptcha('register')) return;
+      if (!validarEdad()) return;
+
+      const formData = new FormData(document.getElementById('register-form'));
+      const data = Object.fromEntries(formData.entries());
+
+      try {
+        const response = await fetch('/auth/register', { 
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+          // Registro exitoso
+          const targetUrl = document.getElementById('register-target').value || '/perfil';
+          window.location.href = targetUrl.startsWith('/') ? targetUrl : `/${targetUrl}`;
+        } else {
+          const errorData = await response.json();
+          const errorDiv = document.getElementById('error-message');
+          errorDiv.style.display = 'block';
+          errorDiv.textContent = errorData.detail || 'Error al registrarse.';
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('error-message').textContent = 'Error de conexión con el servidor.';
+        document.getElementById('error-message').style.display = 'block';
+      }
+    }
+
+    // --- FIN NUEVAS FUNCIONES ---
+
+    // Manejo de errores (Para errores que vienen por URL)
     const errorMessage = document.getElementById('error-message');
     if (error) {
       errorMessage.style.display = 'block';
@@ -540,3 +610,4 @@
   </script>
 </body>
 </html>
+
