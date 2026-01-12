@@ -19,9 +19,6 @@ email_router = APIRouter()
 #  MODELOS DE DATOS (PYDANTIC)
 # ==========================================
 
-# NOTA: Los modelos para la WEB (EmailAuthRequest y RegisterRequest) 
-# se han eliminado porque ahora usamos Form(...) directamente en las funciones.
-
 # Modelos para la APP MÓVIL (Siguen siendo JSON)
 class LoginRequestApp(BaseModel):
     email: str
@@ -110,104 +107,78 @@ def log_failed_attempt(email: str, ip: str, conn):
         print(f"[ERROR] Failed attempt log: {e}")
 
 # ==========================================
-#  RUTAS WEB (MODIFICADAS PARA USAR FORM)
+#  RUTAS WEB (CORECCION APLICADA: NO BUSCA COLUMNAS FALTANTES)
 # ==========================================
-
-# Asegúrate de tener esto arriba del todo:
-import traceback 
 
 @email_router.post("/auth/email")
 async def login_via_email(
     request: Request,
     email: str = Form(...),
     password: str = Form(...),
-    tipo: str = Form("emprendedor"),
+    tipo: str = Form("emprendedor"), # Recibimos el tipo del HTML
     target: str = Form("perfil"),
     g_recaptcha_response: str = Form(..., alias="g-recaptcha-response")
 ):
-    print(f"--- [DEBUG] Intento de Login Web: {email} ---")
+    print(f"--- [WEB LOGIN] Intento: {email} | Tipo: {tipo} ---")
     try:
         ip_address = request.client.host
         user_agent = request.headers.get("user-agent")
         
-        # 1. Validar Captcha (Ya sabemos que esto funciona, pero lo dejamos)
-        print("[DEBUG] Verificando Captcha...")
+        # 1. Validar Captcha
         if not await verify_recaptcha(g_recaptcha_response, ip_address):
-            print("[DEBUG] Captcha falló")
             conn = get_db_connection()
             log_failed_attempt(email, ip_address, conn)
             conn.close()
             raise HTTPException(status_code=400, detail="Captcha inválido")
-        print("[DEBUG] Captcha OK")
 
-        # 2. Conectar a Base de Datos
-        print("[DEBUG] Conectando a BD...")
         conn = get_db_connection()
-        print("[DEBUG] Conexión BD exitosa")
         
         # Validaciones de seguridad
         if is_ip_blocked(ip_address, conn):
             conn.close()
-            print("[DEBUG] IP Bloqueada")
             raise HTTPException(status_code=403, detail="IP bloqueada")
             
         if is_user_quarantined(email, conn):
             conn.close()
-            print("[DEBUG] Usuario en Cuarentena")
             raise HTTPException(status_code=403, detail="Usuario en cuarentena")
 
-        # 3. Buscar Usuario
         try:
-            print("[DEBUG] Buscando usuario en tabla...")
             cursor = conn.cursor()
-            # OJO: Aquí pedimos 'tipo' y 'verified', asegúrate que esas columnas existan
-            cursor.execute("SELECT id, nombre, password, verified, tipo FROM usuarios WHERE email = %s", (email,))
+            
+            # --- CORRECCIÓN: NO buscamos 'tipo' en la BD ---
+            cursor.execute("SELECT id, nombre, password, verified FROM usuarios WHERE email = %s", (email,))
             user = cursor.fetchone()
 
-            if not user:
-                print("[DEBUG] Usuario NO encontrado")
-                conn.close()
-                raise HTTPException(status_code=400, detail="Credenciales incorrectas")
-
-            print(f"[DEBUG] Usuario encontrado: ID {user['id']}")
-
-            # 4. Verificar Password
-            print("[DEBUG] Verificando hash de contraseña...")
-            if not user["password"] or not bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
-                print("[DEBUG] Contraseña INCORRECTA")
+            if not user or not user["password"] or not bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
                 log_failed_attempt(email, ip_address, conn)
                 raise HTTPException(status_code=400, detail="Credenciales incorrectas")
-            print("[DEBUG] Contraseña correcta")
 
-            # 5. Actualizar datos sesión
-            print("[DEBUG] Actualizando sesión en BD...")
+            # Actualizar datos sesión
             cursor.execute(
                 "UPDATE usuarios SET ip_address = %s, user_agent = %s, verified = TRUE WHERE email = %s",
                 (ip_address, user_agent, email)
             )
             conn.commit()
 
-            # 6. Determinar redirección
-            print("[DEBUG] Verificando datos de perfil...")
+            # Determinar redirección
+            # Usamos el 'tipo' que llegó del Formulario HTML, no de la BD
             cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s;", (user["id"],))
             tiene_datos = cursor.fetchone() is not None
             
             redirect_url = "/perfil-especifico" if tipo == "explorador" else ("/perfil" if tiene_datos else "/dashboard")
-            print(f"[DEBUG] Todo OK. Redirigiendo a: {redirect_url}")
 
             return {
                 "user_id": user["id"],
                 "email": email,
                 "name": user["nombre"],
-                "tipo": tipo,
+                "tipo": tipo, # Devolvemos el tipo del formulario
                 "token": "fake_web_token", 
                 "redirect_url": redirect_url
             }
 
         except Exception as e:
             conn.rollback()
-            print(f"--- [ERROR DENTRO DEL TRY DE SQL] ---")
-            print(traceback.format_exc()) # ESTO ES LO QUE NECESITAMOS VER
+            print(f"[ERROR SQL LOGIN WEB] {traceback.format_exc()}")
             raise e
         finally:
             conn.close()
@@ -215,8 +186,7 @@ async def login_via_email(
     except HTTPException as he:
         raise he
     except Exception as e:
-        print(f"--- [ERROR CRÍTICO GENERAL] ---")
-        print(traceback.format_exc()) # O ESTO
+        print(f"[ERROR GENERAL LOGIN WEB] {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Error interno")
 
 @email_router.post("/auth/register")
@@ -225,8 +195,8 @@ async def register_via_email(
     nombre: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
-    fecha_nacimiento: str = Form(...), # La recibimos pero no la guardamos en SQL
-    tipo: str = Form("emprendedor"),
+    fecha_nacimiento: str = Form(...), # La recibimos del HTML para que no falle
+    tipo: str = Form("emprendedor"),   # Recibimos el tipo del HTML
     target: str = Form("perfil"),
     g_recaptcha_response: str = Form(..., alias="g-recaptcha-response")
 ):
@@ -252,8 +222,7 @@ async def register_via_email(
             if cursor.fetchone():
                 raise HTTPException(status_code=400, detail="El correo ya existe")
 
-            # --- CORRECCIÓN: QUITAMOS fecha_nacimiento DEL INSERT ---
-            # Solo guardamos las columnas que SI existen en tu tabla
+            # --- CORRECCIÓN: NO guardamos 'fecha_nacimiento' ni 'tipo' en la BD ---
             cursor.execute(
                 """
                 INSERT INTO usuarios (nombre, email, password, ip_address, user_agent, verified, created_at)
@@ -265,6 +234,7 @@ async def register_via_email(
             user_id = cursor.fetchone()["id"]
             conn.commit()
 
+            # Usamos el 'tipo' que llegó del Formulario HTML
             redirect_url = "/perfil-especifico" if tipo == "explorador" else "/dashboard"
 
             return {
@@ -278,7 +248,7 @@ async def register_via_email(
 
         except Exception as e:
             conn.rollback()
-            print(f"[ERROR SQL REGISTRO] {e}") # Si falla, aquí saldrá por qué
+            print(f"[ERROR SQL REGISTRO WEB] {traceback.format_exc()}")
             raise e
         finally:
             conn.close()
@@ -286,7 +256,7 @@ async def register_via_email(
     except HTTPException as he:
         raise he
     except Exception as e:
-        print(f"[ERROR CRITICO] {e}")
+        print(f"[ERROR GENERAL REGISTRO WEB] {e}")
         raise HTTPException(status_code=500, detail="Error interno")
     
 # ==========================================
@@ -300,7 +270,7 @@ async def login_via_email_app(datos: LoginRequestApp):
     try:
         cursor = conn.cursor()
         
-        # 1. Buscamos al usuario
+        # 1. Buscamos al usuario (Sin buscar columnas que no existen)
         cursor.execute("SELECT id, nombre, password, email FROM usuarios WHERE email = %s", (datos.email,))
         user = cursor.fetchone()
 
@@ -321,8 +291,7 @@ async def login_via_email_app(datos: LoginRequestApp):
         
         cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s", (user_id,))
         tiene_datos = cursor.fetchone() is not None
-        print(f"[APP LOGIN] ¿Tiene datos de negocio?: {'SÍ' if tiene_datos else 'NO'}")
-
+        
         # 3. Decidir destino
         if datos.tipo == "explorador":
             redirect_url = "/perfil-especifico"
@@ -345,7 +314,7 @@ async def login_via_email_app(datos: LoginRequestApp):
 
     except psycopg2.Error as db_error:
         print(f"[DB ERROR CRÍTICO] {db_error}")
-        raise HTTPException(status_code=500, detail="Error de base de datos al verificar perfil")
+        raise HTTPException(status_code=500, detail="Error de base de datos")
     except HTTPException as he:
         raise he
     except Exception as e:
@@ -401,9 +370,6 @@ async def register_via_email_app(datos: RegisterRequestApp):
 
 @email_router.get("/api/auth/current_user")
 async def get_current_user_api(request: Request):
-    """
-    Endpoint mixto para obtener usuario actual desde App (Token) o Web (Session).
-    """
     conn = None
     try:
         user_id = None
