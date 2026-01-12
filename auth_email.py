@@ -103,7 +103,7 @@ def log_failed_attempt(email: str, ip: str, conn):
         print(f"[ERROR] Failed attempt log: {e}")
 
 # ==========================================
-#  RUTAS WEB (WEB LOGIN - AHORA CON REDIRECCIÓN)
+#  RUTAS WEB (LOGIN CON MANEJO DE ERRORES VISUALES)
 # ==========================================
 
 @email_router.post("/auth/email")
@@ -115,37 +115,43 @@ async def login_via_email(
     target: str = Form("perfil"),
     g_recaptcha_response: str = Form(..., alias="g-recaptcha-response")
 ):
-    print(f"--- [WEB LOGIN] Intento: {email} | Tipo: {tipo} ---")
+    # URL base para regresar si algo sale mal (mantenemos el tipo y target)
+    error_url = f"/?tipo={tipo}&target={target}&error=" 
+    # NOTA: Si tu login está en /login, cambia "/" por "/login" arriba.
+
     try:
         ip_address = request.client.host
         user_agent = request.headers.get("user-agent")
         
+        # 1. Validar Captcha
         if not await verify_recaptcha(g_recaptcha_response, ip_address):
             conn = get_db_connection()
             log_failed_attempt(email, ip_address, conn)
             conn.close()
-            raise HTTPException(status_code=400, detail="Captcha inválido")
+            # EN LUGAR DE ERROR 400, REDIRIGIMOS:
+            return RedirectResponse(url=error_url + "captcha_failed", status_code=303)
 
         conn = get_db_connection()
         
+        # Validaciones de seguridad
         if is_ip_blocked(ip_address, conn):
             conn.close()
-            raise HTTPException(status_code=403, detail="IP bloqueada")
+            return RedirectResponse(url=error_url + "ip_blocked", status_code=303)
             
         if is_user_quarantined(email, conn):
             conn.close()
-            raise HTTPException(status_code=403, detail="Usuario en cuarentena")
+            return RedirectResponse(url=error_url + "quarantined", status_code=303)
 
         try:
             cursor = conn.cursor()
-            
-            # Buscamos usuario sin pedir columna 'tipo'
             cursor.execute("SELECT id, nombre, password, verified FROM usuarios WHERE email = %s", (email,))
             user = cursor.fetchone()
 
+            # 2. Verificar Usuario y Contraseña
             if not user or not user["password"] or not bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
                 log_failed_attempt(email, ip_address, conn)
-                raise HTTPException(status_code=400, detail="Credenciales incorrectas")
+                # AQUÍ ESTÁ LA MAGIA: Regresamos con el error en la URL
+                return RedirectResponse(url=error_url + "invalid_credentials", status_code=303)
 
             # Actualizar datos técnicos
             cursor.execute(
@@ -154,14 +160,13 @@ async def login_via_email(
             )
             conn.commit()
 
-            # Lógica de redirección
+            # Redirección de Éxito
             cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s;", (user["id"],))
             tiene_datos = cursor.fetchone() is not None
             
             redirect_url = "/perfil-especifico" if tipo == "explorador" else ("/perfil" if tiene_datos else "/dashboard")
 
-            # --- CAMBIO IMPORTANTE: GUARDAR SESIÓN ---
-            # Guardamos los datos en la cookie segura para que no te pida login otra vez
+            # Guardar sesión
             request.session["user"] = {
                 "id": user["id"],
                 "email": email,
@@ -169,22 +174,19 @@ async def login_via_email(
                 "tipo": tipo
             }
 
-            # --- CAMBIO IMPORTANTE: REDIRECCIÓN ---
-            # En lugar de JSON, mandamos al navegador a la nueva página
             return RedirectResponse(url=redirect_url, status_code=303)
 
         except Exception as e:
             conn.rollback()
-            print(f"[ERROR SQL LOGIN WEB] {traceback.format_exc()}")
-            raise e
+            print(f"[ERROR SQL LOGIN] {traceback.format_exc()}")
+            return RedirectResponse(url=error_url + "auth_failed", status_code=303)
         finally:
             conn.close()
 
-    except HTTPException as he:
-        raise he
     except Exception as e:
-        print(f"[ERROR GENERAL LOGIN WEB] {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail="Error interno")
+        print(f"[ERROR GENERAL LOGIN] {traceback.format_exc()}")
+        return RedirectResponse(url=error_url + "auth_init_failed", status_code=303)
+
 
 @email_router.post("/auth/register")
 async def register_via_email(
@@ -197,6 +199,9 @@ async def register_via_email(
     target: str = Form("perfil"),
     g_recaptcha_response: str = Form(..., alias="g-recaptcha-response")
 ):
+    # URL base para regresar si hay error
+    error_url = f"/?tipo={tipo}&target={target}&error="
+
     try:
         ip_address = request.client.host
         user_agent = request.headers.get("user-agent")
@@ -205,11 +210,11 @@ async def register_via_email(
 
         if is_ip_blocked(ip_address, conn):
             conn.close()
-            raise HTTPException(status_code=403, detail="IP bloqueada")
+            return RedirectResponse(url=error_url + "ip_blocked", status_code=303)
 
         if not await verify_recaptcha(g_recaptcha_response, ip_address):
             conn.close()
-            raise HTTPException(status_code=400, detail="Captcha inválido")
+            return RedirectResponse(url=error_url + "captcha_failed", status_code=303)
 
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
@@ -217,7 +222,8 @@ async def register_via_email(
             cursor = conn.cursor()
             cursor.execute("SELECT id FROM usuarios WHERE email = %s", (email,))
             if cursor.fetchone():
-                raise HTTPException(status_code=400, detail="El correo ya existe")
+                # SI YA EXISTE, AVISAMOS BONITO
+                return RedirectResponse(url=error_url + "email_exists", status_code=303)
 
             cursor.execute(
                 """
@@ -232,7 +238,6 @@ async def register_via_email(
 
             redirect_url = "/perfil-especifico" if tipo == "explorador" else "/dashboard"
 
-            # --- GUARDAR SESIÓN Y REDIRIGIR ---
             request.session["user"] = {
                 "id": user_id,
                 "email": email,
@@ -243,16 +248,14 @@ async def register_via_email(
 
         except Exception as e:
             conn.rollback()
-            print(f"[ERROR SQL REGISTRO WEB] {traceback.format_exc()}")
-            raise e
+            print(f"[ERROR SQL REGISTRO] {traceback.format_exc()}")
+            return RedirectResponse(url=error_url + "auth_failed", status_code=303)
         finally:
             conn.close()
 
-    except HTTPException as he:
-        raise he
     except Exception as e:
-        print(f"[ERROR GENERAL REGISTRO WEB] {e}")
-        raise HTTPException(status_code=500, detail="Error interno")
+        print(f"[ERROR GENERAL REGISTRO] {e}")
+        return RedirectResponse(url=error_url + "auth_init_failed", status_code=303)
     
 # ==========================================
 #  RUTAS APP (Siguen respondiendo JSON)
