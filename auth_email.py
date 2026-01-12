@@ -102,10 +102,6 @@ def log_failed_attempt(email: str, ip: str, conn):
         conn.rollback()
         print(f"[ERROR] Failed attempt log: {e}")
 
-# ==========================================
-#  RUTAS WEB (LOGIN CON MANEJO DE ERRORES VISUALES)
-# ==========================================
-
 @email_router.post("/auth/email")
 async def login_via_email(
     request: Request,
@@ -115,9 +111,9 @@ async def login_via_email(
     target: str = Form("perfil"),
     g_recaptcha_response: str = Form(..., alias="g-recaptcha-response")
 ):
-    # URL base para regresar si algo sale mal (mantenemos el tipo y target)
-    error_url = f"/?tipo={tipo}&target={target}&error=" 
-    # NOTA: Si tu login está en /login, cambia "/" por "/login" arriba.
+    # --- CORRECCIÓN AQUÍ: Cambiamos "/" por "/login" ---
+    # Así te regresa al formulario de login para mostrarte el mensaje rojo
+    error_url = f"/login?tipo={tipo}&target={target}&error=" 
 
     try:
         ip_address = request.client.host
@@ -128,7 +124,6 @@ async def login_via_email(
             conn = get_db_connection()
             log_failed_attempt(email, ip_address, conn)
             conn.close()
-            # EN LUGAR DE ERROR 400, REDIRIGIMOS:
             return RedirectResponse(url=error_url + "captcha_failed", status_code=303)
 
         conn = get_db_connection()
@@ -150,7 +145,7 @@ async def login_via_email(
             # 2. Verificar Usuario y Contraseña
             if not user or not user["password"] or not bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
                 log_failed_attempt(email, ip_address, conn)
-                # AQUÍ ESTÁ LA MAGIA: Regresamos con el error en la URL
+                # Regresamos al /login con el error en la URL
                 return RedirectResponse(url=error_url + "invalid_credentials", status_code=303)
 
             # Actualizar datos técnicos
@@ -199,8 +194,8 @@ async def register_via_email(
     target: str = Form("perfil"),
     g_recaptcha_response: str = Form(..., alias="g-recaptcha-response")
 ):
-    # URL base para regresar si hay error
-    error_url = f"/?tipo={tipo}&target={target}&error="
+    # --- CORRECCIÓN AQUÍ TAMBIÉN: "/login" ---
+    error_url = f"/login?tipo={tipo}&target={target}&error="
 
     try:
         ip_address = request.client.host
@@ -222,7 +217,6 @@ async def register_via_email(
             cursor = conn.cursor()
             cursor.execute("SELECT id FROM usuarios WHERE email = %s", (email,))
             if cursor.fetchone():
-                # SI YA EXISTE, AVISAMOS BONITO
                 return RedirectResponse(url=error_url + "email_exists", status_code=303)
 
             cursor.execute(
