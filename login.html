@@ -10,320 +10,270 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script src="https://www.google.com/recaptcha/api.js" async defer></script>
   <style>
+    /* ESTILOS GENERALES */
+    body {
+      background-color: #f9f9f9; /* Fondo suave para que resalte el cuadro */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
     .login-container {
+      background-color: #ffffff;
       max-width: 400px;
-      margin: 50px auto;
-      padding: 20px;
+      width: 90%;
+      padding: 30px 20px;
       text-align: center;
       font-family: 'Poppins', sans-serif;
       border: 1px solid #e0e0e0;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      border-radius: 12px; /* Bordes más redondeados */
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Sombra más elegante */
     }
+
+    h2 {
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 25px;
+    }
+
+    /* BOTONES DE LOGIN */
     .login-buttons {
-      margin: 10px 0;
+      margin: 15px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px; /* Espacio uniforme entre botones (LOS HACE VER JUNTOS Y ORDENADOS) */
     }
+
     .login-btn {
-      display: block;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       width: 100%;
-      max-width: 340px;
-      margin: 5px auto;
-      padding: 14px;
-      border-radius: 5px;
+      max-width: 100%; /* Ocupa todo el ancho disponible del contenedor */
+      padding: 12px;
+      border-radius: 8px;
       text-decoration: none;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 500;
-      border: 1px solid #ccc;
       cursor: pointer;
-      transition: background-color 0.3s;
+      transition: transform 0.1s ease, box-shadow 0.2s ease, background-color 0.3s;
       box-sizing: border-box;
+      position: relative;
     }
+
+    .login-btn:active {
+      transform: scale(0.98); /* Efecto de click */
+    }
+
+    .login-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      object-fit: contain;
+    }
+
+    /* 1. ESTILO APPLE (Negro Puro) */
+    .login-btn.apple {
+      background-color: #000000;
+      color: #ffffff;
+      border: 1px solid #000000;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .login-btn.apple:hover {
+      background-color: #1a1a1a;
+    }
+
+    /* 2. ESTILO GOOGLE (Blanco con Borde) */
     .login-btn.google {
-      background-color: #fff;
-      color: #000;
+      background-color: #ffffff;
+      color: #555555;
+      border: 1px solid #dadce0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     .login-btn.google:hover {
-      background-color: #f5f5f5;
+      background-color: #f7f8f8;
+      border-color: #d2d4d7;
     }
+
+    /* 3. ESTILO EMAIL (Gris Azulado - Midnight Blue) */
+    /* Diferente al negro para no ser repetitivo, pero muy elegante */
     .login-btn.email {
-      background-color: #000;
-      color: #fff;
+      background-color: #2C3E50; 
+      color: #ffffff;
       border: none;
+      box-shadow: 0 2px 5px rgba(44, 62, 80, 0.3);
     }
     .login-btn.email:hover {
-      background-color: #333;
+      background-color: #34495E;
     }
-    .login-icon {
-      width: 24px;
-      vertical-align: middle;
-      margin-right: 10px;
-    }
+
+    /* ELEMENTOS DE FORMULARIO */
     .separator {
-      margin: 5px 0;
-      color: #666;
-      font-size: 14px;
+      margin: 20px 0;
+      color: #999;
+      font-size: 13px;
+      font-weight: 500;
+      position: relative;
     }
+
     .register-link {
-      display: block;
-      margin: 5px 0;
+      display: inline-block;
+      margin-top: 5px;
       color: #007bff;
-      font-size: 16px;
+      font-size: 15px;
+      font-weight: 500;
       text-decoration: none;
       cursor: pointer;
     }
-    .register-link:hover {
-      text-decoration: underline;
-    }
+    .register-link:hover { text-decoration: underline; }
+
     .email-form, .register-form {
       display: none;
-      margin-top: 10px;
-      max-width: 340px;
-      margin-left: auto;
-      margin-right: auto;
+      margin-top: 15px;
+      animation: fadeIn 0.3s ease-in-out;
     }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     .email-form input, .register-form input {
       display: block;
       width: 100%;
-      margin: 5px 0;
-      padding: 10px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+      margin: 8px 0;
+      padding: 12px;
+      font-size: 15px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
       box-sizing: border-box;
+      background-color: #fcfcfc;
     }
+    
+    .email-form input:focus, .register-form input:focus {
+      outline: none;
+      border-color: #007bff;
+      background-color: #fff;
+    }
+
     .email-form button, .register-form button {
       background-color: #007bff;
       color: white;
       padding: 12px;
       border: none;
-      border-radius: 5px;
+      border-radius: 6px;
       cursor: pointer;
       width: 100%;
       font-size: 16px;
+      font-weight: 600;
+      margin-top: 10px;
     }
     .email-form button:hover, .register-form button:hover {
       background-color: #0056b3;
     }
+
     .error-message {
-      color: #d32f2f;
-      font-size: 14px;
-      margin: 5px 0;
+      background-color: #ffebee;
+      color: #c62828;
+      font-size: 13px;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 15px;
       display: none;
-      max-width: 340px;
-      margin-left: auto;
-      margin-right: auto;
+      text-align: left;
+      border: 1px solid #ffcdd2;
     }
+
     .login-msg {
+      font-size: 12px;
+      color: #777;
+      margin-top: 20px;
+      line-height: 1.5;
+    }
+
+    .back-link, .terms-link {
+      display: block;
+      margin-top: 15px;
+      color: #007bff;
+      text-decoration: none;
       font-size: 14px;
-      color: #666;
-      margin-top: 10px;
-    }
-    .back-link {
-      display: block;
-      margin-top: 10px;
-      color: #007bff;
-      text-decoration: none;
-    }
-    .back-link:hover {
-      text-decoration: underline;
-    }
-    .terms-link {
-      display: block;
-      margin-top: 10px;
-      color: #007bff;
-      font-size: 16px;
-      text-decoration: none;
       cursor: pointer;
     }
-    .terms-link:hover {
-      text-decoration: underline;
-    }
+    .back-link:hover, .terms-link:hover { text-decoration: underline; }
+
+    /* ESTILOS DEL MODAL (Iguales pero limpios) */
     .terms-modal {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
       z-index: 2000;
-      align-items: center;
-      justify-content: center;
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(3px); /* Efecto borroso bonito de fondo */
     }
     .terms-modal-content {
       background-color: #ffffff;
-      border-radius: 10px;
-      padding: 20px;
+      border-radius: 12px;
+      padding: 25px;
       max-width: 600px;
       width: 90%;
-      max-height: 80vh;
+      max-height: 85vh;
       overflow-y: auto;
-      font-family: 'Poppins', sans-serif;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-      animation: slideDown 0.3s ease-in-out;
-    }
-    .terms-modal-content h2 {
-      font-size: 24px;
-      color: #333333;
-      margin-bottom: 15px;
-    }
-    .terms-modal-content h3 {
-      font-size: 18px;
-      color: #333333;
-      margin-top: 20px;
-      margin-bottom: 10px;
-    }
-    .terms-modal-content p, .terms-modal-content li {
-      font-size: 14px;
-      color: #333333;
-      line-height: 1.6;
-      margin-bottom: 10px;
-    }
-    .terms-modal-content ul {
-      list-style-type: disc;
-      padding-left: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
     .terms-modal-content .close-btn {
-      background-color: #e0e0e0;
-      color: #333333;
-      padding: 10px 20px;
+      background-color: #f1f1f1;
+      color: #333;
+      padding: 10px 25px;
       border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
+      border-radius: 20px;
+      font-weight: 600;
       cursor: pointer;
       margin-top: 20px;
-      transition: background-color 0.3s ease;
     }
-    .terms-modal-content .close-btn:hover {
-      background-color: #d0d0d0;
-    }
-    body.dark-mode .terms-modal-content {
-      background-color: #2a2a2a;
-      color: #e0e0e0;
-    }
-    body.dark-mode .terms-modal-content h2,
-    body.dark-mode .terms-modal-content h3,
-    body.dark-mode .terms-modal-content p,
-    body.dark-mode .terms-modal-content li {
-      color: #e0e0e0;
-    }
-    body.dark-mode .terms-modal-content .close-btn {
-      background-color: #444444;
-      color: #e0e0e0;
-    }
-    body.dark-mode .terms-modal-content .close-btn:hover {
-      background-color: #555555;
-    }
-    .g-recaptcha {
-      margin: 10px auto;
-      display: flex;
-      justify-content: center;
-    }
-    @media (max-width: 768px) {
-      .login-container {
-        margin: 20px auto;
-        padding: 15px;
-      }
-      .login-btn {
-        font-size: 16px;
-        padding: 12px;
-      }
-      .register-link, .terms-link, .back-link {
-        font-size: 14px;
-      }
-      .email-form input, .register-form input {
-        font-size: 14px;
-        padding: 8px;
-      }
-      .email-form button, .register-form button {
-        font-size: 14px;
-        padding: 10px;
-      }
-      .error-message {
-        font-size: 12px;
-      }
-      .login-msg {
-        font-size: 12px;
-      }
-      .terms-modal-content {
-        max-width: 90%;
-        padding: 15px;
-      }
-      .terms-modal-content h2 {
-        font-size: 20px;
-      }
-      .terms-modal-content h3 {
-        font-size: 16px;
-      }
-      .terms-modal-content p, .terms-modal-content li {
-        font-size: 12px;
-      }
-      .terms-modal-content .close-btn {
-        font-size: 12px;
-        padding: 8px 16px;
-      }
-    }
+    .terms-modal-content .close-btn:hover { background-color: #e0e0e0; }
+
+    .g-recaptcha { margin: 15px auto; display: flex; justify-content: center; }
+
+    /* MEDIA QUERIES */
     @media (max-width: 480px) {
-      .login-container {
-        margin: 15px auto;
-        padding: 10px;
-      }
-      .login-btn {
-        font-size: 14px;
-        padding: 10px;
-      }
-      .register-link, .terms-link, .back-link {
-        font-size: 12px;
-      }
-      .email-form input, .register-form input {
-        font-size: 12px;
-        padding: 6px;
-      }
-      .email-form button, .register-form button {
-        font-size: 12px;
-        padding: 8px;
-      }
-      .error-message {
-        font-size: 10px;
-      }
-      .login-msg {
-        font-size: 10px;
-      }
-      .terms-modal-content {
-        padding: 10px;
-      }
-      .terms-modal-content h2 {
-        font-size: 18px;
-      }
-      .terms-modal-content h3 {
-        font-size: 14px;
-      }
-      .terms-modal-content p, .terms-modal-content li {
-        font-size: 11px;
-      }
-      .terms-modal-content .close-btn {
-        font-size: 11px;
-        padding: 6px 12px;
-      }
+      .login-container { padding: 20px 15px; width: 95%; margin: 20px auto;}
+      .login-btn { font-size: 15px; padding: 10px; }
+      h2 { font-size: 20px; }
     }
   </style>
 </head>
 <body>
+
   <div class="login-container">
     <h2 data-translate="login.title">Inicia sesión para continuar</h2>
+    
     <div class="error-message" id="error-message"></div>
+    
     <div class="login-buttons">
+      
+      <a href="#" class="login-btn apple">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/3/31/Apple_logo_white.svg" alt="Apple logo" class="login-icon">
+        <span data-translate="login.apple">Continuar con Apple</span>
+      </a>
+
       <a href="#" class="login-btn google">
         <img src="google.png" alt="Google logo" class="login-icon">
         <span data-translate="login.google">Continuar con Google</span>
       </a>
-      <button class="login-btn email" onclick="toggleEmailForm()"><span data-translate="login.email">Iniciar con Email</span></button>
+
+      <button class="login-btn email" onclick="toggleEmailForm()">
+        <i class="fas fa-envelope login-icon" style="margin-right: 12px;"></i>
+        <span data-translate="login.email">Iniciar con Email</span>
+      </button>
+
       <div class="separator">– o –</div>
       <a class="register-link" onclick="toggleRegisterForm()" data-translate="login.register">Registrarse</a>
     </div>
 
-    <!-- FORM LOGIN -->
     <form id="email-form" class="email-form" action="/auth/email" method="POST" onsubmit="return validateCaptcha('email')">
       <input type="email" name="email" placeholder="Correo electrónico" required />
       <input type="password" name="password" placeholder="Contraseña" required />
@@ -334,75 +284,36 @@
       <button type="submit" data-translate="login.submit">Iniciar Sesión</button>
     </form>
 
-    <!-- FORM REGISTRO -->
     <form id="register-form" class="register-form" action="/auth/register" method="POST" onsubmit="return validateCaptcha('register') && validarEdad()">
-      <input type="text" name="nombre" placeholder="Ingrese su nombre" required />
+      <input type="text" name="nombre" placeholder="Nombre completo" required />
       <input type="email" name="email" placeholder="Correo electrónico" required />
       <input type="password" name="password" placeholder="Contraseña" required />
+      <label style="display:block; text-align:left; font-size:12px; color:#666; margin-top:5px;">Fecha de nacimiento:</label>
       <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" required />
+      
       <input type="hidden" name="tipo" id="register-tipo" />
       <input type="hidden" name="target" id="register-target" />
       <input type="hidden" name="g-recaptcha-response" id="register-recaptcha-response" />
+      
       <div class="g-recaptcha" data-sitekey="6Les4tgrAAAAAIuGLuqWt3N3K1I25X__PpUW5WuK" data-callback="onRegisterCaptchaSubmit"></div>
       <button type="submit" data-translate="login.register_submit">Registrarse</button>
     </form>
 
-    <p class="login-msg" data-translate="login.terms_notice">Al iniciar sesión o registrarse acepta nuestros términos y condiciones.</p>
+    <p class="login-msg" data-translate="login.terms_notice">Al continuar, aceptas nuestros términos y condiciones.</p>
+    
     <a href="/" class="back-link" data-translate="login.back">← Volver al inicio</a>
-    <a class="terms-link" onclick="openTermsModal()" data-translate="login.terms_link">Consultar Términos y Condiciones</a>
+    <a class="terms-link" onclick="openTermsModal()" data-translate="login.terms_link">Términos y Condiciones</a>
   </div>
 
-  <!-- Modal para Términos y Condiciones -->
   <div class="terms-modal" id="terms-modal">
     <div class="terms-modal-content">
-      <h2 data-translate="login.terms_title">PrendiaX - Políticas de Privacidad y Términos y Condiciones</h2>
-      <h3 data-translate="login.privacy_title">Políticas de Privacidad – PrendiaX</h3>
-      <p data-translate="login.privacy_intro">En PrendiaX valoramos la confianza de nuestros usuarios y nos comprometemos a proteger la información personal que nos proporcionan.</p>
-      <h3 data-translate="login.privacy_collection_title">1. Recolección de datos</h3>
-      <p>Recopilamos los siguientes tipos de información:</p>
-      <ul>
-        <li data-translate="login.privacy_collection_1">Datos de registro (nombre, correo electrónico, foto de perfil, etc.).</li>
-        <li data-translate="login.privacy_collection_2">Información relacionada con los negocios que los usuarios publiquen en la plataforma (descripción, imágenes, ubicación, enlaces, etc.).</li>
-        <li data-translate="login.privacy_collection_3">Datos de interacción dentro de la app (publicaciones, comentarios, reacciones, chats privados).</li>
-      </ul>
-      <h3 data-translate="login.privacy_usage_title">2. Uso de los datos</h3>
-      <p>Los datos que recopilamos son utilizados exclusivamente para los fines de la plataforma:</p>
-      <ul>
-        <li data-translate="login.privacy_usage_1">Impulsar, promover y dar visibilidad a los negocios de nuestros usuarios.</li>
-        <li data-translate="login.privacy_usage_2">Permitir la interacción entre usuarios dentro de la comunidad, ya sea mediante publicaciones, comentarios o chats.</li>
-        <li data-translate="login.privacy_usage_3">Mejorar las funcionalidades y servicios de PrendiaX.</li>
-      </ul>
-      <p data-translate="login.privacy_usage_note">No vendemos ni compartimos información personal con terceros ajenos al funcionamiento de la plataforma, salvo que sea requerido por ley.</p>
-      <h3 data-translate="login.privacy_protection_title">3. Protección de la información</h3>
-      <p data-translate="login.privacy_protection">Implementamos medidas técnicas y administrativas para proteger la información de nuestros usuarios. Sin embargo, PrendiaX no garantiza la seguridad absoluta ante incidentes externos como hackeos, robos de información o accesos no autorizados, y el usuario acepta este riesgo al registrarse en la plataforma.</p>
-      <h3 data-translate="login.privacy_rights_title">4. Derechos del usuario</h3>
-      <p>Los usuarios podrán:</p>
-      <ul>
-        <li data-translate="login.privacy_rights_1">Acceder, rectificar o eliminar sus datos personales.</li>
-        <li data-translate="login.privacy_rights_2">Solicitar la baja de su cuenta en cualquier momento.</li>
-      </ul>
-      <p data-translate="login.privacy_rights_contact">Para ejercer estos derechos, pueden comunicarse al correo: <a href="mailto:soporte@prendiax.com">soporte@prendiax.com</a></p>
-      <h3 data-translate="login.privacy_age_title">5. Restricción de edad</h3>
-      <p data-translate="login.privacy_age">El uso de PrendiaX está permitido únicamente a personas mayores de 18 años. En caso de que un menor de edad utilice la plataforma, será bajo la supervisión y consentimiento de sus padres o tutores legales, quienes asumen toda la responsabilidad.</p>
-      <h3 data-translate="login.terms_title_2">Términos y Condiciones – PrendiaX</h3>
-      <h3 data-translate="login.terms_usage_title">1. Uso de la plataforma</h3>
-      <ul>
-        <li data-translate="login.terms_usage_1">El usuario es responsable del contenido que publique (información, imágenes, videos, etc.).</li>
-        <li data-translate="login.terms_usage_2">No se permite publicar información falsa, engañosa o que infrinja derechos de terceros.</li>
-        <li data-translate="login.terms_usage_3">Queda estrictamente prohibido publicar, compartir o distribuir contenido ilegal, ofensivo, discriminatorio, violento, pornográfico o que promueva actividades ilícitas.</li>
-        <li data-translate="login.terms_usage_4">PrendiaX se reserva el derecho de suspender o eliminar cuentas que incumplan estas reglas.</li>
-      </ul>
-      <h3 data-translate="login.terms_responsibility_title">2. Responsabilidad</h3>
-      <ul>
-        <li data-translate="login.terms_responsibility_1">PrendiaX no se hace responsable por pérdidas económicas, fraudes, robos de identidad, ni ningún otro percance que pueda surgir del uso de la plataforma.</li>
-        <li data-translate="login.terms_responsibility_2">Si a través de la app se realizan ventas, compras, acuerdos comerciales, intercambios de productos/servicios o conversaciones mediante el chat, la responsabilidad recae únicamente en los usuarios involucrados.</li>
-        <li data-translate="login.terms_responsibility_3">PrendiaX actúa únicamente como un espacio de conexión y promoción de negocios, no como intermediario, aval ni garante de dichas transacciones.</li>
-      </ul>
-      <h3 data-translate="login.terms_modifications_title">3. Modificaciones</h3>
-      <p data-translate="login.terms_modifications">PrendiaX podrá actualizar estas políticas y términos en cualquier momento. Las modificaciones se notificarán a los usuarios y entrarán en vigor al publicarse en la plataforma.</p>
-      <h3 data-translate="login.terms_acceptance_title">4. Aceptación</h3>
-      <p data-translate="login.terms_acceptance">Al registrarse o usar la aplicación, el usuario declara haber leído y aceptado estas Políticas de Privacidad y Términos y Condiciones.</p>
-      <button class="close-btn" onclick="closeTermsModal()" data-translate="login.close_terms">Cerrar</button>
+      <h2 data-translate="login.terms_title">Términos y Condiciones</h2>
+      <div style="text-align: left; margin-top: 15px;">
+          <h3 data-translate="login.privacy_title">Políticas de Privacidad</h3>
+          <p data-translate="login.privacy_intro">En PrendiaX valoramos la confianza de nuestros usuarios...</p>
+          <p>...</p> 
+      </div>
+      <button class="close-btn" onclick="closeTermsModal()" data-translate="login.close_terms">Entendido</button>
     </div>
   </div>
 
@@ -411,132 +322,99 @@
     const tipo = params.get("tipo") || "emprendedor";
     const target = params.get("target") || "perfil";
     const error = params.get("error");
-    const details = params.get("details");
 
+    // CONFIGURACIÓN DE BOTONES INTELIGENTES
+    
+    // 1. Google
     const googleBtn = document.querySelector('a.google');
-    if (googleBtn) {
-      googleBtn.href = `/auth/google?tipo=${tipo}&target=${target}`;
-    }
+    if (googleBtn) googleBtn.href = `/auth/google?tipo=${tipo}&target=${target}`;
 
-    // Configurar valores de tipo y target
+    // 2. Apple (Con lógica de roles)
+    const appleBtn = document.querySelector('a.apple');
+    if (appleBtn) appleBtn.href = `/auth/apple/web/login?tipo=${tipo}`;
+
+    // CONFIGURACIÓN DE INPUTS OCULTOS
     document.getElementById('tipo').value = tipo;
     document.getElementById('target').value = target;
     document.getElementById('register-tipo').value = tipo;
     document.getElementById('register-target').value = target;
 
-    // Mostrar/ocultar formulario de login
+    // FUNCIONES VISUALES (Toggle Forms)
     function toggleEmailForm() {
+      hideAllForms();
       const form = document.getElementById('email-form');
-      const registerForm = document.getElementById('register-form');
-      const errorMessage = document.getElementById('error-message');
-      form.style.display = form.style.display === 'none' ? 'block' : 'none';
-      registerForm.style.display = 'none';
-      errorMessage.style.display = 'none';
-      grecaptcha.reset(); // Reiniciar CAPTCHA al cambiar formulario
+      form.style.display = 'block';
     }
 
-    // Mostrar/ocultar formulario de registro
     function toggleRegisterForm() {
+      hideAllForms();
       const form = document.getElementById('register-form');
-      const emailForm = document.getElementById('email-form');
-      const errorMessage = document.getElementById('error-message');
-      form.style.display = form.style.display === 'none' ? 'block' : 'none';
-      emailForm.style.display = 'none';
-      errorMessage.style.display = 'none';
-      grecaptcha.reset(); // Reiniciar CAPTCHA al cambiar formulario
+      form.style.display = 'block';
     }
 
-    // Validar edad mínima de 18 años
+    function hideAllForms() {
+      document.getElementById('email-form').style.display = 'none';
+      document.getElementById('register-form').style.display = 'none';
+      document.getElementById('error-message').style.display = 'none';
+      if(typeof grecaptcha !== 'undefined') grecaptcha.reset();
+    }
+
+    // VALIDACIONES
     function validarEdad() {
-      const fechaNacimiento = document.getElementById('fecha_nacimiento').value;
-      if (!fechaNacimiento) return false;
-
+      const fecha = document.getElementById('fecha_nacimiento').value;
+      if (!fecha) return false;
+      const nacimiento = new Date(fecha);
       const hoy = new Date();
-      const nacimiento = new Date(fechaNacimiento);
       let edad = hoy.getFullYear() - nacimiento.getFullYear();
-      const mes = hoy.getMonth() - nacimiento.getMonth();
-
-      if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
-        edad--;
-      }
-
-      if (edad < 18) {
-        const errorMessage = document.getElementById('error-message');
-        errorMessage.style.display = 'block';
-        errorMessage.textContent = 'Debes tener al menos 18 años para registrarte.';
-        return false;
-      }
-      return true;
-    }
-
-    // Validar CAPTCHA
-    function validateCaptcha(formType) {
-      const response = formType === 'email' 
-        ? document.getElementById('email-recaptcha-response').value 
-        : document.getElementById('register-recaptcha-response').value;
-      const errorMessage = document.getElementById('error-message');
+      const m = hoy.getMonth() - nacimiento.getMonth();
+      if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) edad--;
       
-      if (!response) {
-        errorMessage.style.display = 'block';
-        errorMessage.textContent = 'Por favor, completa el CAPTCHA.';
+      if (edad < 18) {
+        showError('Debes tener al menos 18 años para registrarte.');
         return false;
       }
       return true;
     }
 
-    // Callbacks de reCAPTCHA
-    window.onEmailCaptchaSubmit = function(token) {
-      document.getElementById('email-recaptcha-response').value = token;
-    };
+    function validateCaptcha(formType) {
+      const id = formType === 'email' ? 'email-recaptcha-response' : 'register-recaptcha-response';
+      const response = document.getElementById(id).value;
+      if (!response) {
+        showError('Por favor, completa el CAPTCHA.');
+        return false;
+      }
+      return true;
+    }
 
-    window.onRegisterCaptchaSubmit = function(token) {
-      document.getElementById('register-recaptcha-response').value = token;
-    };
+    function showError(msg) {
+      const el = document.getElementById('error-message');
+      el.style.display = 'block';
+      el.textContent = msg;
+    }
 
-    // Manejo de errores
-    const errorMessage = document.getElementById('error-message');
+    // CALLBACKS CAPTCHA
+    window.onEmailCaptchaSubmit = function(token) { document.getElementById('email-recaptcha-response').value = token; };
+    window.onRegisterCaptchaSubmit = function(token) { document.getElementById('register-recaptcha-response').value = token; };
+
+    // MANEJO DE ERRORES URL
     if (error) {
-      errorMessage.style.display = 'block';
-      if (error === 'no_email') {
-        errorMessage.textContent = 'Por favor, permite compartir tu correo electrónico para iniciar sesión.';
-      } else if (error === 'auth_failed') {
-        errorMessage.textContent = `Error al autenticar: ${details || 'Intenta de nuevo.'}`;
-      } else if (error === 'auth_init_failed') {
-        errorMessage.textContent = 'Error al iniciar la autenticación. Contacta al soporte.';
-      } else if (error === 'invalid_credentials') {
-        errorMessage.textContent = 'Correo o contraseña incorrectos. Intenta de nuevo.';
-      } else if (error === 'email_exists') {
-        errorMessage.textContent = 'El correo ya está registrado. Inicia sesión o usa otro correo.';
-      } else if (error === 'invalid_input') {
-        errorMessage.textContent = 'Por favor, completa todos los campos requeridos.';
-      } else if (error === 'google_account') {
-        errorMessage.textContent = 'Este correo está registrado con Google. Por favor, inicia sesión con Google.';
-      } else if (error === 'captcha_failed') {
-        errorMessage.textContent = 'Verificación de CAPTCHA fallida. Intenta de nuevo.';
-      } else if (error === 'ip_blocked') {
-        errorMessage.textContent = 'Tu IP está bloqueada. Contacta al soporte.';
-      } else if (error === 'quarantined') {
-        errorMessage.textContent = 'Tu cuenta está en cuarentena. Contacta al soporte.';
-      }
+      const msgMap = {
+        'apple_failed': 'No se pudo iniciar sesión con Apple.',
+        'no_email': 'Necesitamos tu correo para continuar.',
+        'google_account': 'Este correo es de Google. Usa el botón de Google.',
+        'email_exists': 'Este correo ya existe. Intenta iniciar sesión.',
+        'invalid_credentials': 'Correo o contraseña incorrectos.'
+      };
+      showError(msgMap[error] || `Error: ${error}`);
     }
 
-    // Funciones para abrir y cerrar el modal de términos
-    function openTermsModal() {
-      const modal = document.getElementById('terms-modal');
-      modal.style.display = 'flex';
-    }
-
-    function closeTermsModal() {
-      const modal = document.getElementById('terms-modal');
-      modal.style.display = 'none';
-    }
-
-    // Cerrar modal al hacer clic fuera
-    document.getElementById('terms-modal').addEventListener('click', (event) => {
-      if (event.target === document.getElementById('terms-modal')) {
-        closeTermsModal();
-      }
+    // MODAL
+    function openTermsModal() { document.getElementById('terms-modal').style.display = 'flex'; }
+    function closeTermsModal() { document.getElementById('terms-modal').style.display = 'none'; }
+    document.getElementById('terms-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'terms-modal') closeTermsModal();
     });
   </script>
 </body>
 </html>
+

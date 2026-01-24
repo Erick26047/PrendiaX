@@ -13,8 +13,7 @@ from publicaciones import router as publicaciones_router
 from auth_email import email_router
 from chats import router as chats_router
 from resenas import router as resenas_router
-
-
+from apple_auth import router as apple_router
 from pydantic import BaseModel
 from typing import Optional
 
@@ -62,6 +61,7 @@ app.include_router(publicaciones_router)
 app.include_router(email_router)
 app.include_router(chats_router)
 app.include_router(resenas_router)
+app.include_router(apple_router)
 
 # --- Rutas principales ---
 @app.get("/")
