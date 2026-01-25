@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException, Header, WebSocket, WebSocketDisconnect
-from fastapi.responses import RedirectResponse, HTMLResponse, StreamingResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse, StreamingResponse, Response
 from fastapi.templating import Jinja2Templates
 from typing import List, Dict
 import psycopg2
@@ -87,6 +87,10 @@ class CommentRequest(BaseModel):
 class ReviewRequest(BaseModel):
     texto: str
     calificacion: int
+    # --- AGREGAR ESTO JUNTO A TUS OTROS MODELOS (Línea ~85 aprox) ---
+class ReportePublicacionRequest(BaseModel):
+    publicacion_id: int
+    motivo: str
 
 # --- FUNCIÓN HÍBRIDA: Detecta si es App (Token) o Web (Sesión) ---
 def get_user_id_hybrid(request: Request):
@@ -423,6 +427,57 @@ async def publicar(request: Request, contenido: str = Form(None), imagen: Upload
     except Exception as e:
         logging.error(f"Error en /publicar: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+    # =================================================================
+# 🚀 REPORTAR PUBLICACIÓN (NUEVO)
+# =================================================================
+@router.post("/api/reportar/publicacion")
+async def reportar_publicacion(request: Request, reporte: ReportePublicacionRequest):
+    conn = None
+    try:
+        # 1. Identificar al usuario (App o Web)
+        user_id = get_user_id_hybrid(request)
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Debes iniciar sesión para reportar.")
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # 2. Verificar que la publicación exista
+        cur.execute("SELECT id FROM publicaciones WHERE id = %s", (reporte.publicacion_id,))
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="La publicación no existe.")
+
+        # 3. Evitar reportes duplicados (Opcional pero recomendado)
+        # Revisa si este usuario ya reportó este post hoy para no llenar la BD de spam
+        cur.execute("""
+            SELECT id FROM reportes_publicaciones 
+            WHERE denunciante_id = %s AND publicacion_id = %s AND estatus = 'pendiente'
+        """, (user_id, reporte.publicacion_id))
+        
+        if cur.fetchone():
+            return JSONResponse(content={"status": "ok", "message": "Ya has reportado esta publicación anteriormente."})
+
+        # 4. Insertar el reporte
+        cur.execute("""
+            INSERT INTO reportes_publicaciones (denunciante_id, publicacion_id, motivo, estatus, fecha_reporte)
+            VALUES (%s, %s, %s, 'pendiente', CURRENT_TIMESTAMP)
+        """, (user_id, reporte.publicacion_id, reporte.motivo))
+        
+        conn.commit()
+        
+        logging.info(f"Usuario {user_id} reportó publicación {reporte.publicacion_id} por: {reporte.motivo}")
+        
+        return JSONResponse(content={"status": "ok", "message": "Reporte enviado. Gracias por ayudarnos."})
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        if conn: conn.rollback()
+        logging.error(f"Error al reportar publicación: {e}")
+        raise HTTPException(status_code=500, detail="Error interno al procesar el reporte.")
+    finally:
+        if conn: conn.close()
 
 # Ruta FEED JSON
 @router.get("/feed")

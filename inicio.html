@@ -1447,6 +1447,49 @@ body.dark-mode .modal-content {
 body.dark-mode .filter-title {
   color: #fff;
 }
+/* --- NUEVOS ESTILOS: MENÚ Y REPORTE --- */
+.post-header { position: relative; display: flex; align-items: center; }
+.post-options { margin-left: auto; position: relative; }
+
+.options-btn { 
+    background: transparent; border: none; font-size: 18px; cursor: pointer; 
+    padding: 8px; border-radius: 50%; width: 35px; height: 35px; 
+    display: flex; align-items: center; justify-content: center; color: #666; 
+}
+.options-btn:hover { background-color: #e0e0e0; color: #000; }
+
+.post-dropdown-menu { 
+    display: none; position: absolute; right: 0; top: 40px; 
+    background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100; width: 180px; overflow: hidden; 
+}
+.post-dropdown-menu.show { display: block; animation: slideDown 0.2s ease; }
+
+.dropdown-item { 
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 15px; 
+    border: none; background: none; text-align: left; cursor: pointer; font-size: 14px; color: #333; 
+}
+.dropdown-item:hover { background-color: #f5f5f5; color: #1976d2; }
+.dropdown-item.danger { color: #d32f2f; }
+.dropdown-item.danger:hover { background-color: #ffebee; }
+
+/* Estilos Modal Reporte (Para que se vea bien) */
+#report-modal .modal-content { text-align: left; padding: 20px; }
+.report-options { display: flex; flex-direction: column; gap: 10px; margin: 15px 0; }
+.report-option { 
+    display: flex; align-items: center; gap: 10px; padding: 10px; 
+    border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer; background: #fff; 
+}
+.report-option:hover { background-color: #f9f9f9; border-color: #999; }
+.report-option span { color: #333; font-weight: 500; }
+
+/* Ajuste Dark Mode */
+body.dark-mode .post-dropdown-menu { background-color: #2a2a2a; border-color: #444; }
+body.dark-mode .dropdown-item { color: #e0e0e0; }
+body.dark-mode .dropdown-item:hover { background-color: #3a3a3a; }
+body.dark-mode .report-option { background-color: #2a2a2a; border-color: #444; }
+body.dark-mode .report-option:hover { background-color: #333; }
+body.dark-mode .report-option span { color: #fff; }
 
 /* Ajustes para móviles */
 @media (max-width: 768px) {
@@ -1939,7 +1982,22 @@ body.dark-mode .filter-title {
       <button id="cancel-btn" data-translate="inicio.cancel_button">Cancelar</button>
     </div>
   </div>
-
+ <div id="report-modal" class="modal">
+  <div class="modal-content">
+    <h3 data-translate="inicio.report_title">Reportar publicación</h3>
+    <p data-translate="inicio.report_subtitle">Selecciona un motivo:</p>
+    <div class="report-options">
+      <label class="report-option"><input type="radio" name="report-reason" value="Spam o fraude"> <span>Es spam o fraude</span></label>
+      <label class="report-option"><input type="radio" name="report-reason" value="Contenido ofensivo"> <span>Contenido ofensivo</span></label>
+      <label class="report-option"><input type="radio" name="report-reason" value="Información falsa"> <span>Información falsa</span></label>
+      <label class="report-option"><input type="radio" name="report-reason" value="Venta ilegal"> <span>Venta ilegal</span></label>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+      <button id="cancel-report-btn" style="background: #ccc; color: #000;">Cancelar</button>
+      <button id="submit-report-btn" style="background: #f44336; color: #fff;">Enviar</button>
+    </div>
+  </div>
+</div>
   <script src="translations.js"></script>
   <script src="main.js?v=1"></script>
   <script>
@@ -1978,6 +2036,64 @@ themeToggle.addEventListener('click', () => {
 });
 
 // Variables globales
+// --- LÓGICA DE MENÚ Y REPORTES ---
+let currentReportPostId = null;
+
+function togglePostMenu(postId, event) {
+  event.stopPropagation();
+  // Cierra otros menús abiertos
+  document.querySelectorAll('.post-dropdown-menu').forEach(m => {
+    if(m.id !== `menu-post-${postId}`) m.classList.remove('show');
+  });
+  const menu = document.getElementById(`menu-post-${postId}`);
+  if(menu) menu.classList.toggle('show');
+}
+
+// Cerrar menús al hacer clic fuera
+window.addEventListener('click', () => {
+  document.querySelectorAll('.post-dropdown-menu').forEach(m => m.classList.remove('show'));
+});
+
+function openReportModal(postId) {
+  currentReportPostId = postId;
+  // Resetea radio buttons
+  document.querySelectorAll('input[name="report-reason"]').forEach(i => i.checked = false);
+  document.getElementById('report-modal').style.display = 'flex';
+  // Cierra el menú visualmente
+  const menu = document.getElementById(`menu-post-${postId}`);
+  if(menu) menu.classList.remove('show');
+}
+
+document.getElementById('cancel-report-btn').onclick = () => {
+  document.getElementById('report-modal').style.display = 'none';
+};
+
+document.getElementById('submit-report-btn').onclick = async () => {
+  if (!currentReportPostId) return;
+  const selected = document.querySelector('input[name="report-reason"]:checked');
+  if (!selected) return showNotification("Elige un motivo", true);
+
+  try {
+    const res = await fetch('/api/reportar/publicacion', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ publicacion_id: currentReportPostId, motivo: selected.value })
+    });
+    if (res.ok) {
+      showNotification("Reporte enviado. Gracias.");
+      document.getElementById('report-modal').style.display = 'none';
+      
+      // TRUCO: Desaparecer post inmediatamente
+      const post = document.querySelector(`.post[data-post-id="${currentReportPostId}"]`);
+      if(post) post.remove();
+    }
+  } catch (e) { showNotification("Error de conexión", true); }
+};
+
+    // Cerrar menús al hacer click fuera en cualquier parte
+    window.addEventListener('click', () => {
+      document.querySelectorAll('.post-dropdown-menu').forEach(menu => menu.classList.remove('show'));
+    });
 let offset = 0;
 const limit = 10;
 let isLoading = false;
@@ -2659,13 +2775,6 @@ async function loadSinglePost(postId) {
         </div>
       `;
 
-      if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
-        postContent += `
-          <button class="delete-button" onclick="borrarPublicacion(${pub.id}, this.parentElement)" title="${translations[lang].inicio.delete_post_title}">
-            <i class="fas fa-trash"></i>
-          </button>
-        `;
-      }
 
       postContent += `
         <div class="post-content">${pub.contenido && pub.contenido.trim() !== '' ? `<p>${pub.contenido}</p>` : ''}</div>
@@ -2904,24 +3013,44 @@ for (const pub of publicaciones) {
   div.classList.add('post');
   div.setAttribute('data-post-id', pub.id);
 
+      // Definimos qué botón mostrar (Borrar si es dueño, Reportar si es visita)
+      let menuOpciones = '';
+      if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
+          menuOpciones = `
+            <button class="dropdown-item danger" onclick="borrarPublicacion(${pub.id}, this.closest('.post'))">
+              <i class="fas fa-trash-alt" style="margin-right:8px;"></i> Eliminar publicación
+            </button>`;
+      } else {
+          menuOpciones = `
+            <button class="dropdown-item danger" onclick="openReportModal(${pub.id})">
+              <i class="fas fa-flag" style="margin-right:8px;"></i> Reportar publicación
+            </button>`;
+      }
+
+      // Renderizado del Header con el menú integrado
       let postContent = `
         <div class="post-header">
           <div class="post-profile-pic-container">
-            ${pub.foto_perfil_url ? `<img src="${pub.foto_perfil_url}" alt="Foto de perfil" class="post-profile-pic" onerror="this.parentNode.innerHTML = '<i class=\\'fas fa-user post-profile-icon\\'></i>'">` : `<i class="fas fa-user post-profile-icon"></i>`}
+            ${pub.foto_perfil_url ? `<img src="${pub.foto_perfil_url}" class="post-profile-pic">` : `<i class="fas fa-user post-profile-icon"></i>`}
           </div>
           <div class="post-user-info">
-            <span class="company-name" style="cursor: pointer;" onclick="redirectToProfile(${pub.user_id})">${pub.nombre_empresa}</span>
+            <span class="company-name" onclick="redirectToProfile(${pub.user_id})">${pub.nombre_empresa}</span>
+          </div>
+          
+          <div class="post-options">
+            <button class="options-btn" onclick="togglePostMenu(${pub.id}, event)">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <div class="post-dropdown-menu" id="menu-post-${pub.id}">
+              ${menuOpciones}
+            </div>
           </div>
         </div>
       `;
 
-      if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
-        postContent += `
-          <button class="delete-button" onclick="borrarPublicacion(${pub.id}, this.parentElement)" title="${translations[lang].inicio.delete_post_title}">
-            <i class="fas fa-trash"></i>
-          </button>
-        `;
-      }
+      // NOTA: Asegúrate de BORRAR el bloque antiguo que agregaba el <button class="delete-button"> 
+      // flotante (absolute) más abajo, para que no salgan duplicados. ---
+
 
       postContent += `
         <div class="post-content">${pub.contenido && pub.contenido.trim() !== '' ? `<p>${pub.contenido}</p>` : ''}</div>
@@ -3035,24 +3164,29 @@ async function search() {
       div.classList.add('post');
       div.setAttribute('data-post-id', pub.id);
 
-      let postContent = `
-        <div class="post-header">
-          <div class="post-profile-pic-container">
-            ${pub.foto_perfil_url ? `<img src="${pub.foto_perfil_url}" alt="Foto de perfil" class="post-profile-pic" onerror="this.parentNode.innerHTML = '<i class=\\'fas fa-user post-profile-icon\\'></i>'">` : `<i class="fas fa-user post-profile-icon"></i>`}
-          </div>
-          <div class="post-user-info">
-            <span class="company-name" style="cursor: pointer;" onclick="redirectToProfile(${pub.user_id})">${pub.nombre_empresa}</span>
-          </div>
-        </div>
-      `;
-
-      if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
-        postContent += `
-          <button class="delete-button" onclick="borrarPublicacion(${pub.id}, this.parentElement)" title="${translations[lang].inicio.delete_post_title}">
-            <i class="fas fa-trash"></i>
-          </button>
-        `;
-      }
+      // --- INICIO CAMBIO MENU PUNTITOS ---
+          let postContent = `
+            <div class="post-header">
+              <div class="post-profile-pic-container">
+                ${pub.foto_perfil_url ? `<img src="${pub.foto_perfil_url}" class="post-profile-pic" onerror="this.parentNode.innerHTML = '<i class=\\'fas fa-user post-profile-icon\\'></i>'">` : `<i class="fas fa-user post-profile-icon"></i>`}
+              </div>
+              <div class="post-user-info">
+                <span class="company-name" style="cursor: pointer;" onclick="redirectToProfile(${pub.user_id})">${pub.nombre_empresa}</span>
+              </div>
+              
+              <div class="post-options">
+                <button class="options-btn" onclick="togglePostMenu(${pub.id}, event)">
+                  <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <div class="post-dropdown-menu" id="menu-post-${pub.id}">
+                  <button class="dropdown-item danger" onclick="openReportModal(${pub.id})">
+                    <i class="fas fa-flag"></i> Reportar publicación
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+          // --- FIN CAMBIO ---
 
       postContent += `
         <div class="post-content">${pub.contenido && pub.contenido.trim() !== '' ? `<p>${pub.contenido}</p>` : ''}</div>
@@ -3179,14 +3313,6 @@ async function filterByCategory(categoria) {
           </div>
         </div>
       `;
-
-      if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
-        postContent += `
-          <button class="delete-button" onclick="borrarPublicacion(${pub.id}, this.parentElement)" title="${translations[lang].inicio.delete_post_title}">
-            <i class="fas fa-trash"></i>
-          </button>
-        `;
-      }
 
       postContent += `
         <div class="post-content">${pub.contenido && pub.contenido.trim() !== '' ? `<p>${pub.contenido}</p>` : ''}</div>
