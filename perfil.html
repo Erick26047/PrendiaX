@@ -840,6 +840,41 @@
         body.dark-mode .review-btn:hover {
             background-color: #ff9800;
         }
+        /* --- ESTILOS BOTONES DE ACCIÓN Y SEGURIDAD --- */
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .report-btn {
+            background-color: #78909c; /* Gris azulado */
+            color: white; border: none; border-radius: 8px; padding: 0;
+            font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            width: 44px; height: 44px; /* Cuadrado */
+            transition: background-color 0.3s ease;
+        }
+        .report-btn:hover { background-color: #546e7a; }
+
+        .block-btn {
+            background-color: #d32f2f; /* Rojo */
+            color: white; border: none; border-radius: 8px; padding: 0;
+            font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            width: 44px; height: 44px; /* Cuadrado */
+            transition: background-color 0.3s ease;
+        }
+        .block-btn:hover { background-color: #b71c1c; }
+
+        /* Ajuste para el botón de mensaje para que conviva bien */
+        .message-btn { margin: 0; height: 44px; } 
+
+        /* Ajustes Dark Mode */
+        body.dark-mode .report-btn { background-color: #546e7a; }
+        body.dark-mode .report-btn:hover { background-color: #455a64; }
+        body.dark-mode .block-btn { background-color: #c62828; }
+        body.dark-mode .block-btn:hover { background-color: #b71c1c; }
     </style>
 </head>
 <body>
@@ -884,9 +919,19 @@
                 <div class="campo"><label>Otra categoría:</label><p id="profile-otra-categoria">Ninguna</p></div>
                 <div class="campo"><label>Servicios:</label><p id="profile-servicios">Sin servicios</p></div>
                 <div class="campo"><label>Sitio web:</label><p id="profile-sitio-web">Sin sitio web</p></div>
-                <button class="message-btn" id="message-btn" style="display: none;">
-                    <i class="fas fa-envelope"></i> Mandar mensaje
-                </button>
+                <div class="action-buttons" id="visitor-actions" style="display: none;">
+                    <button class="message-btn" id="message-btn">
+                        <i class="fas fa-envelope"></i> Mensaje
+                    </button>
+                    
+                    <button class="report-btn" onclick="openUserReportModal()" title="Reportar usuario">
+                        <i class="fas fa-flag"></i>
+                    </button>
+                    
+                    <button class="block-btn" onclick="openUserBlockModal()" title="Bloquear usuario">
+                        <i class="fas fa-ban"></i>
+                    </button>
+                </div>
             </div>
             <form id="profile-edit-form" style="display: none;">
                 <div class="campo">
@@ -999,6 +1044,33 @@
                 <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
                 <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
                 <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
+            </div>
+        </div>
+    </div>
+    <div id="user-report-modal" class="modal">
+        <div class="modal-content">
+            <h3>Reportar Usuario</h3>
+            <p>Selecciona un motivo:</p>
+            <div class="report-options" style="text-align: left; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                <label><input type="radio" name="user-report-reason" value="Perfil falso"> Perfil falso o suplantación</label>
+                <label><input type="radio" name="user-report-reason" value="Acoso o intimidación"> Acoso o intimidación</label>
+                <label><input type="radio" name="user-report-reason" value="Contenido inapropiado"> Publica contenido inapropiado</label>
+                <label><input type="radio" name="user-report-reason" value="Estafa o fraude"> Estafa o fraude</label>
+            </div>
+            <div class="edit-buttons">
+                <button class="cancel-btn" onclick="document.getElementById('user-report-modal').style.display='none'">Cancelar</button>
+                <button class="save-btn" onclick="submitUserReport()">Enviar Reporte</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="user-block-modal" class="modal">
+        <div class="modal-content">
+            <h3>¿Bloquear a este usuario?</h3>
+            <p>Ya no verás sus publicaciones ni podrá contactarte.</p>
+            <div class="edit-buttons">
+                <button class="cancel-btn" onclick="document.getElementById('user-block-modal').style.display='none'">Cancelar</button>
+                <button class="save-btn" style="background-color: #d32f2f;" onclick="submitUserBlock()">Sí, Bloquear</button>
             </div>
         </div>
     </div>
@@ -1133,62 +1205,91 @@
             }
         }
 
-        // Cargar datos del usuario
+  // Cargar datos del usuario
         async function loadUserData() {
-    const userId = viewedUserId || currentUserId;
-    if (!userId) {
-        showNotification('No se pudo cargar el perfil.', true);
-        return;
-    }
-    try {
-        const response = await fetch(`/user/${userId}`, { credentials: 'include' });
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        const data = await response.json();
-        console.log('Datos del usuario cargados:', data);
-
-        document.getElementById('profile-pic').src = data.foto_perfil || '/static/default_profile.png';
-        document.getElementById('profile-name').textContent = data.nombre_empresa || 'Usuario';
-        document.getElementById('profile-direccion').textContent = data.direccion || 'Sin dirección';
-        document.getElementById('profile-ubicacion').innerHTML = data.ubicacion_google_maps
-            ? `<a href="${data.ubicacion_google_maps}" target="_blank" class="google-maps-link">${data.ubicacion_google_maps}</a>`
-            : 'Sin ubicación';
-        document.getElementById('profile-telefono').textContent = data.telefono || 'Sin teléfono';
-        document.getElementById('profile-horario').textContent = data.horario || 'Sin horario';
-        document.getElementById('profile-categoria').textContent = data.categoria || 'Sin categoría';
-        document.getElementById('profile-otra-categoria').textContent = data.otra_categoria || 'Ninguna';
-        document.getElementById('profile-servicios').textContent = data.servicios || 'Sin servicios';
-        const sitioWebElement = document.getElementById('profile-sitio-web');
-        if (data.sitio_web && data.sitio_web.trim() !== '') {
-            let url = data.sitio_web;
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                url = 'https://' + url;
+            const userId = viewedUserId || currentUserId;
+            if (!userId) {
+                showNotification('No se pudo cargar el perfil.', true);
+                return;
             }
-            sitioWebElement.innerHTML = `<a href="${url}" target="_blank" class="google-maps-link">${data.sitio_web}</a>`;
-        } else {
-            sitioWebElement.textContent = 'Sin sitio web';
+            try {
+                const response = await fetch(`/user/${userId}`, { credentials: 'include' });
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                const data = await response.json();
+                console.log('Datos del usuario cargados:', data);
+
+                // Llenado de datos
+                document.getElementById('profile-pic').src = data.foto_perfil || '/static/default_profile.png';
+                document.getElementById('profile-name').textContent = data.nombre_empresa || 'Usuario';
+                document.getElementById('profile-direccion').textContent = data.direccion || 'Sin dirección';
+                document.getElementById('profile-ubicacion').innerHTML = data.ubicacion_google_maps
+                    ? `<a href="${data.ubicacion_google_maps}" target="_blank" class="google-maps-link">${data.ubicacion_google_maps}</a>`
+                    : 'Sin ubicación';
+                document.getElementById('profile-telefono').textContent = data.telefono || 'Sin teléfono';
+                document.getElementById('profile-horario').textContent = data.horario || 'Sin horario';
+                document.getElementById('profile-categoria').textContent = data.categoria || 'Sin categoría';
+                document.getElementById('profile-otra-categoria').textContent = data.otra_categoria || 'Ninguna';
+                document.getElementById('profile-servicios').textContent = data.servicios || 'Sin servicios';
+                
+                const sitioWebElement = document.getElementById('profile-sitio-web');
+                if (data.sitio_web && data.sitio_web.trim() !== '') {
+                    let url = data.sitio_web;
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                        url = 'https://' + url;
+                    }
+                    sitioWebElement.innerHTML = `<a href="${url}" target="_blank" class="google-maps-link">${data.sitio_web}</a>`;
+                } else {
+                    sitioWebElement.textContent = 'Sin sitio web';
+                }
+
+                // --- CORRECCIÓN AQUÍ ---
+                const editBtn = document.getElementById('edit-profile-btn');
+                // AQUI ESTABA EL ERROR: Usar el ID correcto del HTML ('visitor-actions')
+                const actionBtns = document.getElementById('visitor-actions'); 
+                const reviewBtnRight = document.getElementById('review-btn'); 
+
+                if (!viewedUserId || viewedUserId === currentUserId) {
+                    // ES MI PERFIL
+                    if (editBtn) editBtn.style.display = 'block';      
+                    if (actionBtns) actionBtns.style.display = 'none'; 
+                    if (reviewBtnRight) reviewBtnRight.style.display = 'none';
+
+                    // Pre-llenar formulario (Solo si es mi perfil)
+                    document.getElementById('nombre_empresa').value = data.nombre_empresa || '';
+                    document.getElementById('direccion').value = data.direccion || '';
+                    document.getElementById('ubicacion_google_maps').value = data.ubicacion_google_maps || '';
+                    document.getElementById('telefono').value = data.telefono || '';
+                    document.getElementById('horario').value = data.horario || '';
+                    document.getElementById('categoria').value = data.categoria || '';
+                    document.getElementById('otra_categoria').value = data.otra_categoria || '';
+                    document.getElementById('servicios').value = data.servicios || '';
+                    document.getElementById('sitio_web').value = data.sitio_web || '';
+                    document.getElementById('preview-foto').src = data.foto_perfil || '/static/default_profile.png';
+                } else {
+                    // ESTOY VIENDO A OTRO
+                    if (editBtn) editBtn.style.display = 'none';      
+                    
+                    // Mostrar el contenedor de acciones (Mensaje, Reportar, Bloquear)
+                    if (actionBtns) actionBtns.style.display = 'flex'; 
+                    
+                    if (reviewBtnRight) reviewBtnRight.style.display = 'block'; 
+
+                    // Configurar el click del mensaje
+                    const msgBtn = document.getElementById('message-btn');
+                    if(msgBtn) {
+                        msgBtn.onclick = () => {
+                            window.location.href = `/chats.html?to_user_id=${userId}`;
+                        };
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error al cargar datos del usuario:', error);
+                showNotification('Error al cargar datos del perfil', true);
+            }
         }
 
-        if (!viewedUserId || viewedUserId === currentUserId) {
-            document.getElementById('nombre_empresa').value = data.nombre_empresa || '';
-            document.getElementById('direccion').value = data.direccion || '';
-            document.getElementById('ubicacion_google_maps').value = data.ubicacion_google_maps || '';
-            document.getElementById('telefono').value = data.telefono || '';
-            document.getElementById('horario').value = data.horario || '';
-            document.getElementById('categoria').value = data.categoria || '';
-            document.getElementById('otra_categoria').value = data.otra_categoria || '';
-            document.getElementById('servicios').value = data.servicios || '';
-            document.getElementById('sitio_web').value = data.sitio_web || '';
-            document.getElementById('preview-foto').src = data.foto_perfil || '/static/default_profile.png';
-        }
 
-        document.getElementById('message-btn').onclick = () => {
-            window.location.href = `/chats.html?to_user_id=${userId}`;
-        };
-    } catch (error) {
-        console.error('Error al cargar datos del usuario:', error);
-        showNotification('Error al cargar datos del perfil', true);
-    }
-}
         // Cargar publicaciones del usuario
         async function cargarFeed() {
             if (isLoading || !hasMore) return;
@@ -1902,6 +2003,47 @@
                 isScrolling = false;
             }, 100);
         });
+        // --- FUNCIONES DE SEGURIDAD (REPORTAR Y BLOQUEAR) ---
+        function openUserReportModal() { document.getElementById('user-report-modal').style.display = 'flex'; }
+        function openUserBlockModal() { document.getElementById('user-block-modal').style.display = 'flex'; }
+
+        async function submitUserReport() {
+            const selected = document.querySelector('input[name="user-report-reason"]:checked');
+            if (!selected) { showNotification("Selecciona un motivo", true); return; }
+
+            try {
+                const response = await fetch('/api/reportar/usuario', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario_reportado_id: viewedUserId, motivo: selected.value })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showNotification("Usuario reportado. Gracias.");
+                    document.getElementById('user-report-modal').style.display = 'none';
+                } else {
+                    showNotification(data.message || "Error al reportar", true);
+                }
+            } catch (e) { showNotification("Error de conexión", true); }
+        }
+
+        async function submitUserBlock() {
+            try {
+                const response = await fetch('/api/bloquear/usuario', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bloqueado_id: viewedUserId })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showNotification("Usuario bloqueado.");
+                    document.getElementById('user-block-modal').style.display = 'none';
+                    setTimeout(() => { window.location.href = '/inicio.html'; }, 1500);
+                } else {
+                    showNotification(data.message || "Error al bloquear", true);
+                }
+            } catch (e) { showNotification("Error de conexión", true); }
+        }
     </script>
 </body>
 </html>
