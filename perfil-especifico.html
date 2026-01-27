@@ -796,6 +796,46 @@
         body.dark-mode .review-btn:hover {
             background-color: #ff9800;
         }
+     /* --- BOTONES DE SEGURIDAD (Diseño compacto) --- */
+.report-btn {
+    background-color: #78909c; /* Gris azulado elegante */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px; /* Padding cuadrado */
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px; /* Ancho fijo */
+    height: 44px; /* Alto fijo (igual que los otros botones) */
+    transition: background-color 0.3s ease;
+}
+.report-btn:hover { background-color: #546e7a; }
+
+.block-btn {
+    background-color: #d32f2f; /* Rojo alerta */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    transition: background-color 0.3s ease;
+}
+.block-btn:hover { background-color: #b71c1c; }
+
+/* Ajuste Dark Mode */
+body.dark-mode .report-btn { background-color: #546e7a; }
+body.dark-mode .report-btn:hover { background-color: #455a64; }
+body.dark-mode .block-btn { background-color: #c62828; }
+body.dark-mode .block-btn:hover { background-color: #b71c1c; }
     </style>
 </head>
 <body>
@@ -816,7 +856,7 @@
         </div>
     </header>
 
-    <div class="container">
+  <div class="container">
         <div class="notification" id="notification">
             <i class="fas fa-check-circle"></i>
             <span id="notification-message"></span>
@@ -833,6 +873,7 @@
                     <label>Email:</label>
                     <p id="email">Cargando...</p>
                 </div>
+
                 <div class="action-buttons" id="action-buttons" style="display: none;">
                     <button class="message-btn" onclick="openChat()">
                         <i class="fas fa-envelope"></i> Enviar Mensaje
@@ -840,17 +881,23 @@
                     <button class="review-btn" onclick="openReviewModal()">
                         <i class="fas fa-star"></i> Dejar Reseña
                     </button>
+                    
+                    <button class="report-btn" onclick="openUserReportModal()" title="Reportar usuario">
+                        <i class="fas fa-flag"></i>
+                    </button>
+                    <button class="block-btn" onclick="openUserBlockModal()" title="Bloquear usuario">
+                        <i class="fas fa-ban"></i>
+                    </button>
                 </div>
             </div>
+
             <div class="reviews">
                 <h3>Reseñas</h3>
                 <div id="reviews-container">
                     <p id="reviews-message" style="display: none; text-align: center; color: #666;">No hay reseñas disponibles.</p>
                 </div>
             </div>
-        </div>
-
-        <div class="column-center">
+        </div> <div class="column-center">
             <div class="feed" id="feed">
                 <p id="feed-message" style="display: none; text-align: center; color: #666;">No hay publicaciones disponibles.</p>
             </div>
@@ -902,6 +949,33 @@
                 <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
                 <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
                 <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
+            </div>
+        </div>
+    </div>
+    <div id="user-report-modal" class="modal">
+        <div class="modal-content">
+            <h3>Reportar Usuario</h3>
+            <p>Selecciona un motivo:</p>
+            <div class="report-options" style="text-align: left; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                <label><input type="radio" name="user-report-reason" value="Perfil falso"> Perfil falso o suplantación</label>
+                <label><input type="radio" name="user-report-reason" value="Acoso o intimidación"> Acoso o intimidación</label>
+                <label><input type="radio" name="user-report-reason" value="Contenido inapropiado"> Publica contenido inapropiado</label>
+                <label><input type="radio" name="user-report-reason" value="Estafa o fraude"> Estafa o fraude</label>
+            </div>
+            <div class="edit-buttons">
+                <button class="cancel-btn" onclick="document.getElementById('user-report-modal').style.display='none'">Cancelar</button>
+                <button class="save-btn" onclick="submitUserReport()">Enviar Reporte</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="user-block-modal" class="modal">
+        <div class="modal-content">
+            <h3>¿Bloquear a este usuario?</h3>
+            <p>Ya no verás sus publicaciones ni podrá contactarte.</p>
+            <div class="edit-buttons">
+                <button class="cancel-btn" onclick="document.getElementById('user-block-modal').style.display='none'">Cancelar</button>
+                <button class="save-btn" style="background-color: #d32f2f;" onclick="submitUserBlock()">Sí, Bloquear</button>
             </div>
         </div>
     </div>
@@ -1595,6 +1669,70 @@
                 window.location.href = '/login.html';
             });
         }
+        
+// --- FUNCIONES DE SEGURIDAD (REPORTAR Y BLOQUEAR) ---
+
+        function openUserReportModal() {
+            document.getElementById('user-report-modal').style.display = 'flex';
+        }
+
+        function openUserBlockModal() {
+            document.getElementById('user-block-modal').style.display = 'flex';
+        }
+
+        async function submitUserReport() {
+            const selected = document.querySelector('input[name="user-report-reason"]:checked');
+            if (!selected) {
+                showNotification("Selecciona un motivo", true);
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/reportar/usuario', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        usuario_reportado_id: viewedUserId, 
+                        motivo: selected.value 
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showNotification("Usuario reportado. Gracias.");
+                    document.getElementById('user-report-modal').style.display = 'none';
+                } else {
+                    showNotification(data.message || "Error al reportar", true);
+                }
+            } catch (e) {
+                console.error(e);
+                showNotification("Error de conexión", true);
+            }
+        }
+
+        async function submitUserBlock() {
+            try {
+                const response = await fetch('/api/bloquear/usuario', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bloqueado_id: viewedUserId })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showNotification("Usuario bloqueado.");
+                    document.getElementById('user-block-modal').style.display = 'none';
+                    // Redirigir al inicio porque ya no deberíamos ver este perfil
+                    setTimeout(() => { window.location.href = '/inicio.html'; }, 1500);
+                } else {
+                    showNotification(data.message || "Error al bloquear", true);
+                }
+            } catch (e) {
+                console.error(e);
+                showNotification("Error de conexión", true);
+            }
+        }
+        
 
         // Inicialización
         let hasLoaded = false;

@@ -84,6 +84,14 @@ class CommentRequest(BaseModel):
     parent_id: int | None = None       # ID del comentario padre (para hilos)
     reply_to_user_id: int | None = None # ID del usuario al que se responde (para menciones)
 
+# --- AGREGAR JUNTO A TUS OTROS MODELOS Pydantic ---
+class ReporteUsuarioRequest(BaseModel):
+    usuario_reportado_id: int
+    motivo: str
+
+class BloqueoRequest(BaseModel):
+    bloqueado_id: int
+
 class ReviewRequest(BaseModel):
     texto: str
     calificacion: int
@@ -479,7 +487,7 @@ async def reportar_publicacion(request: Request, reporte: ReportePublicacionRequ
     finally:
         if conn: conn.close()
 
-# Ruta FEED JSON
+# --- RUTA FEED MEJORADA (CON FILTRO DE BLOQUEOS) ---
 @router.get("/feed")
 async def feed(limit: int = 10, offset: int = 0, request: Request = None):
     conn = None
@@ -487,7 +495,9 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
         current_user = get_user_id_hybrid(request) if request else -1
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("""
+        
+        # AQUÍ ESTÁ LA MAGIA: El WHERE filtra a quien tú bloqueaste O quien te bloqueó a ti
+        query = """
             SELECT p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, 
                 COALESCE(du.nombre_empresa, u.nombre) AS display_name,
                 CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END AS tipo_usuario,
@@ -500,9 +510,18 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
             JOIN usuarios u ON p.user_id = u.id
             LEFT JOIN datos_usuario du ON p.user_id = du.user_id
             LEFT JOIN intereses i ON p.id = i.publicacion_id
+            WHERE 
+                -- FILTRO DE BLOQUEOS --
+                p.user_id NOT IN (SELECT bloqueado_id FROM bloqueos WHERE bloqueador_id = %s)
+                AND 
+                p.user_id NOT IN (SELECT bloqueador_id FROM bloqueos WHERE bloqueado_id = %s)
             GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
             ORDER BY p.fecha_creacion DESC LIMIT %s OFFSET %s
-        """, (current_user, limit, offset))
+        """
+        
+        # Pasamos current_user 3 veces: 1 para el Like, 2 para el filtro de bloqueos
+        cur.execute(query, (current_user, current_user, current_user, limit, offset))
+        
         publicaciones = cur.fetchall()
         cur.close()
 
@@ -523,16 +542,20 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
     finally:
         if conn: conn.close()
 
-# Ruta SEARCH
+# Ruta SEARCH (ACTUALIZADA CON FILTRO DE BLOQUEOS)
 @router.get("/search")
 async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, request: Request = None):
     query = query.strip().lower()
     if not query: raise HTTPException(status_code=400, detail="Query empty")
     conn = None
     try:
+        # 1. Obtenemos el usuario (si es -1, los filtros de bloqueo no afectan nada, lo cual está bien)
         current_user = get_user_id_hybrid(request) if request else -1
+        
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # 2. Query con el filtro de bloqueo inyectado en el WHERE
         cur.execute("""
             SELECT p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, 
                 COALESCE(du.nombre_empresa, u.nombre),
@@ -545,11 +568,28 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
             JOIN usuarios u ON p.user_id = u.id
             LEFT JOIN datos_usuario du ON p.user_id = du.user_id
             LEFT JOIN intereses i ON p.id = i.publicacion_id
-            WHERE LOWER(COALESCE(du.nombre_empresa, u.nombre)) LIKE %s
-               OR EXISTS (SELECT 1 FROM unnest(p.etiquetas) AS etiqueta WHERE LOWER(etiqueta) LIKE %s)
+            WHERE 
+                -- PARÉNTESIS IMPORTANTES PARA AGRUPAR LA BÚSQUEDA
+                (
+                    LOWER(COALESCE(du.nombre_empresa, u.nombre)) LIKE %s
+                    OR EXISTS (SELECT 1 FROM unnest(p.etiquetas) AS etiqueta WHERE LOWER(etiqueta) LIKE %s)
+                )
+                -- FILTRO DE BLOQUEOS (La magia anti-haters)
+                AND p.user_id NOT IN (SELECT bloqueado_id FROM bloqueos WHERE bloqueador_id = %s)
+                AND p.user_id NOT IN (SELECT bloqueador_id FROM bloqueos WHERE bloqueado_id = %s)
+
             GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
             ORDER BY p.fecha_creacion DESC LIMIT %s OFFSET %s
-        """, (current_user, f"%{query}%", f"%{query}%", limit, offset))
+        """, (
+            current_user,       # 1. Para ver si le di like
+            f"%{query}%",       # 2. Búsqueda por nombre
+            f"%{query}%",       # 3. Búsqueda por etiqueta
+            current_user,       # 4. Filtro: A quien yo bloqueé
+            current_user,       # 5. Filtro: Quien me bloqueó a mí
+            limit, 
+            offset
+        ))
+        
         publicaciones = cur.fetchall()
         cur.close()
 
@@ -1196,3 +1236,67 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
         logging.error(f"Error en WS notificaciones: {e}")
         notification_manager.disconnect(websocket, user_id)
 
+# =================================================================
+# 🛡️ SEGURIDAD: REPORTAR Y BLOQUEAR USUARIOS
+# =================================================================
+
+# 1. REPORTAR USUARIO
+@router.post("/api/reportar/usuario")
+async def reportar_usuario(request: Request, reporte: ReporteUsuarioRequest):
+    conn = None
+    try:
+        user_id = get_user_id_hybrid(request)
+        if not user_id: raise HTTPException(status_code=401, detail="Login requerido")
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Evitar auto-reporte
+        if user_id == reporte.usuario_reportado_id:
+            return JSONResponse({"status": "error", "message": "No te puedes reportar a ti mismo"})
+
+        # Guardar reporte
+        cur.execute("""
+            INSERT INTO reportes_usuarios (denunciante_id, usuario_reportado_id, motivo, estatus)
+            VALUES (%s, %s, %s, 'pendiente')
+        """, (user_id, reporte.usuario_reportado_id, reporte.motivo))
+        conn.commit()
+        
+        return JSONResponse({"status": "ok", "message": "Usuario reportado. Revisaremos su perfil."})
+    except Exception as e:
+        if conn: conn.rollback()
+        logging.error(f"Error reportando usuario: {e}")
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+    finally:
+        if conn: conn.close()
+
+# 2. BLOQUEAR USUARIO
+@router.post("/api/bloquear/usuario")
+async def bloquear_usuario(request: Request, bloqueo: BloqueoRequest):
+    conn = None
+    try:
+        user_id = get_user_id_hybrid(request)
+        if not user_id: raise HTTPException(status_code=401, detail="Login requerido")
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Evitar auto-bloqueo
+        if user_id == bloqueo.bloqueado_id:
+            return JSONResponse({"status": "error", "message": "No te puedes bloquear a ti mismo"})
+
+        # Insertar bloqueo (ON CONFLICT DO NOTHING evita error si ya estaba bloqueado)
+        cur.execute("""
+            INSERT INTO bloqueos (bloqueador_id, bloqueado_id)
+            VALUES (%s, %s)
+            ON CONFLICT (bloqueador_id, bloqueado_id) DO NOTHING
+        """, (user_id, bloqueo.bloqueado_id))
+        conn.commit()
+
+        return JSONResponse({"status": "ok", "message": "Usuario bloqueado. No verás su contenido."})
+    except Exception as e:
+        if conn: conn.rollback()
+        logging.error(f"Error bloqueando usuario: {e}")
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+    finally:
+        if conn: conn.close()
