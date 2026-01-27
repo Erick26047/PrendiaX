@@ -53,6 +53,21 @@ def sanitize_filename(filename: str) -> str:
     clean_name = re.sub(r'_+', '_', clean_name)
     return clean_name.strip('_')
 
+# --- FUNCIÓN DE SEGURIDAD ANTI-ACOSO (NUEVA) ---
+def verificar_bloqueo(cur, user_a: int, user_b: int):
+    """Revisa si existe un bloqueo bidireccional antes de permitir el chat."""
+    cur.execute("""
+        SELECT 1 FROM bloqueos 
+        WHERE (bloqueador_id = %s AND bloqueado_id = %s) 
+           OR (bloqueador_id = %s AND bloqueado_id = %s)
+    """, (user_a, user_b, user_b, user_a))
+    
+    if cur.fetchone():
+        raise HTTPException(
+            status_code=403, 
+            detail="No puedes interactuar con este usuario (Bloqueo activo)"
+        )
+
 # ====================================================================
 # NUEVA FUNCIÓN HELPER: SOPORTE DE RANGOS (FIX PARA IOS)
 # ====================================================================
@@ -391,7 +406,7 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
         logging.error(f"Error al obtener mensajes: {e}")
         raise HTTPException(status_code=500, detail=f"Error al obtener mensajes: {str(e)}")
 
-# Ruta para enviar mensaje de texto
+# Ruta para enviar mensaje de texto (CON SEGURIDAD)
 @router.post("/{chat_id}/mensaje")
 async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = Depends(get_session)):
     try:
@@ -408,6 +423,11 @@ async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = 
             raise HTTPException(status_code=404, detail="Chat no encontrado")
 
         receptor_id = chat[2] if chat[1] == user_id else chat[1]
+        
+        # --- VERIFICAR BLOQUEO ---
+        verificar_bloqueo(cur, user_id, receptor_id)
+        # -------------------------
+
         cur.execute("""
             INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, contenido, tipo, fecha_envio)
             VALUES (%s, %s, %s, %s, 'texto', CURRENT_TIMESTAMP)
@@ -440,7 +460,7 @@ async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = 
 # RUTAS DE MULTIMEDIA
 # ==================================================================================
 
-# Ruta para enviar multimedia (imagen o video)
+# Ruta para enviar multimedia (imagen o video) (CON SEGURIDAD)
 @router.post("/{chat_id}/media")
 async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = Depends(get_session)):
     try:
@@ -480,6 +500,10 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
 
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
             
+            # --- VERIFICAR BLOQUEO ---
+            verificar_bloqueo(cur, user_id, receptor_id)
+            # -------------------------
+            
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, media_content, fecha_envio)
                 VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
@@ -512,7 +536,7 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
         logging.error(f"Error media: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para enviar nota de voz (CORREGIDA PARA iOS)
+# Ruta para enviar nota de voz (CORREGIDA PARA iOS Y SEGURIDAD)
 @router.post("/{chat_id}/voz")
 async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: int = Depends(get_session)):
     try:
@@ -546,6 +570,10 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
 
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
             
+            # --- VERIFICAR BLOQUEO ---
+            verificar_bloqueo(cur, user_id, receptor_id)
+            # -------------------------
+            
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, media_content, fecha_envio)
                 VALUES (%s, %s, %s, 'voz', %s, CURRENT_TIMESTAMP)
@@ -578,7 +606,7 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
         logging.error(f"Error voz: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para enviar documentos
+# Ruta para enviar documentos (CON SEGURIDAD)
 @router.post("/{chat_id}/document")
 async def send_document(chat_id: int, file: UploadFile = File(...), contenido: str = Form(None), user_id: int = Depends(get_session)):
     try:
@@ -614,6 +642,10 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
             if not chat: raise HTTPException(status_code=404, detail="Chat no encontrado")
 
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
+            
+            # --- VERIFICAR BLOQUEO ---
+            verificar_bloqueo(cur, user_id, receptor_id)
+            # -------------------------
             
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, contenido, tipo, media_content, fecha_envio)
@@ -691,7 +723,7 @@ async def search_chats(query: str, user_id: int = Depends(get_session), limit: i
         logging.error(f"Error buscar: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para iniciar un chat
+# Ruta para iniciar un chat (CON SEGURIDAD)
 @router.post("/iniciar/{otro_usuario_id}")
 async def start_chat(otro_usuario_id: int, user_id: int = Depends(get_session)):
     try:
@@ -700,6 +732,10 @@ async def start_chat(otro_usuario_id: int, user_id: int = Depends(get_session)):
         conn = get_db_connection()
         cur = conn.cursor()
         
+        # --- VERIFICAR BLOQUEO ---
+        verificar_bloqueo(cur, user_id, otro_usuario_id)
+        # -------------------------
+
         cur.execute("SELECT id FROM usuarios WHERE id = %s", (otro_usuario_id,))
         if not cur.fetchone(): raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
