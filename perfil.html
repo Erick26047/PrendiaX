@@ -16,6 +16,78 @@
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
+        /* --- ESTILOS MENÚ CONFIGURACIÓN (TUERCA) --- */
+        .settings-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .settings-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 50px;
+            background-color: #fff;
+            min-width: 200px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            z-index: 2000;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            animation: fadeIn 0.2s;
+        }
+
+        .settings-dropdown button {
+            width: 100%;
+            text-align: left;
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background-color 0.2s;
+            border-radius: 0; /* Reset borde redondeado global */
+            height: auto;
+        }
+
+        .settings-dropdown button:hover {
+            background-color: #f1f1f1;
+            color: #000;
+        }
+
+        .settings-dropdown button.danger-option {
+            color: #d32f2f;
+            border-top: 1px solid #eee;
+        }
+
+        .settings-dropdown button.danger-option:hover {
+            background-color: #ffebee;
+        }
+
+        /* Modo Oscuro para el menú */
+        body.dark-mode .settings-dropdown {
+            background-color: #2a2a2a;
+            border-color: #444;
+        }
+        body.dark-mode .settings-dropdown button {
+            color: #fff;
+        }
+        body.dark-mode .settings-dropdown button:hover {
+            background-color: #333;
+        }
+        body.dark-mode .settings-dropdown button.danger-option {
+            border-top-color: #444;
+        }
+        body.dark-mode .settings-dropdown button.danger-option:hover {
+            background-color: #3e2727;
+        }
+
+        /* --- FIN ESTILOS MENÚ --- */
+
         .stars {
             position: fixed;
             top: 0;
@@ -72,6 +144,7 @@
         .botones {
             display: flex;
             gap: 10px;
+            align-items: center;
         }
 
         .boton {
@@ -194,6 +267,7 @@
             font-size: 16px;
             color: #000;
             transition: background-color 0.3s ease, color 0.3s ease;
+            word-break: break-word;
         }
 
         .google-maps-link {
@@ -683,110 +757,6 @@
             transform: scale(1.1);
         }
 
-        body.dark-mode {
-            background-color: #000;
-            color: #fff;
-        }
-
-        body.dark-mode .stars {
-            display: block;
-        }
-
-        body.dark-mode .boton, body.dark-mode #theme-toggle {
-            background-color: #000;
-            color: #fff;
-        }
-
-        body.dark-mode .boton:hover, body.dark-mode #theme-toggle:hover {
-            background-color: #222;
-        }
-
-        body.dark-mode .column-left, body.dark-mode .column-center, body.dark-mode .column-right {
-            background-color: #000;
-            border: 1px solid #333;
-            box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
-        }
-
-        body.dark-mode .profile-data h2, body.dark-mode .campo label, body.dark-mode .post-user-info .company-name, body.dark-mode .post-content p, body.dark-mode .reviews h3 {
-            color: #fff;
-        }
-
-        body.dark-mode .campo p {
-            background-color: #222;
-            color: #fff;
-        }
-
-        body.dark-mode .google-maps-link {
-            color: #fff;
-        }
-
-        body.dark-mode .google-maps-link:hover {
-            color: #bbb;
-        }
-
-        body.dark-mode .campo input, body.dark-mode .campo textarea {
-            background-color: #222;
-            color: #fff;
-            border-color: #333;
-        }
-
-        body.dark-mode .post {
-            background-color: #000;
-            border: 1px solid #333;
-            box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
-        }
-
-        body.dark-mode .post-meta p {
-            color: #bbb;
-        }
-
-        body.dark-mode .post-meta p:last-child, body.dark-mode .review .review-date {
-            color: #888;
-        }
-
-        body.dark-mode .review {
-            background-color: #222;
-            color: #fff;
-        }
-
-        body.dark-mode .review p {
-            color: #fff;
-        }
-
-        body.dark-mode .notification {
-            box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
-        }
-
-        body.dark-mode .modal-content {
-            background: #222;
-            color: #fff;
-        }
-
-        body.dark-mode .modal-content h3 {
-            color: #fff;
-        }
-
-        body.dark-mode .media-modal-content {
-            background: transparent;
-        }
-
-        body.dark-mode .media-controls button {
-            background: #333;
-            color: #fff;
-        }
-
-        body.dark-mode .media-controls button:hover {
-            background: #555;
-        }
-
-        body.dark-mode .close-media-btn {
-            background: rgba(211, 47, 47, 0.9);
-        }
-
-        body.dark-mode .close-media-btn:hover {
-            background: rgba(183, 28, 28, 1);
-        }
-
         .message-btn {
             background-color: #2196f3;
             color: white;
@@ -840,6 +810,7 @@
         body.dark-mode .review-btn:hover {
             background-color: #ff9800;
         }
+
         /* --- ESTILOS BOTONES DE ACCIÓN Y SEGURIDAD --- */
         .action-buttons {
             display: flex;
@@ -886,9 +857,21 @@
             <button class="boton" onclick="irAInicio()" title="Inicio">
                 <i class="fas fa-home"></i>
             </button>
-            <button class="boton" id="edit-profile-btn" title="Editar Perfil">
-                <i class="fas fa-pen"></i>
-            </button>
+            
+            <div class="settings-container" id="settings-container" style="display:none;">
+                <button class="boton" onclick="toggleSettingsMenu()" title="Configuración">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <div class="settings-dropdown" id="settings-dropdown">
+                    <button onclick="activarEdicion()">
+                        <i class="fas fa-pen"></i> Editar Perfil
+                    </button>
+                    <button class="danger-option" onclick="openDeleteAccountModal()">
+                        <i class="fas fa-trash-alt"></i> Eliminar Cuenta
+                    </button>
+                </div>
+            </div>
+
             <button class="boton" onclick="cerrarSesion()" title="Cerrar Sesión">
                 <i class="fas fa-sign-out-alt"></i>
             </button>
@@ -919,6 +902,7 @@
                 <div class="campo"><label>Otra categoría:</label><p id="profile-otra-categoria">Ninguna</p></div>
                 <div class="campo"><label>Servicios:</label><p id="profile-servicios">Sin servicios</p></div>
                 <div class="campo"><label>Sitio web:</label><p id="profile-sitio-web">Sin sitio web</p></div>
+                
                 <div class="action-buttons" id="visitor-actions" style="display: none;">
                     <button class="message-btn" id="message-btn">
                         <i class="fas fa-envelope"></i> Mensaje
@@ -933,6 +917,7 @@
                     </button>
                 </div>
             </div>
+            
             <form id="profile-edit-form" style="display: none;">
                 <div class="campo">
                     <label>Foto de perfil:</label>
@@ -999,7 +984,18 @@
         </div>
     </div>
 
-    <div class="modal" id="confirm-modal">
+    <div id="delete-account-modal" class="modal">
+        <div class="modal-content" style="border: 2px solid #d32f2f;">
+            <h3 style="color: #d32f2f;">¿Eliminar cuenta permanentemente?</h3>
+            <p>Esta acción no se puede deshacer. Se borrarán todas tus publicaciones, fotos y chats.</p>
+            <div class="edit-buttons">
+                <button class="cancel-btn" onclick="document.getElementById('delete-account-modal').style.display='none'">Cancelar</button>
+                <button class="save-btn" style="background-color: #d32f2f;" onclick="confirmarEliminarCuenta()">Sí, Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="modal">
         <div class="modal-content">
             <p id="confirm-message">¿Estás seguro de que quieres eliminar esta publicación?</p>
             <div class="edit-buttons">
@@ -1009,7 +1005,7 @@
         </div>
     </div>
 
-    <div class="modal" id="review-modal">
+    <div id="review-modal" class="modal">
         <div class="modal-content">
             <h3>Dejar una reseña</h3>
             <form id="review-form">
@@ -1136,7 +1132,61 @@
             }, 3000);
         }
 
-        // Modal para eliminar
+        // --- LÓGICA DE MENÚ DE CONFIGURACIÓN ---
+        function toggleSettingsMenu() {
+            const menu = document.getElementById('settings-dropdown');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+        
+        // Cerrar menú al hacer clic fuera
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('#settings-container')) {
+                document.getElementById('settings-dropdown').style.display = 'none';
+            }
+        });
+
+        function activarEdicion() {
+            document.getElementById('profile-view').style.display = 'none';
+            document.getElementById('profile-edit-form').style.display = 'block';
+            document.getElementById('settings-dropdown').style.display = 'none'; // Cerrar menú
+        }
+
+        function cancelarEdicion() {
+            document.getElementById('profile-edit-form').style.display = 'none';
+            document.getElementById('profile-view').style.display = 'block';
+            document.getElementById('profile-edit-form').reset();
+            loadUserData();
+        }
+
+        // --- LÓGICA ELIMINAR CUENTA ---
+        function openDeleteAccountModal() {
+            document.getElementById('delete-account-modal').style.display = 'flex';
+            document.getElementById('settings-dropdown').style.display = 'none'; // Cerrar menú
+        }
+
+        async function confirmarEliminarCuenta() {
+            try {
+                const response = await fetch('/api/usuario/eliminar', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert("Cuenta eliminada correctamente.");
+                    localStorage.removeItem('user');
+                    window.location.href = '/login.html'; 
+                } else {
+                    showNotification(data.message || "Error al eliminar cuenta", true);
+                    document.getElementById('delete-account-modal').style.display = 'none';
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                showNotification("Error de conexión", true);
+            }
+        }
+
+        // Modal para eliminar publicación
         function showConfirmModal(onConfirm, type = 'publicación') {
             const modal = document.getElementById('confirm-modal');
             const messageElement = document.getElementById('confirm-message');
@@ -1185,15 +1235,6 @@
                 if (data.user_id !== null && data.user_id !== undefined) {
                     currentUserId = Number(data.user_id);
                     console.log('Current User ID:', currentUserId, 'Type:', typeof currentUserId);
-                    if (!viewedUserId || viewedUserId === currentUserId) {
-                        document.getElementById('edit-profile-btn').style.display = 'block';
-                        document.getElementById('message-btn').style.display = 'none';
-                        document.getElementById('review-btn').style.display = 'none';
-                    } else {
-                        document.getElementById('edit-profile-btn').style.display = 'none';
-                        document.getElementById('message-btn').style.display = 'block';
-                        document.getElementById('review-btn').style.display = 'block';
-                    }
                 } else {
                     console.error('No se pudo obtener el ID del usuario desde /current_user. Respuesta:', data);
                     showNotification('No se pudo identificar al usuario', true);
@@ -1202,10 +1243,11 @@
             } catch (error) {
                 console.error('Error al obtener el ID del usuario desde /current_user:', error);
                 showNotification('Error al obtener datos del usuario', true);
+                setTimeout(() => { window.location.href = '/login'; }, 2000);
             }
         }
 
-  // Cargar datos del usuario
+        // Cargar datos del usuario
         async function loadUserData() {
             const userId = viewedUserId || currentUserId;
             if (!userId) {
@@ -1218,7 +1260,6 @@
                 const data = await response.json();
                 console.log('Datos del usuario cargados:', data);
 
-                // Llenado de datos
                 document.getElementById('profile-pic').src = data.foto_perfil || '/static/default_profile.png';
                 document.getElementById('profile-name').textContent = data.nombre_empresa || 'Usuario';
                 document.getElementById('profile-direccion').textContent = data.direccion || 'Sin dirección';
@@ -1242,19 +1283,18 @@
                     sitioWebElement.textContent = 'Sin sitio web';
                 }
 
-                // --- CORRECCIÓN AQUÍ ---
-                const editBtn = document.getElementById('edit-profile-btn');
-                // AQUI ESTABA EL ERROR: Usar el ID correcto del HTML ('visitor-actions')
+                // --- CONTROL DE VISTAS (Dueño vs Visitante) ---
+                const settingsContainer = document.getElementById('settings-container'); // El menú de la tuerca
                 const actionBtns = document.getElementById('visitor-actions'); 
                 const reviewBtnRight = document.getElementById('review-btn'); 
 
                 if (!viewedUserId || viewedUserId === currentUserId) {
                     // ES MI PERFIL
-                    if (editBtn) editBtn.style.display = 'block';      
-                    if (actionBtns) actionBtns.style.display = 'none'; 
+                    if (settingsContainer) settingsContainer.style.display = 'block'; // Mostrar Tuerca
+                    if (actionBtns) actionBtns.style.display = 'none'; // Ocultar botones visita
                     if (reviewBtnRight) reviewBtnRight.style.display = 'none';
 
-                    // Pre-llenar formulario (Solo si es mi perfil)
+                    // Pre-llenar formulario
                     document.getElementById('nombre_empresa').value = data.nombre_empresa || '';
                     document.getElementById('direccion').value = data.direccion || '';
                     document.getElementById('ubicacion_google_maps').value = data.ubicacion_google_maps || '';
@@ -1267,14 +1307,11 @@
                     document.getElementById('preview-foto').src = data.foto_perfil || '/static/default_profile.png';
                 } else {
                     // ESTOY VIENDO A OTRO
-                    if (editBtn) editBtn.style.display = 'none';      
+                    if (settingsContainer) settingsContainer.style.display = 'none'; // Ocultar Tuerca
                     
-                    // Mostrar el contenedor de acciones (Mensaje, Reportar, Bloquear)
-                    if (actionBtns) actionBtns.style.display = 'flex'; 
-                    
+                    if (actionBtns) actionBtns.style.display = 'flex'; // Mostrar botones visita
                     if (reviewBtnRight) reviewBtnRight.style.display = 'block'; 
 
-                    // Configurar el click del mensaje
                     const msgBtn = document.getElementById('message-btn');
                     if(msgBtn) {
                         msgBtn.onclick = () => {
@@ -1288,7 +1325,6 @@
                 showNotification('Error al cargar datos del perfil', true);
             }
         }
-
 
         // Cargar publicaciones del usuario
         async function cargarFeed() {
@@ -1329,13 +1365,6 @@
                     if (loadedPostIds.has(pub.id)) return;
                     loadedPostIds.add(pub.id);
 
-                    console.log(`Renderizando publicación ID: ${pub.id}`, {
-                        contenido: pub.contenido,
-                        imagen_url: pub.imagen_url,
-                        video_url: pub.video_url,
-                        user_id: pub.user_id
-                    });
-
                     const div = document.createElement('div');
                     div.classList.add('post');
 
@@ -1347,23 +1376,18 @@
                             </div>
                         </div>
                     `;
-                    console.log(`Comparando pub.user_id: ${pub.user_id} (${typeof pub.user_id}) con currentUserId: ${currentUserId} (${typeof currentUserId})`);
+                    
                     if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
-                        console.log(`Mostrando botón de eliminar para publicación ID: ${pub.id}`);
                         postContent += `
                             <button class="delete-button" onclick="borrarPublicacion(${pub.id}, this.parentElement)" title="Eliminar publicación">
                                 <i class="fas fa-trash"></i>
                             </button>
                         `;
-                    } else {
-                        console.log(`No se muestra botón de eliminar para publicación ID: ${pub.id}`);
                     }
 
                     postContent += '<div class="post-content">';
                     if (pub.contenido && pub.contenido.trim() !== '') {
                         postContent += `<p>${pub.contenido}</p>`;
-                    } else {
-                        console.log(`Omitiendo texto para publicación ID: ${pub.id} porque contenido es: ${pub.contenido}`);
                     }
                     postContent += '</div>';
 
@@ -1390,7 +1414,6 @@
                 offset += limit;
             } catch (err) {
                 console.error('Error al cargar publicaciones:', err);
-                console.error('Mensaje de error:', err.message);
                 feedMessage.textContent = 'No se pudieron cargar las publicaciones';
                 feedMessage.style.display = 'block';
                 showNotification(`Error al cargar publicaciones: ${err.message}`, true);
@@ -1423,8 +1446,6 @@
                     });
 
                     if (response.ok) {
-                        const data = await response.json();
-                        console.log(`Publicación ID: ${postId} eliminada exitosamente`, data);
                         postElement.style.transition = 'opacity 0.3s';
                         postElement.style.opacity = '0';
                         setTimeout(() => {
@@ -1434,11 +1455,10 @@
                         showNotification('Publicación eliminada correctamente');
                     } else {
                         const data = await response.json();
-                        console.error(`Error al eliminar publicación ID: ${postId}`, data);
                         showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
                     }
                 } catch (error) {
-                    console.error(`Error en la solicitud para eliminar publicación ID: ${postId}`, error);
+                    console.error('Error al eliminar publicación:', error);
                     showNotification('Ocurrió un error al eliminar la publicación', true);
                 }
             }, 'publicación');
@@ -1454,7 +1474,6 @@
                     });
 
                     if (response.ok) {
-                        console.log(`Reseña ID: ${reviewId} eliminada exitosamente`);
                         reviewElement.style.transition = 'opacity 0.3s';
                         reviewElement.style.opacity = '0';
                         setTimeout(() => {
@@ -1464,11 +1483,10 @@
                         }, 300);
                     } else {
                         const data = await response.json();
-                        console.error(`Error al eliminar reseña ID: ${reviewId}`, data);
                         showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
                     }
                 } catch (error) {
-                    console.error(`Error en la solicitud para eliminar reseña ID: ${reviewId}`, error);
+                    console.error('Error al eliminar reseña:', error);
                     showNotification('Ocurrió un error al eliminar la reseña', true);
                 }
             }, 'reseña');
@@ -1478,7 +1496,6 @@
         async function cargarResenas() {
             const userId = viewedUserId || currentUserId;
             if (!userId) {
-                console.error('No se puede cargar reseñas sin userId');
                 showNotification('No se puede cargar reseñas sin identificar al usuario', true);
                 return;
             }
@@ -1487,23 +1504,17 @@
             let reviewsMessage = document.getElementById('reviews-message');
 
             if (!reviewsContainer) {
-                console.warn('reviews-container no encontrado, intentando recrearlo');
-                const columnRight = document.querySelector('.column-right');
-                if (columnRight) {
-                    reviewsContainer = document.createElement('div');
-                    reviewsContainer.id = 'reviews-container';
-                    reviewsContainer.className = 'reviews';
-                    columnRight.appendChild(reviewsContainer);
-                    console.log('reviews-container recreado:', reviewsContainer);
-                } else {
-                    console.error('No se pudo recrear reviews-container: column-right no encontrado');
-                    showNotification('Error: No se encontró la sección de reseñas', true);
-                    return;
-                }
+                 // Si no existe, intenta buscarlo o crearlo (mismo código de respaldo que tenías)
+                 const columnRight = document.querySelector('.column-right');
+                 if(columnRight) {
+                     reviewsContainer = document.createElement('div');
+                     reviewsContainer.id = 'reviews-container';
+                     reviewsContainer.className = 'reviews';
+                     columnRight.appendChild(reviewsContainer);
+                 } else return;
             }
 
             if (!reviewsMessage) {
-                console.warn('reviews-message no encontrado, recreándolo');
                 reviewsMessage = document.createElement('p');
                 reviewsMessage.id = 'reviews-message';
                 reviewsMessage.style.display = 'none';
@@ -1511,22 +1522,13 @@
                 reviewsMessage.style.color = '#666';
                 reviewsMessage.textContent = 'No hay reseñas disponibles.';
                 reviewsContainer.appendChild(reviewsMessage);
-                console.log('reviews-message recreado:', reviewsMessage);
             }
 
             try {
-                console.log(`Solicitando reseñas para userId: ${userId}`);
                 const response = await fetch(`/api/perfil/${userId}/resenas`, { credentials: 'include' });
-                console.log(`Respuesta de /api/perfil/${userId}/resenas: ${response.status}`);
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    console.error('Error en la respuesta:', errorData);
-                    if (response.status === 401) {
-                        showNotification('Sesión expirada, por favor inicia sesión', true);
-                        setTimeout(() => { window.location.href = '/login'; }, 2000);
-                        return;
-                    }
-                    throw new Error(`HTTP error! Status: ${response.status}, Detail: ${errorData.detail || 'Desconocido'}`);
+                    if (response.status === 401) return;
+                    throw new Error(`HTTP error! Status: ${response.status}`);
                 }
                 const resenas = await response.json();
                 console.log('Reseñas cargadas:', resenas);
@@ -1542,12 +1544,6 @@
                 }
 
                 resenas.forEach(resena => {
-                    console.log(`Renderizando reseña ID: ${resena.id}`, {
-                        nombre_empresa: resena.nombre_empresa,
-                        texto: resena.texto,
-                        calificacion: resena.calificacion,
-                        fecha_creacion: resena.fecha_creacion
-                    });
                     const div = document.createElement('div');
                     div.className = 'review';
                     let reviewContent = `
@@ -1570,7 +1566,6 @@
                 console.error('Error al cargar reseñas:', error);
                 reviewsMessage.textContent = 'No se pudieron cargar las reseñas';
                 reviewsMessage.style.display = 'block';
-                showNotification(`Error al cargar reseñas: ${error.message}`, true);
             }
         }
 
@@ -1629,7 +1624,6 @@
             event.preventDefault();
             const userId = viewedUserId || currentUserId;
             if (!userId) {
-                console.error('No se puede enviar reseña sin userId');
                 showNotification('No se pudo enviar la reseña: usuario no identificado', true);
                 return;
             }
@@ -1638,7 +1632,6 @@
             const calificacion = parseInt(document.getElementById('review-rating').value);
 
             if (!texto) {
-                console.error('Intento de enviar reseña con texto vacío');
                 showNotification('El comentario no puede estar vacío', true);
                 return;
             }
@@ -1648,7 +1641,6 @@
             }
 
             try {
-                console.log(`Enviando reseña para userId: ${userId}`, { texto, calificacion });
                 const response = await fetch(`/api/perfil/${userId}/resenas`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1656,10 +1648,7 @@
                     credentials: 'include'
                 });
 
-                console.log(`Respuesta de POST /api/perfil/${userId}/resenas: ${response.status}`);
                 if (response.ok) {
-                    const newReview = await response.json();
-                    console.log('Reseña enviada exitosamente:', newReview);
                     showNotification('Reseña enviada correctamente');
                     document.getElementById('review-modal').style.display = 'none';
                     document.getElementById('review-form').reset();
@@ -1669,27 +1658,12 @@
                     setTimeout(() => cargarResenas(), 100);
                 } else {
                     const error = await response.json().catch(() => ({}));
-                    console.error('Error al enviar reseña:', error);
                     showNotification(`Error: ${error.detail || 'No se pudo enviar la reseña'}`, true);
                 }
             } catch (error) {
-                console.error('Error al conectar con el servidor al enviar reseña:', error);
                 showNotification(`Error al conectar con el servidor: ${error.message}`, true);
             }
         });
-
-        // Edición del perfil
-        document.getElementById('edit-profile-btn').addEventListener('click', () => {
-            document.getElementById('profile-view').style.display = 'none';
-            document.getElementById('profile-edit-form').style.display = 'block';
-        });
-
-        function cancelarEdicion() {
-            document.getElementById('profile-edit-form').style.display = 'none';
-            document.getElementById('profile-view').style.display = 'block';
-            document.getElementById('profile-edit-form').reset();
-            loadUserData();
-        }
 
         // Vista previa de la foto de perfil
         document.getElementById('foto_perfil').addEventListener('change', (event) => {
@@ -1726,12 +1700,9 @@
 
             for (const field of fields) {
                 const element = document.getElementById(field.id);
-                if (!element) {
-                    console.error(`Elemento con ID '${field.id}' no encontrado`);
-                    showNotification(`Error: Campo '${field.id}' no encontrado`, true);
-                    return;
+                if (element) {
+                    formData.append(field.key, element.value || '');
                 }
-                formData.append(field.key, element.value || '');
             }
 
             try {
@@ -1742,8 +1713,6 @@
                 });
 
                 if (response.ok) {
-                    const data = await response.json();
-                    console.log('Datos actualizados:', data);
                     document.getElementById('profile-edit-form').style.display = 'none';
                     document.getElementById('profile-view').style.display = 'block';
                     document.getElementById('profile-edit-form').reset();
@@ -1751,23 +1720,19 @@
                     loadUserData();
                 } else {
                     const error = await response.json();
-                    console.error('Error al actualizar:', error);
                     showNotification(`Error: ${error.detail || 'No se pudo actualizar el perfil'}`, true);
                 }
             } catch (error) {
-                console.error('Error en la solicitud:', error);
                 showNotification('Ocurrió un error al conectar con el servidor', true);
             }
         });
 
         // Funciones de los botones
         function irAInicio() {
-            console.log("user antes de ir a inicio:", localStorage.getItem("user"));
             window.location.href = "/inicio.html";
         }
 
         function cerrarSesion() {
-            console.log("Cerrando sesión, user:", localStorage.getItem("user"));
             fetch('/salir', {
                 method: 'POST',
                 credentials: 'include'
@@ -1782,113 +1747,11 @@
             const modal = document.getElementById('media-modal');
             const content = document.getElementById('media-modal-content');
             const controls = document.getElementById('media-controls');
-            const zoomInBtn = document.getElementById('zoom-in-btn');
-            const zoomOutBtn = document.getElementById('zoom-out-btn');
-            const volumeUpBtn = document.getElementById('volume-up-btn');
-            const volumeDownBtn = document.getElementById('volume-down-btn');
-
-            // Limpiar contenido, pero mantener el botón de cierre y controles
-            content.innerHTML = `
-                <button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>
-                <div class="media-controls" id="media-controls" style="display: none;">
-                    <button id="zoom-in-btn"><i class="fas fa-search-plus"></i></button>
-                    <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
-                    <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
-                    <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
-                </div>
-            `;
-            // Reasignar referencias después de recrear el contenido
-            const newControls = document.getElementById('media-controls');
             const newZoomInBtn = document.getElementById('zoom-in-btn');
             const newZoomOutBtn = document.getElementById('zoom-out-btn');
             const newVolumeUpBtn = document.getElementById('volume-up-btn');
             const newVolumeDownBtn = document.getElementById('volume-down-btn');
 
-            if (type === 'image') {
-                const img = document.createElement('img');
-                img.src = src;
-                img.alt = 'Imagen ampliada';
-                content.insertBefore(img, newControls);
-                newControls.style.display = 'flex';
-                newZoomInBtn.style.display = 'inline-block';
-                newZoomOutBtn.style.display = 'inline-block';
-                newVolumeUpBtn.style.display = 'none';
-                newVolumeDownBtn.style.display = 'none';
-
-                currentScale = 1;
-                translateX = 0;
-                translateY = 0;
-                img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
-
-                newZoomInBtn.onclick = () => {
-                    currentScale = Math.min(currentScale + 0.2, 3);
-                    img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
-                };
-                newZoomOutBtn.onclick = () => {
-                    currentScale = Math.max(currentScale - 0.2, 0.5);
-                    img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
-                };
-
-                img.onmousedown = (e) => {
-                    if (currentScale <= 1) return;
-                    isDragging = true;
-                    startX = e.clientX - translateX;
-                    startY = e.clientY - translateY;
-                    img.style.cursor = 'grabbing';
-                };
-
-                img.onmousemove = (e) => {
-                    if (!isDragging) return;
-                    translateX = e.clientX - startX;
-                    translateY = e.clientY - startY;
-                    img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
-                };
-
-                img.onmouseup = () => {
-                    isDragging = false;
-                    img.style.cursor = 'grab';
-                };
-
-                img.onmouseleave = () => {
-                    isDragging = false;
-                    img.style.cursor = 'grab';
-                };
-
-                img.onwheel = (e) => {
-                    e.preventDefault();
-                    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-                    currentScale = Math.max(0.5, Math.min(currentScale + delta, 3));
-                    img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
-                };
-            } else if (type === 'video') {
-                const video = document.createElement('video');
-                video.src = src;
-                video.controls = true;
-                content.insertBefore(video, newControls);
-                newControls.style.display = 'flex';
-                newZoomInBtn.style.display = 'none';
-                newZoomOutBtn.style.display = 'none';
-                newVolumeUpBtn.style.display = 'inline-block';
-                newVolumeDownBtn.style.display = 'inline-block';
-
-                newVolumeUpBtn.onclick = () => {
-                    video.volume = Math.min(video.volume + 0.1, 1);
-                };
-                newVolumeDownBtn.onclick = () => {
-                    video.volume = Math.max(video.volume - 0.1, 0);
-                };
-            }
-
-            modal.style.display = 'flex';
-            // Reasignar evento de cierre
-            document.getElementById('close-media-btn').onclick = closeMediaModal;
-        }
-
-        // Función para cerrar el modal de multimedia
-        function closeMediaModal() {
-            const modal = document.getElementById('media-modal');
-            const content = document.getElementById('media-modal-content');
-            modal.style.display = 'none';
             content.innerHTML = `
                 <button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>
                 <div class="media-controls" id="media-controls" style="display: none;">
@@ -1898,91 +1761,52 @@
                     <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
                 </div>
             `;
-            // Reasignar evento de cierre al nuevo botón
             document.getElementById('close-media-btn').onclick = closeMediaModal;
+
+            if (type === 'image') {
+                const img = document.createElement('img');
+                img.src = src;
+                img.alt = 'Imagen ampliada';
+                content.insertBefore(img, document.getElementById('media-controls'));
+            } else if (type === 'video') {
+                const video = document.createElement('video');
+                video.src = src;
+                video.controls = true;
+                content.insertBefore(video, document.getElementById('media-controls'));
+            }
+            modal.style.display = 'flex';
         }
 
-        // Delegación de eventos para multimedia
+        function closeMediaModal() {
+            document.getElementById('media-modal').style.display = 'none';
+        }
+
         document.getElementById('feed').addEventListener('click', (event) => {
             const target = event.target;
             if (target.classList.contains('media-item')) {
-                const type = target.dataset.type;
-                const src = target.dataset.src;
-                openMediaModal(type, src);
+                openMediaModal(target.dataset.type, target.dataset.src);
             }
         });
 
         // Inicialización
         let hasLoaded = false;
         window.addEventListener('load', async () => {
-            console.log('Evento load disparado. Estado del DOM:', document.readyState);
-            console.log('reviews-container:', document.getElementById('reviews-container'));
-            console.log('reviews-message:', document.getElementById('reviews-message'));
-
-            const columnRight = document.querySelector('.column-right');
-            if (columnRight) {
-                const observer = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        console.log('Mutación detectada en column-right:', {
-                            type: mutation.type,
-                            addedNodes: Array.from(mutation.addedNodes).map(node => ({
-                                nodeName: node.nodeName,
-                                id: node.id,
-                                className: node.className
-                            })),
-                            removedNodes: Array.from(mutation.removedNodes).map(node => ({
-                                nodeName: node.nodeName,
-                                id: node.id,
-                                className: node.className
-                            })),
-                            target: {
-                                nodeName: mutation.target.nodeName,
-                                id: mutation.target.id,
-                                className: mutation.target.className
-                            }
-                        });
-                        if (!document.getElementById('reviews-container') || !document.getElementById('reviews-message')) {
-                            console.error('Elementos reviews-container o reviews-message eliminados o modificados');
-                            let reviewsContainer = document.getElementById('reviews-container');
-                            if (reviewsContainer && !document.getElementById('reviews-message')) {
-                                const newReviewsMessage = document.createElement('p');
-                                newReviewsMessage.id = 'reviews-message';
-                                newReviewsMessage.style.display = 'none';
-                                newReviewsMessage.style.textAlign = 'center';
-                                newReviewsMessage.style.color = '#666';
-                                newReviewsMessage.textContent = 'No hay reseñas disponibles.';
-                                reviewsContainer.appendChild(newReviewsMessage);
-                                console.log('reviews-message recreado por MutationObserver:', newReviewsMessage);
-                            }
-                        }
-                    });
-                });
-                observer.observe(columnRight, { childList: true, subtree: true });
-            } else {
-                console.error('column-right no encontrado al iniciar el observador');
-            }
-
-            const urlParams = new URLSearchParams(window.location.search);
-            viewedUserId = Number(urlParams.get('user_id')) || null;
-
+            viewedUserId = Number(new URLSearchParams(window.location.search).get('user_id')) || null;
             await fetchCurrentUserId();
 
             if (!viewedUserId && currentUserId) {
-                console.log('No se proporcionó user_id en la URL, usando currentUserId:', currentUserId);
                 viewedUserId = currentUserId;
                 window.history.replaceState(null, '', `/perfil.html?user_id=${currentUserId}`);
             }
 
             if (!hasLoaded && (viewedUserId || currentUserId)) {
                 hasLoaded = true;
-                console.log('Iniciando carga de datos. viewedUserId:', viewedUserId, 'currentUserId:', currentUserId);
                 await loadUserData();
                 await cargarFeed();
                 await cargarResenas();
             } else {
-                console.error('No se puede cargar el perfil sin userId');
                 const feedMessage = document.getElementById('feed-message');
-                if (feedMessage) {
+                if(feedMessage) {
                     feedMessage.textContent = 'Por favor, inicia sesión para ver el perfil';
                     feedMessage.style.display = 'block';
                 }
@@ -2003,14 +1827,14 @@
                 isScrolling = false;
             }, 100);
         });
-        // --- FUNCIONES DE SEGURIDAD (REPORTAR Y BLOQUEAR) ---
+
+        // Funciones de Reportar/Bloquear (NUEVAS)
         function openUserReportModal() { document.getElementById('user-report-modal').style.display = 'flex'; }
         function openUserBlockModal() { document.getElementById('user-block-modal').style.display = 'flex'; }
 
         async function submitUserReport() {
             const selected = document.querySelector('input[name="user-report-reason"]:checked');
             if (!selected) { showNotification("Selecciona un motivo", true); return; }
-
             try {
                 const response = await fetch('/api/reportar/usuario', {
                     method: 'POST',

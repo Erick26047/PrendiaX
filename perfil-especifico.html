@@ -16,6 +16,75 @@
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
+        /* --- ESTILOS MENÚ CONFIGURACIÓN (TUERCA) --- */
+        .settings-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .settings-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 50px;
+            background-color: #fff;
+            min-width: 180px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            z-index: 2000;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            animation: fadeIn 0.2s;
+        }
+
+        .settings-dropdown button {
+            width: 100%;
+            text-align: left;
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background-color 0.2s;
+        }
+
+        .settings-dropdown button:hover {
+            background-color: #f1f1f1;
+            color: #000;
+        }
+
+        .settings-dropdown button.danger-option {
+            color: #d32f2f;
+            border-top: 1px solid #eee;
+        }
+
+        .settings-dropdown button.danger-option:hover {
+            background-color: #ffebee;
+        }
+
+        /* Modo Oscuro Menú */
+        body.dark-mode .settings-dropdown {
+            background-color: #2a2a2a;
+            border-color: #444;
+        }
+        body.dark-mode .settings-dropdown button {
+            color: #fff;
+        }
+        body.dark-mode .settings-dropdown button:hover {
+            background-color: #333;
+        }
+        body.dark-mode .settings-dropdown button.danger-option {
+            border-top-color: #444;
+        }
+        body.dark-mode .settings-dropdown button.danger-option:hover {
+            background-color: #3e2727;
+        }
+
+        /* --- ESTILOS GENERALES --- */
         .stars {
             position: fixed;
             top: 0;
@@ -72,6 +141,7 @@
         .botones {
             display: flex;
             gap: 10px;
+            align-items: center;
         }
 
         .boton {
@@ -212,10 +282,7 @@
             gap: 5px;
             transition: background-color 0.3s ease;
         }
-
-        .message-btn:hover {
-            background-color: #1976d2;
-        }
+        .message-btn:hover { background-color: #1976d2; }
 
         .review-btn {
             background-color: #ff9800;
@@ -230,10 +297,7 @@
             gap: 5px;
             transition: background-color 0.3s ease;
         }
-
-        .review-btn:hover {
-            background-color: #f57c00;
-        }
+        .review-btn:hover { background-color: #f57c00; }
 
         .save-btn {
             background-color: #4caf50;
@@ -245,10 +309,7 @@
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
-
-        .save-btn:hover {
-            background-color: #388e3c;
-        }
+        .save-btn:hover { background-color: #388e3c; }
 
         .cancel-btn {
             background-color: #f44336;
@@ -260,211 +321,109 @@
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
-
-        .cancel-btn:hover {
-            background-color: #d32f2f;
-        }
+        .cancel-btn:hover { background-color: #d32f2f; }
 
         .delete-review-button {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: #f44336;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            padding: 5px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 30px;
-            height: 30px;
+            position: absolute; top: 10px; right: 10px;
+            background-color: #f44336; color: #fff; border: none; border-radius: 5px;
+            padding: 5px; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;
+            display: flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px;
         }
-
-        .delete-review-button:hover {
-            background-color: #d32f2f;
-        }
+        .delete-review-button:hover { background-color: #d32f2f; }
 
         .reviews {
             margin-top: 30px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+            display: flex; flex-direction: column; gap: 15px;
         }
 
         .reviews h3 {
-            font-size: 20px;
-            margin: 0 0 15px;
-            color: #000;
-            text-align: center;
-            transition: color 0.3s ease;
+            font-size: 20px; margin: 0 0 15px;
+            color: #000; text-align: center; transition: color 0.3s ease;
         }
 
         .review {
-            background-color: #f2f2f2;
-            padding: 15px;
-            border-radius: 8px;
-            transition: background-color 0.3s ease;
-            position: relative;
+            background-color: #f2f2f2; padding: 15px; border-radius: 8px;
+            transition: background-color 0.3s ease; position: relative;
         }
 
         .review p {
-            margin: 0;
-            font-size: 14px;
-            color: #333;
-            transition: color 0.3s ease;
+            margin: 0; font-size: 14px; color: #333; transition: color 0.3s ease;
         }
 
-        .review .review-author {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .review .review-text {
-            margin-bottom: 5px;
-        }
-
-        .review .review-rating {
-            color: #ffd700;
-            margin-bottom: 5px;
-        }
-
-        .review .review-date {
-            font-size: 12px;
-            color: #666;
-        }
+        .review .review-author { font-weight: bold; margin-bottom: 5px; }
+        .review .review-text { margin-bottom: 5px; }
+        .review .review-rating { color: #ffd700; margin-bottom: 5px; }
+        .review .review-date { font-size: 12px; color: #666; }
 
         .feed {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+            display: flex; flex-direction: column; gap: 20px;
         }
 
         .post {
-            background-color: #fafafa;
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #ccc;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            background-color: #fafafa; padding: 20px; border-radius: 10px;
+            border: 1px solid #ccc; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
             position: relative;
         }
 
         .post-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
+            display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
         }
 
         .post-profile-pic {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 1px solid #ccc;
+            width: 40px; height: 40px; border-radius: 50%;
+            object-fit: cover; border: 1px solid #ccc;
         }
 
-        .post-user-info {
-            display: flex;
-            flex-direction: column;
-        }
+        .post-user-info { display: flex; flex-direction: column; }
 
         .post-user-info .company-name {
-            font-size: 16px;
-            font-weight: bold;
-            color: #000;
-            margin: 0;
+            font-size: 16px; font-weight: bold; color: #000; margin: 0;
             transition: color 0.3s ease;
         }
 
-        .post-content {
-            margin-bottom: 10px;
-        }
+        .post-content { margin-bottom: 10px; }
 
         .post-content p {
-            margin: 0 0 10px;
-            font-size: 16px;
-            color: #000;
-            line-height: 1.5;
-            transition: color 0.3s ease;
+            margin: 0 0 10px; font-size: 16px; color: #000;
+            line-height: 1.5; transition: color 0.3s ease;
         }
 
-        .post-media {
-            margin-top: 10px;
-        }
+        .post-media { margin-top: 10px; }
 
         .post-media img, .post-media video {
-            max-width: 25%;
-            width: 25%;
-            height: auto;
-            border-radius: 8px;
-            display: block;
-            cursor: pointer;
+            max-width: 25%; width: 25%; height: auto;
+            border-radius: 8px; display: block; cursor: pointer;
         }
 
         .post-meta p {
-            margin: 10px 0 0;
-            font-size: 14px;
-            color: #666;
-            transition: color 0.3s ease;
+            margin: 10px 0 0; font-size: 14px; color: #666; transition: color 0.3s ease;
         }
 
         .post-meta p:last-child {
-            font-size: 12px;
-            color: #999;
+            font-size: 12px; color: #999;
         }
 
         .delete-button {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: #f44336;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            padding: 5px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 30px;
-            height: 30px;
+            position: absolute; top: 10px; right: 10px;
+            background-color: #f44336; color: #fff; border: none; border-radius: 5px;
+            padding: 5px; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;
+            display: flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px;
         }
-
-        .delete-button:hover {
-            background-color: #d32f2f;
-        }
+        .delete-button:hover { background-color: #d32f2f; }
 
         .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background-color: #4caf50;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            display: none;
-            align-items: center;
-            gap: 10px;
-            font-size: 16px;
-            animation: slideIn 0.3s ease-in-out;
+            position: fixed; top: 20px; right: 20px;
+            background-color: #4caf50; color: white; padding: 15px 20px;
+            border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000; display: none; align-items: center; gap: 10px;
+            font-size: 16px; animation: slideIn 0.3s ease-in-out;
         }
 
-        .notification.error {
-            background-color: #f44336;
-        }
-
-        .notification i {
-            font-size: 18px;
-        }
+        .notification.error { background-color: #f44336; }
+        .notification i { font-size: 18px; }
 
         @keyframes slideIn {
             from { opacity: 0; transform: translateX(100%); }
@@ -477,365 +436,171 @@
         }
 
         .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); display: none;
+            align-items: center; justify-content: center; z-index: 2000;
             animation: fadeIn 0.2s ease-in-out;
         }
 
         .modal-content {
-            background: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            max-width: 400px;
-            width: 90%;
-            color: #000;
+            background: #fff; padding: 20px; border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); text-align: center;
+            max-width: 400px; width: 90%; color: #000;
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .modal-content h3 {
-            margin: 0 0 20px;
-            font-size: 20px;
-            color: #000;
-            transition: color 0.3s ease;
+            margin: 0 0 20px; font-size: 20px; color: #000; transition: color 0.3s ease;
         }
 
-        .modal-content p {
-            margin: 0 0 20px;
-            font-size: 16px;
-        }
+        .modal-content p { margin: 0 0 20px; font-size: 16px; }
 
         .star-rating {
-            display: flex;
-            gap: 8px;
-            font-size: 28px;
-            color: #ccc;
-            cursor: pointer;
-            justify-content: center;
-            margin-bottom: 15px;
+            display: flex; gap: 8px; font-size: 28px; color: #ccc;
+            cursor: pointer; justify-content: center; margin-bottom: 15px;
         }
 
-        .star-rating .star {
-            transition: color 0.2s ease;
-        }
+        .star-rating .star { transition: color 0.2s ease; }
+        .star-rating .star:hover, .star-rating .star.active { color: #ffd700; }
 
-        .star-rating .star:hover,
-        .star-rating .star.active {
-            color: #ffd700;
-        }
-
-        body.dark-mode .star-rating .star {
-            color: #555;
-        }
-
-        body.dark-mode .star-rating .star:hover,
-        body.dark-mode .star-rating .star.active {
-            color: #ffeb3b;
-        }
+        body.dark-mode .star-rating .star { color: #555; }
+        body.dark-mode .star-rating .star:hover, body.dark-mode .star-rating .star.active { color: #ffeb3b; }
 
         .modal-content textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 16px;
-            resize: vertical;
-            min-height: 100px;
-            background-color: #fff;
-            color: #000;
+            width: 100%; padding: 12px; border: 1px solid #ccc;
+            border-radius: 8px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 16px; resize: vertical; min-height: 100px;
+            background-color: #fff; color: #000;
             transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
-            outline: none;
-            box-sizing: border-box;
+            outline: none; box-sizing: border-box;
         }
 
         .modal-content textarea:focus {
-            border-color: #4caf50;
-            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+            border-color: #4caf50; box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
         }
 
         body.dark-mode .modal-content textarea {
-            background-color: #333;
-            color: #fff;
-            border-color: #555;
+            background-color: #333; color: #fff; border-color: #555;
         }
 
         body.dark-mode .modal-content textarea:focus {
-            border-color: #66bb6a;
-            box-shadow: 0 0 5px rgba(102, 187, 106, 0.3);
+            border-color: #66bb6a; box-shadow: 0 0 5px rgba(102, 187, 106, 0.3);
         }
 
         .edit-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
+            display: flex; justify-content: center; gap: 10px; margin-top: 20px;
         }
 
         .media-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 2500;
-    animation: fadeIn 0.2s ease-in-out;
-}
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8); display: none;
+            align-items: center; justify-content: center; z-index: 2500;
+            animation: fadeIn 0.2s ease-in-out;
+        }
 
         .media-modal-content {
-            position: relative;
-            max-width: 90%;
-            max-height: 90%;
-            background: transparent;
-            text-align: center;
+            position: relative; max-width: 90%; max-height: 90%;
+            background: transparent; text-align: center;
         }
 
         .media-modal-content img {
-            max-width: 100%;
-            max-height: 80vh;
-            object-fit: contain;
-            transform-origin: center;
-            transition: transform 0.2s ease;
+            max-width: 100%; max-height: 80vh; object-fit: contain;
+            transform-origin: center; transition: transform 0.2s ease;
             cursor: grab;
         }
 
         .media-modal-content video {
-            max-width: 100%;
-            max-height: 80vh;
-            object-fit: contain;
+            max-width: 100%; max-height: 80vh; object-fit: contain;
         }
 
         .media-controls {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 8px;
+            position: absolute; bottom: 10px; left: 50%;
+            transform: translateX(-50%); display: flex; gap: 10px;
+            background: rgba(0, 0, 0, 0.7); padding: 10px; border-radius: 8px;
         }
 
         .media-controls button {
-            background: #fff;
-            border: none;
-            border-radius: 5px;
-            padding: 8px;
-            font-size: 16px;
-            cursor: pointer;
+            background: #fff; border: none; border-radius: 5px;
+            padding: 8px; font-size: 16px; cursor: pointer;
             transition: background-color 0.3s ease;
         }
 
-        .media-controls button:hover {
-            background: #e0e0e0;
-        }
+        .media-controls button:hover { background: #e0e0e0; }
 
         .close-media-btn {
-    position: fixed; /* Cambiado de absolute a fixed */
-    top: 10px; /* Cerca de la esquina superior */
-    right: 10px; /* Cerca de la orilla derecha */
-    background: rgba(244, 67, 54, 0.9); /* Fondo rojo con opacidad */
-    color: white;
-    border: none;
-    border-radius: 50%; /* Círculo para mejor estética */
-    padding: 12px;
-    font-size: 18px;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-    z-index: 2600; /* Muy alto para estar encima de todo */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); /* Sombra más pronunciada */
-    width: 40px; /* Tamaño mayor para mejor interacción */
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+            position: fixed; top: 10px; right: 10px;
+            background: rgba(244, 67, 54, 0.9); color: white;
+            border: none; border-radius: 50%; padding: 12px;
+            font-size: 18px; cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            z-index: 2600; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+            width: 40px; height: 40px; display: flex;
+            align-items: center; justify-content: center;
+        }
 
         .close-media-btn:hover {
-    background: rgba(211, 47, 47, 1);
-    transform: scale(1.1); /* Efecto de aumento al pasar el mouse */
-}
-
-        body.dark-mode {
-            background-color: #000;
-            color: #fff;
+            background: rgba(211, 47, 47, 1); transform: scale(1.1);
         }
 
-        body.dark-mode .stars {
-            display: block;
-        }
-
-        body.dark-mode header {
-            background-color: #000000;
-        }
-
-        body.dark-mode .boton {
-            background-color: #000;
-            color: #fff;
-        }
-
-        body.dark-mode .boton:hover {
-            background-color: #222;
-        }
-
-        body.dark-mode #theme-toggle {
-            background-color: #000;
-            color: #fff;
-        }
-
-        body.dark-mode #theme-toggle:hover {
-            background-color: #222;
-        }
+        body.dark-mode { background-color: #000; color: #fff; }
+        body.dark-mode .stars { display: block; }
+        body.dark-mode header { background-color: #000000; }
+        body.dark-mode .boton { background-color: #000; color: #fff; }
+        body.dark-mode .boton:hover { background-color: #222; }
+        body.dark-mode #theme-toggle { background-color: #000; color: #fff; }
+        body.dark-mode #theme-toggle:hover { background-color: #222; }
 
         body.dark-mode .column-left, body.dark-mode .column-center {
-            background-color: #000;
-            border: 1px solid #333;
+            background-color: #000; border: 1px solid #333;
             box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
         }
 
-        body.dark-mode .profile-data h2 {
-            color: #fff;
-        }
-
-        body.dark-mode .campo label {
-            color: #fff;
-        }
-
-        body.dark-mode .campo p {
-            background-color: #222;
-            color: #fff;
-        }
-
-        body.dark-mode .reviews h3 {
-            color: #fff;
-        }
+        body.dark-mode .profile-data h2 { color: #fff; }
+        body.dark-mode .campo label { color: #fff; }
+        body.dark-mode .campo p { background-color: #222; color: #fff; }
+        body.dark-mode .reviews h3 { color: #fff; }
 
         body.dark-mode .post {
-            background-color: #000;
-            border: 1px solid #333;
+            background-color: #000; border: 1px solid #333;
             box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
         }
 
-        body.dark-mode .post-user-info .company-name {
-            color: #fff;
+        body.dark-mode .post-user-info .company-name { color: #fff; }
+        body.dark-mode .post-content p { color: #fff; }
+        body.dark-mode .post-meta p { color: #bbb; }
+        body.dark-mode .post-meta p:last-child { color: #888; }
+
+        body.dark-mode .review { background-color: #222; color: #fff; }
+        body.dark-mode .review p { color: #fff; }
+
+        body.dark-mode .notification { box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2); }
+        body.dark-mode .modal-content { background: #222; color: #fff; }
+        body.dark-mode .modal-content h3 { color: #fff; }
+        body.dark-mode .media-modal-content { background: transparent; }
+
+        body.dark-mode .media-controls button { background: #333; color: #fff; }
+        body.dark-mode .media-controls button:hover { background: #555; }
+
+        /* BOTONES DE REPORTE Y BLOQUEO */
+        .report-btn {
+            background-color: #78909c; color: white; border: none; border-radius: 8px; padding: 0;
+            font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            width: 44px; height: 44px; transition: background-color 0.3s ease;
         }
+        .report-btn:hover { background-color: #546e7a; }
 
-        body.dark-mode .post-content p {
-            color: #fff;
+        .block-btn {
+            background-color: #d32f2f; color: white; border: none; border-radius: 8px; padding: 0;
+            font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            width: 44px; height: 44px; transition: background-color 0.3s ease;
         }
+        .block-btn:hover { background-color: #b71c1c; }
 
-        body.dark-mode .post-meta p {
-            color: #bbb;
-        }
+        body.dark-mode .report-btn { background-color: #546e7a; }
+        body.dark-mode .report-btn:hover { background-color: #455a64; }
+        body.dark-mode .block-btn { background-color: #c62828; }
+        body.dark-mode .block-btn:hover { background-color: #b71c1c; }
 
-        body.dark-mode .post-meta p:last-child {
-            color: #888;
-        }
-
-        body.dark-mode .review {
-            background-color: #222;
-            color: #fff;
-        }
-
-        body.dark-mode .review p {
-            color: #fff;
-        }
-
-        body.dark-mode .notification {
-            box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
-        }
-
-        body.dark-mode .modal-content {
-            background: #222;
-            color: #fff;
-        }
-
-        body.dark-mode .modal-content h3 {
-            color: #fff;
-        }
-
-        body.dark-mode .media-modal-content {
-            background: transparent;
-        }
-
-        body.dark-mode .media-controls button {
-            background: #333;
-            color: #fff;
-        }
-
-        body.dark-mode .media-controls button:hover {
-            background: #555;
-        }
-
-        body.dark-mode .message-btn {
-            background-color: #42a5f5;
-        }
-
-        body.dark-mode .message-btn:hover {
-            background-color: #2196f3;
-        }
-
-        body.dark-mode .review-btn {
-            background-color: #ffb300;
-        }
-
-        body.dark-mode .review-btn:hover {
-            background-color: #ff9800;
-        }
-     /* --- BOTONES DE SEGURIDAD (Diseño compacto) --- */
-.report-btn {
-    background-color: #78909c; /* Gris azulado elegante */
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 10px; /* Padding cuadrado */
-    font-size: 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px; /* Ancho fijo */
-    height: 44px; /* Alto fijo (igual que los otros botones) */
-    transition: background-color 0.3s ease;
-}
-.report-btn:hover { background-color: #546e7a; }
-
-.block-btn {
-    background-color: #d32f2f; /* Rojo alerta */
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 10px;
-    font-size: 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    transition: background-color 0.3s ease;
-}
-.block-btn:hover { background-color: #b71c1c; }
-
-/* Ajuste Dark Mode */
-body.dark-mode .report-btn { background-color: #546e7a; }
-body.dark-mode .report-btn:hover { background-color: #455a64; }
-body.dark-mode .block-btn { background-color: #c62828; }
-body.dark-mode .block-btn:hover { background-color: #b71c1c; }
     </style>
 </head>
 <body>
@@ -847,6 +612,18 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
             <button class="boton" onclick="irAInicio()" title="Inicio">
                 <i class="fas fa-home"></i>
             </button>
+            
+            <div class="settings-container" id="settings-container" style="display:none;">
+                <button class="boton" onclick="toggleSettingsMenu()" title="Configuración">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <div class="settings-dropdown" id="settings-dropdown">
+                    <button class="danger-option" onclick="openDeleteAccountModal()">
+                        <i class="fas fa-trash-alt"></i> Eliminar Cuenta
+                    </button>
+                </div>
+            </div>
+
             <button class="boton" onclick="cerrarSesion()" title="Cerrar Sesión">
                 <i class="fas fa-sign-out-alt"></i>
             </button>
@@ -856,7 +633,7 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
         </div>
     </header>
 
-  <div class="container">
+    <div class="container">
         <div class="notification" id="notification">
             <i class="fas fa-check-circle"></i>
             <span id="notification-message"></span>
@@ -874,7 +651,7 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                     <p id="email">Cargando...</p>
                 </div>
 
-                <div class="action-buttons" id="action-buttons" style="display: none;">
+                <div class="action-buttons" id="visitor-actions" style="display: none;">
                     <button class="message-btn" onclick="openChat()">
                         <i class="fas fa-envelope"></i> Enviar Mensaje
                     </button>
@@ -897,9 +674,22 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                     <p id="reviews-message" style="display: none; text-align: center; color: #666;">No hay reseñas disponibles.</p>
                 </div>
             </div>
-        </div> <div class="column-center">
+        </div>
+
+        <div class="column-center">
             <div class="feed" id="feed">
                 <p id="feed-message" style="display: none; text-align: center; color: #666;">No hay publicaciones disponibles.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-account-modal" class="modal">
+        <div class="modal-content" style="border: 2px solid #d32f2f;">
+            <h3 style="color: #d32f2f;">¿Eliminar cuenta permanentemente?</h3>
+            <p>Esta acción no se puede deshacer. Se borrarán todas tus publicaciones, fotos y chats.</p>
+            <div class="edit-buttons">
+                <button class="cancel-btn" onclick="document.getElementById('delete-account-modal').style.display='none'">Cancelar</button>
+                <button class="save-btn" style="background-color: #d32f2f;" onclick="confirmarEliminarCuenta()">Sí, Eliminar</button>
             </div>
         </div>
     </div>
@@ -941,17 +731,6 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
         </div>
     </div>
 
-    <div class="media-modal" id="media-modal">
-        <div class="media-modal-content" id="media-modal-content">
-            <button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>
-            <div class="media-controls" id="media-controls" style="display: none;">
-                <button id="zoom-in-btn"><i class="fas fa-search-plus"></i></button>
-                <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
-                <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
-                <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
-            </div>
-        </div>
-    </div>
     <div id="user-report-modal" class="modal">
         <div class="modal-content">
             <h3>Reportar Usuario</h3>
@@ -980,8 +759,20 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
         </div>
     </div>
 
+    <div class="media-modal" id="media-modal">
+        <div class="media-modal-content" id="media-modal-content">
+            <button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>
+            <div class="media-controls" id="media-controls" style="display: none;">
+                <button id="zoom-in-btn"><i class="fas fa-search-plus"></i></button>
+                <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
+                <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
+                <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Estrellas para el fondo en modo oscuro
+        // Estrellas
         const starsContainer = document.querySelector('.stars');
         const numStars = 100;
         for (let i = 0; i < numStars; i++) {
@@ -1041,7 +832,48 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
             }, 3000);
         }
 
-        // Modal para eliminar
+        // --- LÓGICA DE MENÚ DE CONFIGURACIÓN ---
+        function toggleSettingsMenu() {
+            const menu = document.getElementById('settings-dropdown');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+        
+        // Cerrar menú al hacer clic fuera
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('#settings-container')) {
+                document.getElementById('settings-dropdown').style.display = 'none';
+            }
+        });
+
+        // --- LÓGICA ELIMINAR CUENTA ---
+        function openDeleteAccountModal() {
+            document.getElementById('delete-account-modal').style.display = 'flex';
+            document.getElementById('settings-dropdown').style.display = 'none'; 
+        }
+
+        async function confirmarEliminarCuenta() {
+            try {
+                const response = await fetch('/api/usuario/eliminar', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert("Cuenta eliminada correctamente.");
+                    localStorage.removeItem('user');
+                    window.location.href = '/login.html'; 
+                } else {
+                    showNotification(data.message || "Error al eliminar cuenta", true);
+                    document.getElementById('delete-account-modal').style.display = 'none';
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                showNotification("Error de conexión", true);
+            }
+        }
+
+        // Modal para eliminar publicación
         function showConfirmModal(onConfirm, type = 'publicación') {
             const modal = document.getElementById('confirm-modal');
             const messageElement = document.getElementById('confirm-message');
@@ -1075,8 +907,6 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
         function getViewedUserId() {
             const params = new URLSearchParams(window.location.search);
             const userId = params.get('user_id');
-            console.log('URL actual:', window.location.href);
-            console.log('Parámetro user_id:', userId);
             if (!userId || isNaN(parseInt(userId))) {
                 console.warn('ID de usuario no proporcionado o inválido en la URL');
                 return null;
@@ -1097,49 +927,49 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
                 const data = await response.json();
-                console.log('Respuesta de /current_user:', data);
                 if (data.user_id !== null && data.user_id !== undefined) {
                     currentUserId = Number(data.user_id);
-                    console.log('Current User ID:', currentUserId, 'Type:', typeof currentUserId);
                 } else {
-                    console.error('No se pudo obtener el ID del usuario desde /current_user. Respuesta:', data);
                     showNotification('No se pudo identificar al usuario', true);
                     setTimeout(() => { window.location.href = '/login.html'; }, 2000);
                 }
             } catch (error) {
-                console.error('Error al obtener el ID del usuario desde /current_user:', error);
+                console.error('Error al obtener el ID del usuario:', error);
                 showNotification('Error al obtener datos del usuario', true);
                 setTimeout(() => { window.location.href = '/login.html'; }, 2000);
             }
         }
 
-        // Cargar datos del usuario
+        // --- FUNCIÓN CORREGIDA ---
         async function cargarDatosUsuario() {
-            if (!viewedUserId) {
-                console.error('No se puede cargar datos del usuario sin viewedUserId');
-                showNotification('No se puede cargar el perfil', true);
-                setTimeout(() => { window.location.href = '/inicio.html'; }, 2000);
+            const userId = viewedUserId || currentUserId;
+            if (!userId) {
+                showNotification('No se pudo cargar el perfil.', true);
                 return;
             }
             try {
-                const response = await fetch(`/user/${viewedUserId}`, { credentials: 'include' });
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        showNotification('Usuario no encontrado', true);
-                        setTimeout(() => { window.location.href = '/inicio.html'; }, 2000);
-                        return;
-                    }
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                const userData = await response.json();
-                console.log('Datos del usuario:', userData);
+                const response = await fetch(`/user/${userId}`, { credentials: 'include' });
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                const data = await response.json();
+                console.log('Datos del usuario:', data);
 
-                document.getElementById('nombre').textContent = userData.nombre_empresa || 'Sin nombre';
-                document.getElementById('email').textContent = userData.email || 'Sin email';
+                document.getElementById('nombre').textContent = data.nombre_empresa || 'Sin nombre';
+                document.getElementById('email').textContent = data.email || 'Sin email';
 
-                if (currentUserId && currentUserId !== viewedUserId) {
-                    document.getElementById('action-buttons').style.display = 'flex';
+                // --- LÓGICA DE VISIBILIDAD DE BOTONES ---
+                const settingsContainer = document.getElementById('settings-container'); // Tuerca
+                const actionBtns = document.getElementById('visitor-actions'); // Botones visita
+
+                if (!viewedUserId || viewedUserId === currentUserId) {
+                    // ES MI PERFIL
+                    if (settingsContainer) settingsContainer.style.display = 'block'; // Mostrar tuerca
+                    if (actionBtns) actionBtns.style.display = 'none'; // Ocultar botones visita
+                } else {
+                    // ES PERFIL DE OTRO
+                    if (settingsContainer) settingsContainer.style.display = 'none'; // Ocultar tuerca
+                    if (actionBtns) actionBtns.style.display = 'flex'; // Mostrar botones visita
                 }
+
             } catch (error) {
                 console.error('Error al cargar datos del usuario:', error);
                 showNotification('Error al cargar datos del usuario', true);
@@ -1157,7 +987,6 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
 
             try {
                 const res = await fetch(`/user/${viewedUserId}/publicaciones?limit=${limit}&offset=${offset}`, { credentials: 'include' });
-                console.log('Estado de la respuesta /user/{user_id}/publicaciones:', res.status);
                 if (!res.ok) {
                     if (res.status === 401) {
                         showNotification('Sesión expirada, por favor inicia sesión', true);
@@ -1167,7 +996,6 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                     throw new Error(`HTTP error! Status: ${res.status}`);
                 }
                 const publicaciones = await res.json();
-                console.log('Publicaciones cargadas:', publicaciones);
 
                 if (!Array.isArray(publicaciones)) {
                     throw new Error('La respuesta de /user/{user_id}/publicaciones no es un arreglo');
@@ -1185,13 +1013,6 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                     if (loadedPostIds.has(pub.id)) return;
                     loadedPostIds.add(pub.id);
 
-                    console.log(`Renderizando publicación ID: ${pub.id}`, {
-                        contenido: pub.contenido,
-                        imagen_url: pub.imagen_url,
-                        video_url: pub.video_url,
-                        user_id: pub.user_id
-                    });
-
                     const div = document.createElement('div');
                     div.classList.add('post');
 
@@ -1202,23 +1023,18 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                             </div>
                         </div>
                     `;
-                    console.log(`Comparando pub.user_id: ${pub.user_id} (${typeof pub.user_id}) con currentUserId: ${currentUserId} (${typeof currentUserId})`);
+                    
                     if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
-                        console.log(`Mostrando botón de eliminar para publicación ID: ${pub.id}`);
                         postContent += `
                             <button class="delete-button" onclick="borrarPublicacion(${pub.id}, this.parentElement)" title="Eliminar publicación">
                                 <i class="fas fa-trash"></i>
                             </button>
                         `;
-                    } else {
-                        console.log(`No se muestra botón de eliminar para publicación ID: ${pub.id}`);
                     }
 
                     postContent += '<div class="post-content">';
                     if (pub.contenido && pub.contenido.trim() !== '') {
                         postContent += `<p>${pub.contenido}</p>`;
-                    } else {
-                        console.log(`Omitiendo texto para publicación ID: ${pub.id} porque contenido es: ${pub.contenido}`);
                     }
                     postContent += '</div>';
 
@@ -1245,7 +1061,6 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                 offset += limit;
             } catch (err) {
                 console.error('Error al cargar publicaciones:', err);
-                console.error('Mensaje de error:', err.message);
                 feedMessage.textContent = 'No se pudieron cargar las publicaciones';
                 feedMessage.style.display = 'block';
                 showNotification(`Error al cargar publicaciones: ${err.message}`, true);
@@ -1257,7 +1072,6 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
         // Cargar reseñas
         async function cargarResenas() {
             if (!viewedUserId) {
-                console.error('No se puede cargar reseñas sin viewedUserId');
                 showNotification('No se puede cargar reseñas sin identificar al usuario', true);
                 return;
             }
@@ -1266,23 +1080,15 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
             let reviewsMessage = document.getElementById('reviews-message');
 
             if (!reviewsContainer) {
-                console.warn('reviews-container no encontrado, intentando recrearlo');
-                const reviewsSection = document.querySelector('.reviews');
-                if (reviewsSection) {
-                    reviewsContainer = document.createElement('div');
-                    reviewsContainer.id = 'reviews-container';
-                    reviewsContainer.className = 'reviews';
-                    reviewsSection.appendChild(reviewsContainer);
-                    console.log('reviews-container recreado:', reviewsContainer);
-                } else {
-                    console.error('No se pudo recrear reviews-container: reviews section no encontrada');
-                    showNotification('Error: No se encontró la sección de reseñas', true);
-                    return;
-                }
+                 const reviewsSection = document.querySelector('.reviews');
+                 if(reviewsSection) {
+                     reviewsContainer = document.createElement('div');
+                     reviewsContainer.id = 'reviews-container';
+                     reviewsSection.appendChild(reviewsContainer);
+                 } else return;
             }
 
             if (!reviewsMessage) {
-                console.warn('reviews-message no encontrado, recreándolo');
                 reviewsMessage = document.createElement('p');
                 reviewsMessage.id = 'reviews-message';
                 reviewsMessage.style.display = 'none';
@@ -1290,25 +1096,15 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                 reviewsMessage.style.color = '#666';
                 reviewsMessage.textContent = 'No hay reseñas disponibles.';
                 reviewsContainer.appendChild(reviewsMessage);
-                console.log('reviews-message recreado:', reviewsMessage);
             }
 
             try {
-                console.log(`Solicitando reseñas para userId: ${viewedUserId}`);
                 const response = await fetch(`/api/perfil/${viewedUserId}/resenas`, { credentials: 'include' });
-                console.log(`Respuesta de /api/perfil/${viewedUserId}/resenas: ${response.status}`);
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    console.error('Error en la respuesta:', errorData);
-                    if (response.status === 401) {
-                        showNotification('Sesión expirada, por favor inicia sesión', true);
-                        setTimeout(() => { window.location.href = '/login.html'; }, 2000);
-                        return;
-                    }
-                    throw new Error(`HTTP error! Status: ${response.status}, Detail: ${errorData.detail || 'Desconocido'}`);
+                    if (response.status === 401) return;
+                    throw new Error(`HTTP error! Status: ${response.status}`);
                 }
                 const resenas = await response.json();
-                console.log('Reseñas cargadas:', resenas);
 
                 reviewsContainer.innerHTML = '';
                 reviewsContainer.appendChild(reviewsMessage);
@@ -1321,12 +1117,6 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                 }
 
                 resenas.forEach(resena => {
-                    console.log(`Renderizando reseña ID: ${resena.id}`, {
-                        nombre_empresa: resena.nombre_empresa,
-                        texto: resena.texto,
-                        calificacion: resena.calificacion,
-                        fecha_creacion: resena.fecha_creacion
-                    });
                     const div = document.createElement('div');
                     div.className = 'review';
                     let reviewContent = `
@@ -1349,7 +1139,6 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                 console.error('Error al cargar reseñas:', error);
                 reviewsMessage.textContent = 'No se pudieron cargar las reseñas';
                 reviewsMessage.style.display = 'block';
-                showNotification(`Error al cargar reseñas: ${error.message}`, true);
             }
         }
 
@@ -1429,7 +1218,6 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
             }
 
             try {
-                console.log(`Enviando reseña para userId: ${viewedUserId}`, { texto, calificacion });
                 const response = await fetch(`/api/perfil/${viewedUserId}/resenas`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1437,7 +1225,6 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                     body: JSON.stringify({ texto, calificacion })
                 });
 
-                console.log(`Respuesta de POST /api/perfil/${viewedUserId}/resenas: ${response.status}`);
                 if (response.ok) {
                     showNotification('Reseña enviada correctamente');
                     document.getElementById('review-modal').style.display = 'none';
@@ -1448,11 +1235,9 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                     setTimeout(() => cargarResenas(), 100);
                 } else {
                     const errorData = await response.json().catch(() => ({}));
-                    console.error('Error al enviar reseña:', errorData);
                     showNotification(`Error: ${errorData.detail || 'No se pudo enviar la reseña'}`, true);
                 }
             } catch (error) {
-                console.error('Error al conectar con el servidor al enviar reseña:', error);
                 showNotification(`Error al conectar con el servidor: ${error.message}`, true);
             }
         });
@@ -1467,7 +1252,6 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                     });
 
                     if (response.ok) {
-                        console.log(`Reseña ID: ${reviewId} eliminada exitosamente`);
                         reviewElement.style.transition = 'opacity 0.3s';
                         reviewElement.style.opacity = '0';
                         setTimeout(() => {
@@ -1477,11 +1261,9 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                         }, 300);
                     } else {
                         const data = await response.json();
-                        console.error(`Error al eliminar reseña ID: ${reviewId}`, data);
                         showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
                     }
                 } catch (error) {
-                    console.error(`Error en la solicitud para eliminar reseña ID: ${reviewId}`, error);
                     showNotification('Ocurrió un error al eliminar la reseña', true);
                 }
             }, 'reseña');
@@ -1497,8 +1279,6 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                     });
 
                     if (response.ok) {
-                        const data = await response.json();
-                        console.log(`Publicación ID: ${postId} eliminada exitosamente`, data);
                         postElement.style.transition = 'opacity 0.3s';
                         postElement.style.opacity = '0';
                         setTimeout(() => {
@@ -1508,11 +1288,9 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                         showNotification('Publicación eliminada correctamente');
                     } else {
                         const data = await response.json();
-                        console.error(`Error al eliminar publicación ID: ${postId}`, data);
                         showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
                     }
                 } catch (error) {
-                    console.error(`Error en la solicitud para eliminar publicación ID: ${postId}`, error);
                     showNotification('Ocurrió un error al eliminar la publicación', true);
                 }
             }, 'publicación');
@@ -1522,145 +1300,38 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
         function openMediaModal(type, src) {
             const modal = document.getElementById('media-modal');
             const content = document.getElementById('media-modal-content');
+            
+            // Recrear contenido multimedia
             const controls = document.getElementById('media-controls');
-            const zoomInBtn = document.getElementById('zoom-in-btn');
-            const zoomOutBtn = document.getElementById('zoom-out-btn');
-            const volumeUpBtn = document.getElementById('volume-up-btn');
-            const volumeDownBtn = document.getElementById('volume-down-btn');
-
-            // Limpiar contenido, pero mantener el botón de cierre y controles
-            content.innerHTML = `
-                <button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>
-                <div class="media-controls" id="media-controls" style="display: none;">
-                    <button id="zoom-in-btn"><i class="fas fa-search-plus"></i></button>
-                    <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
-                    <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
-                    <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
-                </div>
-            `;
-            // Reasignar referencias después de recrear el contenido
-            const newControls = document.getElementById('media-controls');
-            const newZoomInBtn = document.getElementById('zoom-in-btn');
-            const newZoomOutBtn = document.getElementById('zoom-out-btn');
-            const newVolumeUpBtn = document.getElementById('volume-up-btn');
-            const newVolumeDownBtn = document.getElementById('volume-down-btn');
-
-            if (type === 'image') {
-                const img = document.createElement('img');
-                img.src = src;
-                img.alt = 'Imagen ampliada';
-                content.insertBefore(img, newControls);
-                newControls.style.display = 'flex';
-                newZoomInBtn.style.display = 'inline-block';
-                newZoomOutBtn.style.display = 'inline-block';
-                newVolumeUpBtn.style.display = 'none';
-                newVolumeDownBtn.style.display = 'none';
-
-                currentScale = 1;
-                translateX = 0;
-                translateY = 0;
-                img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
-
-                newZoomInBtn.onclick = () => {
-                    currentScale = Math.min(currentScale + 0.2, 3);
-                    img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
-                };
-                newZoomOutBtn.onclick = () => {
-                    currentScale = Math.max(currentScale - 0.2, 0.5);
-                    img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
-                };
-
-                img.onmousedown = (e) => {
-                    if (currentScale <= 1) return;
-                    isDragging = true;
-                    startX = e.clientX - translateX;
-                    startY = e.clientY - translateY;
-                    img.style.cursor = 'grabbing';
-                };
-
-                img.onmousemove = (e) => {
-                    if (!isDragging) return;
-                    translateX = e.clientX - startX;
-                    translateY = e.clientY - startY;
-                    img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
-                };
-
-                img.onmouseup = () => {
-                    isDragging = false;
-                    img.style.cursor = 'grab';
-                };
-
-                img.onmouseleave = () => {
-                    isDragging = false;
-                    img.style.cursor = 'grab';
-                };
-
-                img.onwheel = (e) => {
-                    e.preventDefault();
-                    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-                    currentScale = Math.max(0.5, Math.min(currentScale + delta, 3));
-                    img.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
-                };
+            content.innerHTML = `<button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>`;
+             if (type === 'image') {
+                const img = document.createElement('img'); img.src = src; 
+                content.appendChild(img);
             } else if (type === 'video') {
-                const video = document.createElement('video');
-                video.src = src;
-                video.controls = true;
-                content.insertBefore(video, newControls);
-                newControls.style.display = 'flex';
-                newZoomInBtn.style.display = 'none';
-                newZoomOutBtn.style.display = 'none';
-                newVolumeUpBtn.style.display = 'inline-block';
-                newVolumeDownBtn.style.display = 'inline-block';
-
-                newVolumeUpBtn.onclick = () => {
-                    video.volume = Math.min(video.volume + 0.1, 1);
-                };
-                newVolumeDownBtn.onclick = () => {
-                    video.volume = Math.max(video.volume - 0.1, 0);
-                };
+                const video = document.createElement('video'); video.src = src; video.controls = true;
+                content.appendChild(video);
             }
-
+            document.getElementById('close-media-btn').onclick = closeMediaModal;
             modal.style.display = 'flex';
-            // Reasignar evento de cierre
-            document.getElementById('close-media-btn').onclick = closeMediaModal;
         }
 
-        // Función para cerrar el modal de multimedia
         function closeMediaModal() {
-            const modal = document.getElementById('media-modal');
-            const content = document.getElementById('media-modal-content');
-            modal.style.display = 'none';
-            content.innerHTML = `
-                <button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>
-                <div class="media-controls" id="media-controls" style="display: none;">
-                    <button id="zoom-in-btn"><i class="fas fa-search-plus"></i></button>
-                    <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
-                    <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
-                    <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
-                </div>
-            `;
-            // Reasignar evento de cierre al nuevo botón
-            document.getElementById('close-media-btn').onclick = closeMediaModal;
+            document.getElementById('media-modal').style.display = 'none';
         }
 
-        // Delegación de eventos para multimedia
         document.getElementById('feed').addEventListener('click', (event) => {
             const target = event.target;
             if (target.classList.contains('media-item')) {
-                const type = target.dataset.type;
-                const src = target.dataset.src;
-                openMediaModal(type, src);
+                openMediaModal(target.dataset.type, target.dataset.src);
             }
         });
 
         // Funciones de los botones
         function irAInicio() {
-            console.log("user antes de ir a inicio:", localStorage.getItem("user"));
             window.location.href = '/inicio.html';
         }
 
         function cerrarSesion() {
-            console.log("Cerrando sesión, user:", localStorage.getItem("user"));
             fetch('/salir', {
                 method: 'POST',
                 credentials: 'include'
@@ -1669,138 +1340,24 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                 window.location.href = '/login.html';
             });
         }
-        
-// --- FUNCIONES DE SEGURIDAD (REPORTAR Y BLOQUEAR) ---
-
-        function openUserReportModal() {
-            document.getElementById('user-report-modal').style.display = 'flex';
-        }
-
-        function openUserBlockModal() {
-            document.getElementById('user-block-modal').style.display = 'flex';
-        }
-
-        async function submitUserReport() {
-            const selected = document.querySelector('input[name="user-report-reason"]:checked');
-            if (!selected) {
-                showNotification("Selecciona un motivo", true);
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/reportar/usuario', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        usuario_reportado_id: viewedUserId, 
-                        motivo: selected.value 
-                    })
-                });
-                
-                const data = await response.json();
-                if (response.ok) {
-                    showNotification("Usuario reportado. Gracias.");
-                    document.getElementById('user-report-modal').style.display = 'none';
-                } else {
-                    showNotification(data.message || "Error al reportar", true);
-                }
-            } catch (e) {
-                console.error(e);
-                showNotification("Error de conexión", true);
-            }
-        }
-
-        async function submitUserBlock() {
-            try {
-                const response = await fetch('/api/bloquear/usuario', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ bloqueado_id: viewedUserId })
-                });
-
-                const data = await response.json();
-                if (response.ok) {
-                    showNotification("Usuario bloqueado.");
-                    document.getElementById('user-block-modal').style.display = 'none';
-                    // Redirigir al inicio porque ya no deberíamos ver este perfil
-                    setTimeout(() => { window.location.href = '/inicio.html'; }, 1500);
-                } else {
-                    showNotification(data.message || "Error al bloquear", true);
-                }
-            } catch (e) {
-                console.error(e);
-                showNotification("Error de conexión", true);
-            }
-        }
-        
 
         // Inicialización
         let hasLoaded = false;
         window.addEventListener('load', async () => {
-            console.log('Evento load disparado. Estado del DOM:', document.readyState);
-            console.log('reviews-container:', document.getElementById('reviews-container'));
-            console.log('reviews-message:', document.getElementById('reviews-message'));
-
-            const columnLeft = document.querySelector('.column-left');
-            if (columnLeft) {
-                const observer = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        console.log('Mutación detectada en column-left:', {
-                            type: mutation.type,
-                            addedNodes: Array.from(mutation.addedNodes).map(node => ({
-                                nodeName: node.nodeName,
-                                id: node.id,
-                                className: node.className
-                            })),
-                            removedNodes: Array.from(mutation.removedNodes).map(node => ({
-                                nodeName: node.nodeName,
-                                id: node.id,
-                                className: node.className
-                            })),
-                            target: {
-                                nodeName: mutation.target.nodeName,
-                                id: mutation.target.id,
-                                className: mutation.target.className
-                            }
-                        });
-                        if (!document.getElementById('reviews-container') || !document.getElementById('reviews-message')) {
-                            console.error('Elementos reviews-container o reviews-message eliminados o modificados');
-                            let reviewsContainer = document.getElementById('reviews-container');
-                            if (reviewsContainer && !document.getElementById('reviews-message')) {
-                                const newReviewsMessage = document.createElement('p');
-                                newReviewsMessage.id = 'reviews-message';
-                                newReviewsMessage.style.display = 'none';
-                                newReviewsMessage.style.textAlign = 'center';
-                                newReviewsMessage.style.color = '#666';
-                                newReviewsMessage.textContent = 'No hay reseñas disponibles.';
-                                reviewsContainer.appendChild(newReviewsMessage);
-                                console.log('reviews-message recreado por MutationObserver:', newReviewsMessage);
-                            }
-                        }
-                    });
-                });
-                observer.observe(columnLeft, { childList: true, subtree: true });
-            } else {
-                console.error('column-left no encontrado al iniciar el observador');
-            }
-
             viewedUserId = getViewedUserId();
             await fetchCurrentUserId();
 
             if (!viewedUserId && currentUserId) {
-                console.log('No se proporcionó user_id en la URL, usando currentUserId:', currentUserId);
                 viewedUserId = currentUserId;
                 window.history.replaceState(null, '', `/perfil-especifico.html?user_id=${currentUserId}`);
             }
 
             if (!hasLoaded && viewedUserId && !isNaN(viewedUserId)) {
                 hasLoaded = true;
-                console.log('Iniciando carga de datos. viewedUserId:', viewedUserId, 'currentUserId:', currentUserId);
                 await cargarDatosUsuario();
                 await cargarFeed();
                 await cargarResenas();
             } else {
-                console.error('No se puede cargar el perfil sin un viewedUserId válido');
                 document.getElementById('feed-message').textContent = 'Por favor inicia sesión o proporciona un ID de usuario válido';
                 document.getElementById('feed-message').style.display = 'block';
                 showNotification('No se puede cargar el perfil sin un usuario válido', true);
@@ -1820,6 +1377,47 @@ body.dark-mode .block-btn:hover { background-color: #b71c1c; }
                 isScrolling = false;
             }, 100);
         });
+
+        // --- FUNCIONES DE SEGURIDAD (REPORTAR Y BLOQUEAR) ---
+        function openUserReportModal() { document.getElementById('user-report-modal').style.display = 'flex'; }
+        function openUserBlockModal() { document.getElementById('user-block-modal').style.display = 'flex'; }
+
+        async function submitUserReport() {
+            const selected = document.querySelector('input[name="user-report-reason"]:checked');
+            if (!selected) { showNotification("Selecciona un motivo", true); return; }
+            try {
+                const response = await fetch('/api/reportar/usuario', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario_reportado_id: viewedUserId, motivo: selected.value })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showNotification("Usuario reportado. Gracias.");
+                    document.getElementById('user-report-modal').style.display = 'none';
+                } else {
+                    showNotification(data.message || "Error al reportar", true);
+                }
+            } catch (e) { showNotification("Error de conexión", true); }
+        }
+
+        async function submitUserBlock() {
+            try {
+                const response = await fetch('/api/bloquear/usuario', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bloqueado_id: viewedUserId })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showNotification("Usuario bloqueado.");
+                    document.getElementById('user-block-modal').style.display = 'none';
+                    setTimeout(() => { window.location.href = '/inicio.html'; }, 1500);
+                } else {
+                    showNotification(data.message || "Error al bloquear", true);
+                }
+            } catch (e) { showNotification("Error de conexión", true); }
+        }
     </script>
 </body>
 </html>

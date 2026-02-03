@@ -1300,3 +1300,33 @@ async def bloquear_usuario(request: Request, bloqueo: BloqueoRequest):
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
     finally:
         if conn: conn.close()
+
+        # --- RUTA PARA ELIMINAR CUENTA ---
+@router.delete("/api/usuario/eliminar")
+async def eliminar_cuenta(request: Request):
+    conn = None
+    try:
+        # 1. Obtener ID del usuario (Usando tu función existente)
+        user_id = get_user_id_hybrid(request) 
+        if not user_id:
+            raise HTTPException(status_code=401, detail="No autorizado")
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # 2. EJECUTAR EL BORRADO (La base de datos borrará todo lo demás en cascada)
+        cur.execute("DELETE FROM usuarios WHERE id = %s", (user_id,))
+        conn.commit()
+        
+        # 3. Limpiar sesión y responder
+        request.session.clear() # Limpia la sesión del lado del servidor si usas SessionMiddleware
+        response = JSONResponse({"status": "ok", "message": "Cuenta eliminada"})
+        response.delete_cookie("session_token") # Por si acaso usas cookies manuales
+        return response
+
+    except Exception as e:
+        if conn: conn.rollback()
+        logging.error(f"Error eliminando cuenta {user_id}: {e}")
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+    finally:
+        if conn: conn.close()
