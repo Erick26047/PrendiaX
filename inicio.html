@@ -1918,10 +1918,22 @@ body.dark-mode .report-option span { color: #fff; }
 }
 
 /* Asegurar que el botón ver más se vea */
+/* Busca y reemplaza tu clase .read-more por esta */
 .read-more {
-  display: block !important;
-  margin-top: 8px;
+  display: none; /* Oculto por defecto */
+  color: #1976d2;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 5px;
+  padding: 5px; 
+  z-index: 100; 
+  position: relative; 
   font-weight: 600;
+}
+
+/* Agregamos esta clase para mostrarlo mediante JS */
+.read-more.visible {
+  display: inline-block;
 }
 
 </style>
@@ -2683,8 +2695,10 @@ function scrollToPost(postId) {
 }
 
 // --- FUNCIÓN MEJORADA PARA DETECTAR TEXTO LARGO ---
+// Busca esta función en tu script y reemplázala
 function checkContentHeight(postContent) {
   return new Promise(resolve => {
+    // Un pequeño delay para asegurar que el DOM y las fuentes se hayan renderizado
     setTimeout(() => {
       const pElement = postContent.querySelector('p');
       if (!pElement) {
@@ -2692,13 +2706,12 @@ function checkContentHeight(postContent) {
          return;
       }
       
-      // LOGICA: Si el texto tiene más de 150 caracteres O si la altura real es mayor que la visible
-      const isLongText = pElement.textContent.length > 150;
+      // Si la altura total del contenido es mayor a la altura máxima permitida (4.5em)
+      // significa que el texto está siendo cortado por el CSS
       const isOverflowing = postContent.scrollHeight > postContent.clientHeight;
       
-      // Devolvemos true si cualquiera de las dos condiciones se cumple
-      resolve(isOverflowing || isLongText);
-    }, 100); 
+      resolve(isOverflowing);
+    }, 50); 
   });
 }
 
@@ -2737,16 +2750,19 @@ async function loadSinglePost(postId) {
       div.innerHTML = generatePostHTML(pub, lang, currentUserId);
       feedDiv.prepend(div);
       
-      const postContentElement = div.querySelector('.post-content');
-      const needsReadMore = await checkContentHeight(postContentElement);
-      if (needsReadMore) {
-        const readMoreButton = document.createElement('span');
-        readMoreButton.classList.add('read-more');
-        readMoreButton.textContent = "Ver más";
-        readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
-        // INSERTAR FUERA DEL PÁRRAFO
-        postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
-      }
+      // --- DENTRO DE LAS FUNCIONES DE CARGA (Feed, Search, etc) ---
+const postContentElement = div.querySelector('.post-content');
+const needsReadMore = await checkContentHeight(postContentElement);
+
+if (needsReadMore) {
+    const readMoreButton = document.createElement('span');
+    readMoreButton.classList.add('read-more', 'visible'); // Añadimos 'visible' aquí
+    readMoreButton.textContent = "Ver más"; 
+    readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
+    
+    // Insertamos después del contenido
+    postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
+}
       
       cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
       div.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2859,17 +2875,19 @@ async function cargarFeed() {
       feedDiv.appendChild(div);
 
       // --- AQUÍ ESTÁ LA MAGIA DEL BOTÓN VER MÁS ---
-      const postContentElement = div.querySelector('.post-content');
-      const needsReadMore = await checkContentHeight(postContentElement);
-      if (needsReadMore) {
-        const readMoreButton = document.createElement('span');
-        readMoreButton.classList.add('read-more');
-        readMoreButton.textContent = "Ver más"; // Texto Forzado
-        readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
-        
-        // Insertamos el botón JUSTO DESPUÉS del div de contenido (no adentro)
-        postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
-      }
+      // --- DENTRO DE LAS FUNCIONES DE CARGA (Feed, Search, etc) ---
+const postContentElement = div.querySelector('.post-content');
+const needsReadMore = await checkContentHeight(postContentElement);
+
+if (needsReadMore) {
+    const readMoreButton = document.createElement('span');
+    readMoreButton.classList.add('read-more', 'visible'); // Añadimos 'visible' aquí
+    readMoreButton.textContent = "Ver más"; 
+    readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
+    
+    // Insertamos después del contenido
+    postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
+}
       
       cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
     }
@@ -2901,15 +2919,19 @@ async function search() {
           div.innerHTML = generatePostHTML(pub, lang, currentUserId);
           feedDiv.appendChild(div);
 
-          const postContentElement = div.querySelector('.post-content');
-          const needsReadMore = await checkContentHeight(postContentElement);
-          if (needsReadMore) {
-            const readMoreButton = document.createElement('span');
-            readMoreButton.classList.add('read-more');
-            readMoreButton.textContent = "Ver más";
-            readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
-            postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
-          }
+          // --- DENTRO DE LAS FUNCIONES DE CARGA (Feed, Search, etc) ---
+const postContentElement = div.querySelector('.post-content');
+const needsReadMore = await checkContentHeight(postContentElement);
+
+if (needsReadMore) {
+    const readMoreButton = document.createElement('span');
+    readMoreButton.classList.add('read-more', 'visible'); // Añadimos 'visible' aquí
+    readMoreButton.textContent = "Ver más"; 
+    readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
+    
+    // Insertamos después del contenido
+    postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
+}
           cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
       }
       offset += limit;
@@ -2939,15 +2961,19 @@ async function filterByCategory(categoria) {
           div.innerHTML = generatePostHTML(pub, lang, currentUserId);
           feedDiv.appendChild(div);
           
-          const postContentElement = div.querySelector('.post-content');
-          const needsReadMore = await checkContentHeight(postContentElement);
-          if (needsReadMore) {
-            const readMoreButton = document.createElement('span');
-            readMoreButton.classList.add('read-more');
-            readMoreButton.textContent = "Ver más";
-            readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
-            postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
-          }
+          // --- DENTRO DE LAS FUNCIONES DE CARGA (Feed, Search, etc) ---
+const postContentElement = div.querySelector('.post-content');
+const needsReadMore = await checkContentHeight(postContentElement);
+
+if (needsReadMore) {
+    const readMoreButton = document.createElement('span');
+    readMoreButton.classList.add('read-more', 'visible'); // Añadimos 'visible' aquí
+    readMoreButton.textContent = "Ver más"; 
+    readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
+    
+    // Insertamos después del contenido
+    postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
+}
           cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
       }
   } catch(e){}
