@@ -9,6 +9,7 @@ from jwt.algorithms import RSAAlgorithm
 import json
 import requests
 import time
+from datetime import datetime, timedelta # IMPORTANTE PARA JWT
 
 router = APIRouter()
 
@@ -17,9 +18,9 @@ router = APIRouter()
 # ==========================================
 APPLE_TEAM_ID = "ZRTLHL9GXR"
 APPLE_KEY_ID = "YFNS7NW42N"
-APPLE_CLIENT_ID_WEB = "com.prendiax.web.service"     
-APPLE_BUNDLE_ID_IOS = "com.prendiax.web" 
-APPLE_PRIVATE_KEY_FILE = "AuthKey_YFNS7NW42N.p8" 
+APPLE_CLIENT_ID_WEB = "com.prendiax.web.service"
+APPLE_BUNDLE_ID_IOS = "com.prendiax.app" 
+APPLE_PRIVATE_KEY_FILE = "AuthKey_YFNS7NW42N.p8"
 
 # 🔴 CONFIGURACIÓN DB
 DB_CONFIG = {
@@ -39,8 +40,7 @@ def get_db_connection():
 
 def process_unified_login(apple_sub, email, name, tipo, user_agent):
     """
-    Gestiona la creación, vinculación y decide la redirección
-    basada en si el usuario es 'explorador' o 'emprendedor'.
+    Gestiona la creación, vinculación y genera un JWT REAL.
     """
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -100,27 +100,40 @@ def process_unified_login(apple_sub, email, name, tipo, user_agent):
                 conn.commit()
                 es_nuevo = True
 
-        # === LÓGICA DE REDIRECCIÓN (CRÍTICA) ===
-        # Aquí decidimos a dónde va según lo que eligió al iniciar sesión
-        redirect_url = "/dashboard" # Fallback
-        
+        # === LÓGICA DE REDIRECCIÓN ===
+        redirect_url = "/dashboard"
         if tipo == "explorador":
-            # Caso Explorador: Va al feed/perfil público
             redirect_url = "/perfil-especifico"
         else:
-            # Caso Emprendedor: Verificamos si ya tiene negocio
             cursor.execute("SELECT 1 FROM datos_usuario WHERE user_id = %s", (user_id,))
             if cursor.fetchone():
-                redirect_url = "/perfil" # Ya tiene negocio
+                redirect_url = "/perfil"
             else:
-                redirect_url = "/dashboard" # Aún no tiene negocio
+                redirect_url = "/dashboard"
 
-        # Generar Token (Simulado para el ejemplo)
-        fake_token = f"jwt_apple_{user_id}"
+        # 🔥🔥🔥 CORRECCIÓN: GENERAR TOKEN JWT REAL 🔥🔥🔥
+        # ¡IMPORTANTE!: Esta CLAVE debe ser IGUAL a la que usas para validar tokens en el resto de tu app.
+        SECRET_KEY = "TU_CLAVE_SECRETA_SUPER_SEGURA" 
+        
+        payload = {
+            "sub": str(user_id),      # ID del usuario como string (estándar JWT)
+            "user_id": user_id,       # ID como entero (por si acaso)
+            "email": email,
+            "tipo": tipo,
+            "exp": datetime.utcnow() + timedelta(days=365), # Expira en 1 año
+            "iat": datetime.utcnow()
+        }
+        
+        # Generamos el token real
+        real_token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+        # Aseguramos que sea string (en versiones viejas de PyJWT devuelve bytes)
+        if isinstance(real_token, bytes):
+            real_token = real_token.decode('utf-8')
 
         return {
             "status": "ok",
-            "token": fake_token,
+            "token": real_token, # <--- AHORA SÍ ES UN TOKEN REAL QUE LA APP PUEDE USAR
             "user_id": user_id,
             "email": email,
             "redirect_url": redirect_url,
@@ -149,7 +162,6 @@ def get_apple_public_key(kid):
 # ==========================================
 # 📱 RUTA 1: APP MÓVIL (iOS - Flutter)
 # ==========================================
-# Esta ruta no cambia, ya funciona bien porque Flutter manda el JSON directo.
 
 class AppleLoginAppModel(BaseModel):
     identityToken: str
@@ -184,22 +196,15 @@ async def login_apple_ios(data: AppleLoginAppModel):
         raise HTTPException(status_code=400, detail=str(e))
 
 # ==========================================
-# 🌐 RUTA 2: WEB (Navegador) - ¡CORREGIDO!
+# 🌐 RUTA 2: WEB (Navegador)
 # ==========================================
 
 @router.get("/auth/apple/web/login")
 async def login_apple_web_start(request: Request):
     """Inicia el flujo redirigiendo a Apple"""
-    
-    # Recibimos si el usuario quiere entrar como explorador o emprendedor
     tipo = request.query_params.get("tipo", "emprendedor")
-    
-    # ⚠️ NO USAMOS SESSION AQUI (request.session["tipo"] = tipo) PORQUE SE PIERDE
-    
     redirect_uri = "https://prendiax.com/api/auth/apple/callback" 
     
-    # ✅ CORRECTO: Pasamos el 'tipo' dentro del parámetro 'state' de Apple.
-    # Apple nos devolverá este valor intacto en el callback.
     url = (
         f"https://appleid.apple.com/auth/authorize?"
         f"client_id={APPLE_CLIENT_ID_WEB}&"
@@ -207,7 +212,7 @@ async def login_apple_web_start(request: Request):
         f"response_type=code id_token&"
         f"scope=name email&"
         f"response_mode=form_post&"
-        f"state={tipo}"  # <--- AQUÍ VIAJA EL DATO SEGURO
+        f"state={tipo}"
     )
     return RedirectResponse(url)
 
@@ -218,11 +223,9 @@ async def login_apple_web_callback(request: Request):
         form_data = await request.form()
         id_token_str = form_data.get('id_token')
         user_json = form_data.get('user')
-        
-        # ✅ RECUPERAMOS EL STATE (explorador o emprendedor)
         tipo_recuperado = form_data.get('state', 'emprendedor')
         
-        print(f"[APPLE WEB] Callback recibido. Tipo recuperado del state: {tipo_recuperado}")
+        print(f"[APPLE WEB] Callback recibido. Tipo: {tipo_recuperado}")
         
         if not id_token_str:
             return RedirectResponse("/login?error=no_token", status_code=303)
@@ -231,7 +234,6 @@ async def login_apple_web_callback(request: Request):
         header = jwt.get_unverified_header(id_token_str)
         public_key = get_apple_public_key(header['kid'])
         
-        # Validamos contra el Service ID Web
         decoded = jwt.decode(id_token_str, public_key, algorithms=['RS256'], audience=APPLE_CLIENT_ID_WEB)
         
         apple_sub = decoded['sub']
@@ -244,20 +246,18 @@ async def login_apple_web_callback(request: Request):
                 name = f"{u.get('name', {}).get('firstName','')} {u.get('name', {}).get('lastName','')}".strip()
             except: pass
 
-        # Ejecutamos la lógica central con el tipo correcto
+        # Ejecutamos la lógica central
         result = process_unified_login(apple_sub, email, name, tipo_recuperado, "Web Browser")
         
-        # Ahora sí guardamos la sesión (ya estamos seguros en nuestro dominio)
+        # Guardamos sesión (Cookies para Web)
         request.session['user'] = {
             "id": result['user_id'],
             "email": result['email'],
             "tipo": tipo_recuperado
         }
         
-        # Redirigimos a la URL que decidió la función process_unified_login
         return RedirectResponse(result['redirect_url'], status_code=303)
 
     except Exception as e:
         print(f"[ERROR WEB] {e}")
         return RedirectResponse("/login?error=apple_callback_failed", status_code=303)
-
