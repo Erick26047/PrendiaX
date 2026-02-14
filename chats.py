@@ -1,15 +1,22 @@
-from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect, Depends
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException, Header, WebSocket, WebSocketDisconnect, Depends
+from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse, StreamingResponse, Response
 from fastapi.templating import Jinja2Templates
+from typing import List, Dict
 import psycopg2
 from datetime import datetime
 import logging
-import json
-import re
-from typing import Dict, List
 import io
+import re
+import json 
+from pydantic import BaseModel
+import jwt # <--- NECESARIO PARA LEER EL TOKEN
 
-# Configurar el logger
+router = APIRouter(prefix="/chats", tags=["chats"])
+
+# Configurar Jinja2
+templates = Jinja2Templates(directory=".")
+
+# Configurar logging
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -19,15 +26,40 @@ logging.basicConfig(
     ]
 )
 
-# Inicializar FastAPI router
-router = APIRouter(prefix="/chats", tags=["chats"])
+# 🔥 CLAVE MAESTRA (IGUAL A LA DE APPLE_AUTH.PY)
+SECRET_KEY_JWT = "Elbicho7"
 
-# Configurar Jinja2 para buscar plantillas en el directorio raíz
-templates = Jinja2Templates(directory=".")
+# --- GESTOR DE WEBSOCKETS ---
+class NotificationManager:
+    def __init__(self):
+        self.active_connections: Dict[int, List[WebSocket]] = {}
 
-# Conexión a la base de datos
+    async def connect(self, websocket: WebSocket, user_id: int):
+        await websocket.accept()
+        if user_id not in self.active_connections:
+            self.active_connections[user_id] = []
+        self.active_connections[user_id].append(websocket)
+        logging.debug(f"Usuario {user_id} conectado a WS Notificaciones")
+
+    def disconnect(self, websocket: WebSocket, user_id: int):
+        if user_id in self.active_connections:
+            if websocket in self.active_connections[user_id]:
+                self.active_connections[user_id].remove(websocket)
+            if not self.active_connections[user_id]:
+                del self.active_connections[user_id]
+        logging.debug(f"Usuario {user_id} desconectado de WS Notificaciones")
+
+    async def send_personal_message(self, message: dict, user_id: int):
+        if user_id in self.active_connections:
+            for connection in self.active_connections[user_id]:
+                try:
+                    await connection.send_text(json.dumps(message))
+                except Exception as e:
+                    logging.error(f"Error enviando WS a {user_id}: {e}")
+
+notification_manager = NotificationManager()
+
 def get_db_connection():
-    """Establece una conexión a la base de datos PostgreSQL."""
     try:
         conn = psycopg2.connect(
             host="localhost",
@@ -40,22 +72,41 @@ def get_db_connection():
         logging.error(f"Error al conectar a la base de datos: {e}")
         raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
 
-# Tamaño máximo de archivo (20 MB para dar margen)
 MAX_FILE_SIZE = 20 * 1024 * 1024 
 
-# Diccionario para almacenar conexiones WebSocket activas
+# Modelos Pydantic
+class InterestRequest(BaseModel):
+    user_id: int
+
+class CommentRequest(BaseModel):
+    contenido: str
+    parent_id: int | None = None
+    reply_to_user_id: int | None = None
+
+class ReporteUsuarioRequest(BaseModel):
+    usuario_reportado_id: int
+    motivo: str
+
+class BloqueoRequest(BaseModel):
+    bloqueado_id: int
+
+class ReviewRequest(BaseModel):
+    texto: str
+    calificacion: int
+
+class ReportePublicacionRequest(BaseModel):
+    publicacion_id: int
+    motivo: str
+
+# Diccionario para WebSockets de Chat
 websocket_connections: Dict[int, WebSocket] = {}
 
-# Función para limpiar nombres de archivo
 def sanitize_filename(filename: str) -> str:
-    """Limpia nombres de archivo reemplazando caracteres no deseados por guiones bajos."""
     clean_name = re.sub(r'[^a-zA-Z0-9\.\-_]', '_', filename)
     clean_name = re.sub(r'_+', '_', clean_name)
     return clean_name.strip('_')
 
-# --- FUNCIÓN DE SEGURIDAD ANTI-ACOSO (NUEVA) ---
 def verificar_bloqueo(cur, user_a: int, user_b: int):
-    """Revisa si existe un bloqueo bidireccional antes de permitir el chat."""
     cur.execute("""
         SELECT 1 FROM bloqueos 
         WHERE (bloqueador_id = %s AND bloqueado_id = %s) 
@@ -68,23 +119,10 @@ def verificar_bloqueo(cur, user_a: int, user_b: int):
             detail="No puedes interactuar con este usuario (Bloqueo activo)"
         )
 
-# ====================================================================
-# NUEVA FUNCIÓN HELPER: SOPORTE DE RANGOS (FIX PARA IOS)
-# ====================================================================
-def send_bytes_range_requests(
-    request: Request, 
-    file_bytes: bytes, 
-    content_type: str, 
-    filename: str
-):
-    """
-    Permite hacer streaming (Range Requests) de archivos binarios en memoria (desde BD).
-    Vital para que iOS reproduzca video/audio (Status 206).
-    """
+def send_bytes_range_requests(request: Request, file_bytes: bytes, content_type: str, filename: str):
     file_size = len(file_bytes)
     range_header = request.headers.get("range")
 
-    # Si no hay header Range, enviamos todo (Status 200)
     if not range_header:
         return StreamingResponse(
             io.BytesIO(file_bytes),
@@ -92,29 +130,17 @@ def send_bytes_range_requests(
             headers={"Content-Disposition": f"inline; filename={filename}"}
         )
 
-    # Procesar header Range: "bytes=0-" o "bytes=0-1024"
     try:
         start, end = 0, None
         match = range_header.strip().replace("bytes=", "").split("-")
-        if match[0]: 
-            start = int(match[0])
-        if len(match) > 1 and match[1]: 
-            end = int(match[1])
-            
-        if end is None: 
-            end = file_size - 1
-            
-        if start >= file_size:
-            # Si piden un rango fuera del archivo
-            raise HTTPException(status_code=416, detail="Range Not Satisfiable")
-
-        # Ajustar final
-        if end >= file_size: 
-            end = file_size - 1
+        if match[0]: start = int(match[0])
+        if len(match) > 1 and match[1]: end = int(match[1])
+        
+        if end is None: end = file_size - 1
+        if start >= file_size: raise HTTPException(status_code=416, detail="Range Not Satisfiable")
+        if end >= file_size: end = file_size - 1
 
         chunk_length = end - start + 1
-        
-        # Cortamos los bytes exactos que pide el cliente
         data_chunk = file_bytes[start : end + 1]
 
         headers = {
@@ -126,57 +152,81 @@ def send_bytes_range_requests(
 
         return StreamingResponse(
             io.BytesIO(data_chunk),
-            status_code=206, # Partial Content (CLAVE PARA IOS)
+            status_code=206,
             headers=headers,
             media_type=content_type
         )
-
     except ValueError:
-        # Si el header Range viene mal formado, devolvemos todo
         return StreamingResponse(
             io.BytesIO(file_bytes),
             media_type=content_type,
             headers={"Content-Disposition": f"inline; filename={filename}"}
         )
-# ====================================================================
 
+# =========================================================================
+# 🔥 CORRECCIÓN CRÍTICA 1: LECTURA DE TOKEN REAL (JWT)
+# =========================================================================
+def get_user_id_hybrid(request: Request):
+    # 1. Intentar Token de App Móvil (JWT REAL)
+    auth_header = request.headers.get("Authorization")
+    
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            # Intentamos desencriptar con la clave "Elbicho7"
+            payload = jwt.decode(token, SECRET_KEY_JWT, algorithms=["HS256"])
+            user_id = payload.get("user_id") or payload.get("sub")
+            if user_id:
+                return int(user_id)
+        except Exception as e:
+            logging.error(f"Error JWT Hybrid: {e}")
+            # Si falla, intentamos el token viejo por compatibilidad
+            if "jwt_app_" in token:
+                 try: return int(token.split("jwt_app_")[1])
+                 except: pass
+
+    # 2. Intentar Sesión Web (Cookie)
+    if 'user' in request.session and 'id' in request.session['user']:
+        return int(request.session['user']['id'])
+        
+    return None
+
+# =========================================================================
+# 🔥 CORRECCIÓN CRÍTICA 2: SESSION DE CHATS (JWT REAL)
+# =========================================================================
 async def get_session(request: Request):
-    """
-    Obtiene el ID del usuario de forma híbrida:
-    1. Si es WEB: Busca en la cookie de sesión.
-    2. Si es APP: Busca el Token "jwt_app_" en el header Authorization.
-    """
-    # --- 1. INTENTO WEB (Cookie) ---
+    # 1. Web
     if 'user' in request.session and 'id' in request.session['user']:
         return request.session['user']['id']
     
-    # --- 2. INTENTO APP (Token Automático) ---
+    # 2. App (JWT)
     auth_header = request.headers.get("Authorization")
     
-    if auth_header and "jwt_app_" in auth_header:
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
         try:
-            # El header llega así: "Bearer jwt_app_45"
-            token_part = auth_header.split("jwt_app_")[1] 
-            user_id = int(token_part)
-            # logging.debug(f"Usuario autenticado por Token APP: {user_id}")
-            return user_id
-        except (ValueError, IndexError):
-            logging.error(f"Token mal formado: {auth_header}")
-            pass
+            # Decodificar JWT Real
+            payload = jwt.decode(token, SECRET_KEY_JWT, algorithms=["HS256"])
+            user_id = payload.get("user_id") or payload.get("sub")
+            if user_id:
+                return int(user_id)
+        except Exception as e:
+            logging.error(f"Error get_session JWT: {e}")
+            # Fallback legacy
+            if "jwt_app_" in token:
+                try: return int(token.split("jwt_app_")[1])
+                except: pass
 
-    # Si no hay ni cookie ni token válido:
     raise HTTPException(status_code=401, detail="No autorizado. Inicia sesión.")
 
-# Ruta para obtener el usuario actual
+# --- EL RESTO DEL CÓDIGO SIGUE IGUAL ---
+
 @router.get("/current_user")
-async def get_current_user(user_id: int = Depends(get_session)):
-    """Devuelve el ID del usuario autenticado."""
+async def get_current_user_endpoint(user_id: int = Depends(get_session)):
     return {"user_id": user_id}
 
-# Ruta para obtener datos de un usuario
 @router.get("/user/{user_id}")
-async def get_user(user_id: int, requesting_user_id: int = Depends(get_session)):
-    """Obtiene los datos de un usuario específico."""
+async def get_user_info(user_id: int, requesting_user_id: int = Depends(get_session)):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -192,7 +242,6 @@ async def get_user(user_id: int, requesting_user_id: int = Depends(get_session))
         conn.close()
 
         if not user:
-            logging.warning(f"Usuario no encontrado: {user_id}")
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
         return {
@@ -203,31 +252,23 @@ async def get_user(user_id: int, requesting_user_id: int = Depends(get_session))
             "foto_perfil_url": f"/chats/user/{user_id}/foto_perfil" if user[3] and user[4] else ""
         }
     except Exception as e:
-        logging.error(f"Error al obtener datos del usuario {user_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al obtener datos del usuario: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para renderizar chats.html (SOLO WEB)
 @router.get("/", response_class=HTMLResponse)
 async def get_chats_page(request: Request, user_id: int = Depends(get_session)):
-    """Renderiza la página de chats para el usuario autenticado (Solo Web)."""
     try:
-        logging.debug(f"Renderizando chats.html para user_id: {user_id}")
         return templates.TemplateResponse("chats.html", {
             "request": request,
             "user_id": user_id
         })
     except Exception as e:
-        logging.error(f"Error al renderizar chats.html: {e}")
         if "application/json" in request.headers.get("accept", ""):
              raise HTTPException(status_code=401, detail="No autorizado")
         return RedirectResponse(url="/login", status_code=302)
 
-# Ruta MODIFICADA para servir archivos multimedia desde la base de datos (con soporte Range)
 @router.get("/media/{mensaje_id}")
-async def get_media(request: Request, mensaje_id: int, user_id: int = Depends(get_session)):
-    """Sirve el contenido multimedia desde la base de datos."""
+async def get_media_chat(request: Request, mensaje_id: int, user_id: int = Depends(get_session)):
     try:
-        # logging.debug(f"Obteniendo multimedia para mensaje_id: {mensaje_id}, user_id: {user_id}")
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
@@ -241,7 +282,6 @@ async def get_media(request: Request, mensaje_id: int, user_id: int = Depends(ge
         conn.close()
 
         if not result or not result[0]:
-            logging.warning(f"Archivo no encontrado para mensaje_id: {mensaje_id}")
             raise HTTPException(status_code=404, detail="Archivo no encontrado")
 
         media_content, tipo = result
@@ -252,25 +292,20 @@ async def get_media(request: Request, mensaje_id: int, user_id: int = Depends(ge
             'document': 'application/pdf'
         }.get(tipo, 'application/octet-stream')
 
-        # Definir nombre de archivo adecuado
         filename = f"file_{mensaje_id}"
         if tipo == 'video': filename += ".mp4"
         elif tipo == 'voz': filename += ".m4a"
         elif tipo == 'imagen': filename += ".jpg"
         elif tipo == 'document': filename += ".pdf"
         
-        # USAMOS LA NUEVA FUNCIÓN QUE SOPORTA RANGOS
         return send_bytes_range_requests(request, media_content, content_type, filename)
 
     except Exception as e:
-        logging.error(f"Error al servir multimedia para mensaje_id {mensaje_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al servir multimedia: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para listar chats del usuario
 @router.get("/list")
 async def list_chats(user_id: int = Depends(get_session), limit: int = 10, offset: int = 0):
     try:
-        logging.debug(f"Listando chats para user_id: {user_id}")
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
@@ -324,10 +359,8 @@ async def list_chats(user_id: int = Depends(get_session), limit: int = 10, offse
         ]
         return chats_list
     except Exception as e:
-        logging.error(f"Error al listar chats: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al listar chats: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para obtener mensajes
 @router.get("/{chat_id}/mensajes")
 async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), limit: int = 20, offset: int = 0):
     try:
@@ -340,7 +373,6 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
         """, (chat_id, user_id, user_id))
         chat = cur.fetchone()
         if not chat:
-            logging.warning(f"Chat no encontrado: {chat_id}")
             raise HTTPException(status_code=404, detail="Chat no encontrado")
 
         otro_usuario_id = chat[2] if chat[1] == user_id else chat[1]
@@ -403,10 +435,8 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
             "mensajes": mensajes_list
         }
     except Exception as e:
-        logging.error(f"Error al obtener mensajes: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al obtener mensajes: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para enviar mensaje de texto (CON SEGURIDAD)
 @router.post("/{chat_id}/mensaje")
 async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = Depends(get_session)):
     try:
@@ -424,9 +454,7 @@ async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = 
 
         receptor_id = chat[2] if chat[1] == user_id else chat[1]
         
-        # --- VERIFICAR BLOQUEO ---
         verificar_bloqueo(cur, user_id, receptor_id)
-        # -------------------------
 
         cur.execute("""
             INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, contenido, tipo, fecha_envio)
@@ -452,45 +480,32 @@ async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = 
         conn.close()
         return message_data
     except Exception as e:
-        logging.error(f"Error enviando mensaje: {e}")
-        if 'conn' in locals(): conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        if 'conn' in locals() and conn: conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
-# ==================================================================================
-# RUTAS DE MULTIMEDIA
-# ==================================================================================
-
-# Ruta para enviar multimedia (imagen o video) (CON SEGURIDAD)
 @router.post("/{chat_id}/media")
 async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = Depends(get_session)):
     try:
-        # Validación de seguridad: Leer un poco para asegurar que hay archivo
         if not file: raise HTTPException(status_code=400, detail="Archivo vacío")
 
-        # --- LÓGICA DE DETECCIÓN INTELIGENTE ---
         content_type = file.content_type or ""
         filename = file.filename.lower() if file.filename else ""
         ext = filename.split('.')[-1] if '.' in filename else ''
         tipo = None
 
-        # 1. Verificar Headers
         if content_type.startswith('image/'): tipo = 'imagen'
         elif content_type.startswith('video/'): tipo = 'video'
-
-        # 2. Respaldo por Extensión (Para iOS/Simulador que envían application/octet-stream)
         if not tipo:
             if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'bmp']: tipo = 'imagen'
             elif ext in ['mp4', 'mov', 'avi', 'mkv', 'webm']: tipo = 'video'
 
         if not tipo:
-            logging.warning(f"Tipo archivo rechazado: {content_type}, ext: {ext}")
             raise HTTPException(status_code=400, detail=f"Formato no soportado ({ext or content_type})")
 
         file_content = await file.read()
         if len(file_content) > MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail="Archivo excede 20MB")
 
-        # Guardar en BD
         conn = get_db_connection()
         cur = conn.cursor()
         try:
@@ -499,10 +514,7 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
             if not chat: raise HTTPException(status_code=404, detail="Chat no encontrado")
 
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
-            
-            # --- VERIFICAR BLOQUEO ---
             verificar_bloqueo(cur, user_id, receptor_id)
-            # -------------------------
             
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, media_content, fecha_envio)
@@ -530,31 +542,25 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
         finally:
             cur.close()
             conn.close()
-
     except HTTPException as he: raise he
     except Exception as e:
-        logging.error(f"Error media: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para enviar nota de voz (CORREGIDA PARA iOS Y SEGURIDAD)
 @router.post("/{chat_id}/voz")
 async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: int = Depends(get_session)):
     try:
         if not file: raise HTTPException(status_code=400, detail="Archivo vacío")
 
-        # --- LÓGICA DE DETECCIÓN INTELIGENTE ---
         content_type = file.content_type or ""
         filename = file.filename.lower() if file.filename else ""
         ext = filename.split('.')[-1] if '.' in filename else ''
         
-        # iOS envía notas de voz .m4a a veces como video/mp4 o application/octet-stream
         es_audio = False
         if content_type.startswith('audio/'): es_audio = True
         elif ext in ['m4a', 'mp3', 'wav', 'aac', 'webm', 'ogg', 'opus']: es_audio = True
-        elif content_type == 'video/mp4' and ext == 'm4a': es_audio = True # Caso específico iOS
+        elif content_type == 'video/mp4' and ext == 'm4a': es_audio = True 
 
         if not es_audio:
-            logging.warning(f"Audio rechazado: {content_type}, ext: {ext}")
             raise HTTPException(status_code=400, detail=f"No es un audio válido ({ext or content_type})")
 
         file_content = await file.read()
@@ -569,10 +575,7 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
             if not chat: raise HTTPException(status_code=404, detail="Chat no encontrado")
 
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
-            
-            # --- VERIFICAR BLOQUEO ---
             verificar_bloqueo(cur, user_id, receptor_id)
-            # -------------------------
             
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, media_content, fecha_envio)
@@ -600,19 +603,15 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
         finally:
             cur.close()
             conn.close()
-
     except HTTPException as he: raise he
     except Exception as e:
-        logging.error(f"Error voz: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para enviar documentos (CON SEGURIDAD)
 @router.post("/{chat_id}/document")
 async def send_document(chat_id: int, file: UploadFile = File(...), contenido: str = Form(None), user_id: int = Depends(get_session)):
     try:
         if not file: raise HTTPException(status_code=400, detail="Archivo vacío")
 
-        # --- LÓGICA DE DETECCIÓN INTELIGENTE ---
         content_type = file.content_type or ""
         filename = file.filename.lower() if file.filename else ""
         ext = filename.split('.')[-1] if '.' in filename else ''
@@ -622,10 +621,9 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
         
         if content_type in ['application/pdf', 'application/msword', 'text/plain']: es_doc = True
         elif ext in allowed_extensions: es_doc = True
-        elif 'application/' in content_type: es_doc = True # Permitir genéricos de oficina
+        elif 'application/' in content_type: es_doc = True
 
         if not es_doc:
-            logging.warning(f"Documento rechazado: {content_type}, ext: {ext}")
             raise HTTPException(status_code=400, detail=f"Documento no permitido ({ext})")
 
         file_content = await file.read()
@@ -642,10 +640,7 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
             if not chat: raise HTTPException(status_code=404, detail="Chat no encontrado")
 
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
-            
-            # --- VERIFICAR BLOQUEO ---
             verificar_bloqueo(cur, user_id, receptor_id)
-            # -------------------------
             
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, contenido, tipo, media_content, fecha_envio)
@@ -673,13 +668,10 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
         finally:
             cur.close()
             conn.close()
-
     except HTTPException as he: raise he
     except Exception as e:
-        logging.error(f"Error doc: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para buscar chats
 @router.get("/buscar")
 async def search_chats(query: str, user_id: int = Depends(get_session), limit: int = 10, offset: int = 0):
     try:
@@ -705,7 +697,7 @@ async def search_chats(query: str, user_id: int = Depends(get_session), limit: i
             GROUP BY c.id, c.usuario1_id, c.usuario2_id, u.nombre, du.nombre_empresa, du.categoria, m.contenido, m.fecha_envio, m.tipo, du.foto
             ORDER BY m.fecha_envio DESC NULLS LAST
             LIMIT %s OFFSET %s
-        """, (user_id, user_id, user_id, user_id, user_id, user_id, f"%{query}%", limit, offset))
+        """, (user_id, user_id, user_id, user_id, user_id, f"%{query}%", limit, offset))
         chats = cur.fetchall()
         cur.close()
         conn.close()
@@ -720,10 +712,8 @@ async def search_chats(query: str, user_id: int = Depends(get_session), limit: i
         ]
         return chats_list
     except Exception as e:
-        logging.error(f"Error buscar: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para iniciar un chat (CON SEGURIDAD)
 @router.post("/iniciar/{otro_usuario_id}")
 async def start_chat(otro_usuario_id: int, user_id: int = Depends(get_session)):
     try:
@@ -732,9 +722,7 @@ async def start_chat(otro_usuario_id: int, user_id: int = Depends(get_session)):
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # --- VERIFICAR BLOQUEO ---
         verificar_bloqueo(cur, user_id, otro_usuario_id)
-        # -------------------------
 
         cur.execute("SELECT id FROM usuarios WHERE id = %s", (otro_usuario_id,))
         if not cur.fetchone(): raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -766,10 +754,8 @@ async def start_chat(otro_usuario_id: int, user_id: int = Depends(get_session)):
         conn.close()
         return {"chat_id": chat_id}
     except Exception as e:
-        logging.error(f"Error iniciar chat: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para eliminar un chat
 @router.delete("/{chat_id}")
 async def delete_chat(chat_id: int, user_id: int = Depends(get_session)):
     try:
@@ -793,10 +779,8 @@ async def delete_chat(chat_id: int, user_id: int = Depends(get_session)):
         conn.close()
         return {"message": "Chat eliminado"}
     except Exception as e:
-        logging.error(f"Error eliminar chat: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta WebSocket
 @router.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int):
     await websocket.accept()
@@ -823,7 +807,6 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
         logging.error(f"Error WS: {e}")
         await websocket.close(code=1008)
 
-# Ruta para servir foto de perfil
 @router.get("/user/{user_id}/foto_perfil")
 async def get_user_profile_picture(user_id: int):
     try:
@@ -860,4 +843,3 @@ async def get_unread_count(user_id: int = Depends(get_session)):
         conn.close()
         return {"unread_count": count}
     except Exception: raise HTTPException(status_code=500)
-
