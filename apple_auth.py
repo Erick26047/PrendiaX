@@ -113,7 +113,7 @@ def process_unified_login(apple_sub, email, name, tipo, user_agent):
 
         # 🔥🔥🔥 CORRECCIÓN: GENERAR TOKEN JWT REAL 🔥🔥🔥
         # ¡IMPORTANTE!: Esta CLAVE debe ser IGUAL a la que usas para validar tokens en el resto de tu app.
-        SECRET_KEY = "TU_CLAVE_SECRETA_SUPER_SEGURA" 
+        SECRET_KEY = "Elbicho7"  # En producción, usa una clave segura y mantenla en secreto (env var)
         
         payload = {
             "sub": str(user_id),      # ID del usuario como string (estándar JWT)
