@@ -9,6 +9,7 @@ import io
 import re
 import json # <--- Agregado para enviar mensajes JSON
 from pydantic import BaseModel
+import jwt
 
 router = APIRouter()
 
@@ -101,20 +102,38 @@ class ReportePublicacionRequest(BaseModel):
     motivo: str
 
 # --- FUNCIÓN HÍBRIDA: Detecta si es App (Token) o Web (Sesión) ---
+# Asegúrate de tener este import arriba si no lo tienes
+
+# 🔥 CLAVE MAESTRA (Debe ser la misma que en apple_auth.py)
+SECRET_KEY_JWT = "Elbicho7"
+
+# --- FUNCIÓN HÍBRIDA CORREGIDA: Acepta JWT Real y Sesión Web ---
 def get_user_id_hybrid(request: Request):
     # 1. Intentar Token de App Móvil (Header Authorization)
     auth_header = request.headers.get("Authorization")
-    if auth_header and "jwt_app_" in auth_header:
-        try:
-            # El header llega así: "Bearer jwt_app_45"
-            token_part = auth_header.split("jwt_app_")[1]
-            if token_part.isdigit():
-                return int(token_part)
-        except Exception as e:
-            logging.error(f"Error al leer token híbrido: {e}")
-            pass
     
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1] # Quitamos la palabra "Bearer"
+        
+        try:
+            # A) Intentamos leerlo como un JWT REAL (Lo que manda Apple ahora)
+            payload = jwt.decode(token, SECRET_KEY_JWT, algorithms=["HS256"])
+            # Buscamos 'user_id' o 'sub' en el token desencriptado
+            user_id = payload.get("user_id") or payload.get("sub")
+            if user_id:
+                return int(user_id)
+                
+        except Exception as e:
+            # B) Si falla el JWT, intentamos el modo antiguo (jwt_app_) por si acaso
+            if "jwt_app_" in token:
+                try:
+                    return int(token.split("jwt_app_")[1])
+                except:
+                    pass
+            logging.error(f"Error validando token: {e}")
+
     # 2. Intentar Sesión Web (Cookie)
+    # Esto sigue funcionando igual para cuando entras desde el navegador
     if 'user' in request.session and 'id' in request.session['user']:
         return int(request.session['user']['id'])
         
