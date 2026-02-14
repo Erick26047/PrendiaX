@@ -19,7 +19,7 @@ router = APIRouter()
 APPLE_TEAM_ID = "ZRTLHL9GXR"
 APPLE_KEY_ID = "YFNS7NW42N"
 APPLE_CLIENT_ID_WEB = "com.prendiax.web.service"
-APPLE_BUNDLE_ID_IOS = "com.prendiax.app" 
+APPLE_BUNDLE_ID_IOS = "com.prendiax.web" 
 APPLE_PRIVATE_KEY_FILE = "AuthKey_YFNS7NW42N.p8"
 
 # 🔴 CONFIGURACIÓN DB
