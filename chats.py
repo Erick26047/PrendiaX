@@ -493,6 +493,11 @@ async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = 
                         title=f"Nuevo mensaje de {emisor_nombre}",
                         body=contenido
                     ),
+                    apns=messaging.APNSConfig(
+                        payload=messaging.APNSPayload(
+                            aps=messaging.Aps(sound="default")
+                        )
+                    ),
                     data={"tipo": "chat", "chat_id": str(chat_id)},
                     token=fcm_token,
                 )

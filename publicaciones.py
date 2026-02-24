@@ -221,7 +221,13 @@ async def crear_notificacion(publicacion_id: int, tipo: str, actor_id: int, mens
                 
                 try:
                     push_msg = messaging.Message(
-                        notification=messaging.Notification(title=titulos.get(tipo, "Notificación"), body=cuerpos.get(tipo, "Tienes una nueva notificación")),
+                        notification=messaging.Notification(title=titulos.get(tipo, "Notificación"), body=cuerpos.get(tipo, "Tienes una nueva notificación")), 
+                        apns=messaging.APNSConfig(
+                        payload=messaging.APNSPayload(
+                            aps=messaging.Aps(sound="default")
+                        )
+                    ),
+                        
                         data={"tipo": tipo, "publicacion_id": str(publicacion_id)},
                         token=fcm_token,
                     )
