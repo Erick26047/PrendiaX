@@ -6,4 +6,4 @@ node_modules/
 __pycache__/
 *.pyc
 *.log
-
+firebase_key.json

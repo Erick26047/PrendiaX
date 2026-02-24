@@ -10,6 +10,8 @@ import re
 import json 
 from pydantic import BaseModel
 import jwt # <--- NECESARIO PARA LEER EL TOKEN
+from firebase_admin import messaging # 🔥 Añadir a tus imports
+
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
@@ -441,20 +443,27 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
 async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = Depends(get_session)):
     try:
         contenido = contenido.strip()
-        if not contenido:
-            raise HTTPException(status_code=400, detail="Mensaje vacío")
+        if not contenido: raise HTTPException(status_code=400, detail="Mensaje vacío")
 
         conn = get_db_connection()
         cur = conn.cursor()
         
         cur.execute("SELECT id, usuario1_id, usuario2_id FROM chats WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)", (chat_id, user_id, user_id))
         chat = cur.fetchone()
-        if not chat:
-            raise HTTPException(status_code=404, detail="Chat no encontrado")
+        if not chat: raise HTTPException(status_code=404, detail="Chat no encontrado")
 
         receptor_id = chat[2] if chat[1] == user_id else chat[1]
-        
         verificar_bloqueo(cur, user_id, receptor_id)
+
+        # 🔥 Buscar el nombre de quien envía y el token del receptor
+        cur.execute("""
+            SELECT 
+                (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s),
+                (SELECT fcm_token FROM usuarios WHERE id = %s)
+        """, (user_id, receptor_id))
+        row = cur.fetchone()
+        emisor_nombre = row[0] if row and row[0] else "Usuario"
+        fcm_token = row[1] if row and row[1] else None
 
         cur.execute("""
             INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, contenido, tipo, fecha_envio)
@@ -475,6 +484,21 @@ async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = 
         if receptor_id in websocket_connections:
             try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
             except: del websocket_connections[receptor_id]
+
+        # 🔥 ENVIAR PUSH NOTIFICATION (CHAT) 🔥
+        if fcm_token:
+            try:
+                push_msg = messaging.Message(
+                    notification=messaging.Notification(
+                        title=f"Nuevo mensaje de {emisor_nombre}",
+                        body=contenido
+                    ),
+                    data={"tipo": "chat", "chat_id": str(chat_id)},
+                    token=fcm_token,
+                )
+                messaging.send(push_msg)
+            except Exception as e:
+                logging.error(f"Error enviando Push (Chat): {e}")
 
         cur.close()
         conn.close()

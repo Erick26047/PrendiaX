@@ -16,9 +16,21 @@ from resenas import router as resenas_router
 from apple_auth import router as apple_router
 from pydantic import BaseModel
 from typing import Optional
+import firebase_admin
+from firebase_admin import credentials
 
 # --- Configurar logs ---
 logging.basicConfig(level=logging.DEBUG)
+
+# 🔥 INICIALIZAR FIREBASE (ANTES DE CREAR LA APP) 🔥
+try:
+    if not firebase_admin._apps:
+        # ¡Asegúrate de que firebase_key.json esté en esta carpeta!
+        cred = credentials.Certificate("firebase_key.json")
+        firebase_admin.initialize_app(cred)
+        logging.info("🔥 Firebase Admin inicializado correctamente")
+except Exception as e:
+    logging.error(f"⚠️ Error al inicializar Firebase: {e}")
 
 # --- Esquema del perfil público ---
 class UserProfile(BaseModel):

@@ -10,6 +10,8 @@ import re
 import json # <--- Agregado para enviar mensajes JSON
 from pydantic import BaseModel
 import jwt
+from firebase_admin import messaging # 🔥 Añadir a tus imports
+
 
 router = APIRouter()
 
@@ -101,6 +103,16 @@ class ReportePublicacionRequest(BaseModel):
     publicacion_id: int
     motivo: str
 
+# ... (Tus otros modelos) ...
+class ReportePublicacionRequest(BaseModel):
+    publicacion_id: int
+    motivo: str
+
+# 🔥 NUEVO MODELO PARA EL TOKEN 🔥
+class FCMTokenRequest(BaseModel):
+    fcm_token: str
+
+
 # --- FUNCIÓN HÍBRIDA: Detecta si es App (Token) o Web (Sesión) ---
 # Asegúrate de tener este import arriba si no lo tienes
 
@@ -141,44 +153,32 @@ def get_user_id_hybrid(request: Request):
 
 # --- NOTIFICACIONES INTELIGENTES (MODIFICADO PARA USAR WEBSOCKET) ---
 async def crear_notificacion(publicacion_id: int, tipo: str, actor_id: int, mensaje: str = None, target_user_id: int = None, comentario_id: int = None):
-    """
-    Crea una notificación gestionando la lógica de destinatarios Y LA ENVÍA POR WEBSOCKET
-    """
     try:
-        logging.debug(f"Creando notificación: post={publicacion_id}, tipo={tipo}, actor={actor_id}, target={target_user_id}")
-        
         if tipo not in ['interes', 'comentario', 'respuesta', 'mencion']:
-            raise HTTPException(status_code=400, detail="Tipo de notificación no válido")
+            raise HTTPException(status_code=400, detail="Tipo inválido")
 
         conn = get_db_connection()
         cur = conn.cursor()
         try:
-            # 1. Definir quién es el receptor
             receptor_id = target_user_id
-
-            # Si no es explícito, buscamos al dueño de la publicación
             if not receptor_id:
                 cur.execute("SELECT user_id FROM publicaciones WHERE id = %s", (publicacion_id,))
                 publicacion = cur.fetchone()
-                if not publicacion:
-                    raise HTTPException(status_code=404, detail="Publicación no encontrada")
+                if not publicacion: return None
                 receptor_id = publicacion[0]
 
-            # Evitar notificarse a uno mismo
-            if receptor_id == actor_id:
-                return None 
+            if receptor_id == actor_id: return None 
 
-            # 2. Obtener nombre del actor (para logs o historial rápido)
+            # 🔥 Modificamos la consulta para traer también el fcm_token del receptor
             cur.execute("""
-                SELECT COALESCE(du.nombre_empresa, u.nombre) AS display_name
-                FROM usuarios u
-                LEFT JOIN datos_usuario du ON u.id = du.user_id
-                WHERE u.id = %s
-            """, (actor_id,))
-            actor_name = cur.fetchone()
-            actor_name = actor_name[0] if actor_name else "Usuario desconocido"
+                SELECT 
+                    (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s) AS actor_name,
+                    (SELECT fcm_token FROM usuarios WHERE id = %s) AS fcm_token
+            """, (actor_id, receptor_id))
+            row = cur.fetchone()
+            actor_name = row[0] if row and row[0] else "Usuario"
+            fcm_token = row[1] if row and row[1] else None
 
-            # 3. Insertar la notificación en BD
             cur.execute("""
                 INSERT INTO notifications (user_id, publicacion_id, tipo, leida, fecha_creacion, actor_id, mensaje, comentario_id)
                 VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, %s, %s, %s)
@@ -187,36 +187,36 @@ async def crear_notificacion(publicacion_id: int, tipo: str, actor_id: int, mens
             notificacion = cur.fetchone()
             conn.commit()
 
-            # 4. ENVIAR POR WEBSOCKET (¡ESTO ES LO QUE FALTABA EN EL ORIGINAL!)
             payload = {
-                "id": notificacion[0],
-                "user_id": receptor_id,
-                "publicacion_id": publicacion_id,
-                "tipo": tipo,
-                "leida": False,
-                "fecha_creacion": notificacion[1].strftime("%Y-%m-%d %H:%M:%S"),
-                "actor_id": actor_id,
-                "nombre_usuario": actor_name,
-                "mensaje": mensaje,
-                "comentario_id": comentario_id
+                "id": notificacion[0], "user_id": receptor_id, "publicacion_id": publicacion_id,
+                "tipo": tipo, "leida": False, "fecha_creacion": notificacion[1].strftime("%Y-%m-%d %H:%M:%S"),
+                "actor_id": actor_id, "nombre_usuario": actor_name, "mensaje": mensaje, "comentario_id": comentario_id
             }
             await notification_manager.send_personal_message(payload, receptor_id)
 
-            return payload
+            # 🔥 ENVIAR PUSH NOTIFICATION 🔥
+            if fcm_token:
+                titulos = {'interes': "¡Nueva interacción!", 'comentario': "Nuevo comentario", 'respuesta': "Te han respondido", 'mencion': "Te mencionaron"}
+                cuerpos = {'interes': f"A {actor_name} le interesó tu publicación.", 'comentario': f"{actor_name} comentó: {mensaje}", 'respuesta': f"{actor_name} respondió a tu comentario.", 'mencion': f"{actor_name} te mencionó: {mensaje}"}
+                
+                try:
+                    push_msg = messaging.Message(
+                        notification=messaging.Notification(title=titulos.get(tipo, "Notificación"), body=cuerpos.get(tipo, "Tienes una nueva notificación")),
+                        data={"tipo": tipo, "publicacion_id": str(publicacion_id)},
+                        token=fcm_token,
+                    )
+                    messaging.send(push_msg)
+                except Exception as e:
+                    logging.error(f"Error enviando Push (Notificación): {e}")
 
-        except Exception as e:
-            conn.rollback()
-            # Logueamos pero no rompemos el flujo principal
-            logging.error(f"Error interno creando notificación: {str(e)}")
-            return None
+            return payload
         finally:
             cur.close()
             conn.close()
     except Exception as e:
-        logging.error(f"Error general en crear_notificacion: {e}")
+        logging.error(f"Error crear_notificacion: {e}")
         return None
-
-
+    
 # Ruta para renderizar perfil-especifico.html
 @router.get("/perfil-especifico", response_class=HTMLResponse)
 async def perfil_especifico(request: Request):
