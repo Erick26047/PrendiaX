@@ -103,15 +103,35 @@ class ReportePublicacionRequest(BaseModel):
     publicacion_id: int
     motivo: str
 
-# ... (Tus otros modelos) ...
-class ReportePublicacionRequest(BaseModel):
-    publicacion_id: int
-    motivo: str
-
 # 🔥 NUEVO MODELO PARA EL TOKEN 🔥
 class FCMTokenRequest(BaseModel):
     fcm_token: str
 
+# =================================================================
+# 📱 GUARDAR FCM TOKEN (AQUÍ ESTABA EL ERROR 404, FALTABA ESTO)
+# =================================================================
+@router.post("/api/update_fcm_token")
+async def update_fcm_token(request: Request, data: FCMTokenRequest):
+    conn = None
+    try:
+        user_id = get_user_id_hybrid(request)
+        if not user_id:
+            raise HTTPException(status_code=401, detail="No autorizado")
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE usuarios SET fcm_token = %s WHERE id = %s", (data.fcm_token, user_id))
+        conn.commit()
+        return JSONResponse(content={"status": "ok", "message": "Token guardado"})
+    except Exception as e:
+        if conn: conn.rollback()
+        logging.error(f"Error guardando FCM: {e}")
+        raise HTTPException(status_code=500, detail="Error interno")
+    finally:
+        if conn: conn.close()
+
+
+# --- FUNCIÓN HÍBRIDA: Detecta si es App (Token) o Web (Sesión) ---
 
 # --- FUNCIÓN HÍBRIDA: Detecta si es App (Token) o Web (Sesión) ---
 # Asegúrate de tener este import arriba si no lo tienes
