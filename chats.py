@@ -545,6 +545,16 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
             verificar_bloqueo(cur, user_id, receptor_id)
             
+            # 🔥 NUEVO: Obtener nombre y token para push
+            cur.execute("""
+                SELECT 
+                    (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s),
+                    (SELECT fcm_token FROM usuarios WHERE id = %s)
+            """, (user_id, receptor_id))
+            row = cur.fetchone()
+            emisor_nombre = row[0] if row and row[0] else "Usuario"
+            fcm_token = row[1] if row and row[1] else None
+
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, media_content, fecha_envio)
                 VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
@@ -563,6 +573,27 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
             if receptor_id in websocket_connections:
                 try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
                 except: del websocket_connections[receptor_id]
+
+            # 🔥 NUEVO: ENVIAR PUSH NOTIFICATION (MEDIA) 🔥
+            if fcm_token:
+                cuerpo = "📷 Te ha enviado una foto." if tipo == 'imagen' else "🎥 Te ha enviado un video."
+                try:
+                    push_msg = messaging.Message(
+                        notification=messaging.Notification(
+                            title=f"Nuevo mensaje de {emisor_nombre}",
+                            body=cuerpo
+                        ),
+                        apns=messaging.APNSConfig(
+                            payload=messaging.APNSPayload(
+                                aps=messaging.Aps(sound="default")
+                            )
+                        ),
+                        data={"tipo": "chat", "chat_id": str(chat_id)},
+                        token=fcm_token,
+                    )
+                    messaging.send(push_msg)
+                except Exception as e:
+                    logging.error(f"Error enviando Push ({tipo}): {e}")
 
             return message_data
         except Exception as e:
@@ -606,6 +637,16 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
             verificar_bloqueo(cur, user_id, receptor_id)
             
+            # 🔥 NUEVO: Obtener nombre y token para push
+            cur.execute("""
+                SELECT 
+                    (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s),
+                    (SELECT fcm_token FROM usuarios WHERE id = %s)
+            """, (user_id, receptor_id))
+            row = cur.fetchone()
+            emisor_nombre = row[0] if row and row[0] else "Usuario"
+            fcm_token = row[1] if row and row[1] else None
+
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, media_content, fecha_envio)
                 VALUES (%s, %s, %s, 'voz', %s, CURRENT_TIMESTAMP)
@@ -624,6 +665,26 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
             if receptor_id in websocket_connections:
                 try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
                 except: del websocket_connections[receptor_id]
+
+            # 🔥 NUEVO: ENVIAR PUSH NOTIFICATION (VOZ) 🔥
+            if fcm_token:
+                try:
+                    push_msg = messaging.Message(
+                        notification=messaging.Notification(
+                            title=f"Nuevo mensaje de {emisor_nombre}",
+                            body="🎙️ Te ha enviado una nota de voz."
+                        ),
+                        apns=messaging.APNSConfig(
+                            payload=messaging.APNSPayload(
+                                aps=messaging.Aps(sound="default")
+                            )
+                        ),
+                        data={"tipo": "chat", "chat_id": str(chat_id)},
+                        token=fcm_token,
+                    )
+                    messaging.send(push_msg)
+                except Exception as e:
+                    logging.error(f"Error enviando Push (voz): {e}")
 
             return message_data
         except Exception as e:
@@ -671,6 +732,16 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
             verificar_bloqueo(cur, user_id, receptor_id)
             
+            # 🔥 NUEVO: Obtener nombre y token para push
+            cur.execute("""
+                SELECT 
+                    (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s),
+                    (SELECT fcm_token FROM usuarios WHERE id = %s)
+            """, (user_id, receptor_id))
+            row = cur.fetchone()
+            emisor_nombre = row[0] if row and row[0] else "Usuario"
+            fcm_token = row[1] if row and row[1] else None
+
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, contenido, tipo, media_content, fecha_envio)
                 VALUES (%s, %s, %s, %s, 'document', %s, CURRENT_TIMESTAMP)
@@ -689,6 +760,26 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
             if receptor_id in websocket_connections:
                 try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
                 except: del websocket_connections[receptor_id]
+
+            # 🔥 NUEVO: ENVIAR PUSH NOTIFICATION (DOCUMENTO) 🔥
+            if fcm_token:
+                try:
+                    push_msg = messaging.Message(
+                        notification=messaging.Notification(
+                            title=f"Nuevo mensaje de {emisor_nombre}",
+                            body=f"📄 Te ha enviado un documento: {doc_name}"
+                        ),
+                        apns=messaging.APNSConfig(
+                            payload=messaging.APNSPayload(
+                                aps=messaging.Aps(sound="default")
+                            )
+                        ),
+                        data={"tipo": "chat", "chat_id": str(chat_id)},
+                        token=fcm_token,
+                    )
+                    messaging.send(push_msg)
+                except Exception as e:
+                    logging.error(f"Error enviando Push (documento): {e}")
 
             return message_data
         except Exception as e:
