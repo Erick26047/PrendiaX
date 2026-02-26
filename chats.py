@@ -74,7 +74,7 @@ def get_db_connection():
         logging.error(f"Error al conectar a la base de datos: {e}")
         raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
 
-MAX_FILE_SIZE = 20 * 1024 * 1024 
+MAX_FILE_SIZE = 100 * 1024 * 1024 
 
 # Modelos Pydantic
 class InterestRequest(BaseModel):
