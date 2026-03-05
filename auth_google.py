@@ -95,11 +95,11 @@ async def google_login_app(data: GoogleLoginApp):
                 print("[GOOGLE APP] Creando usuario nuevo...")
                 cursor.execute(
                     """
-                    INSERT INTO usuarios (nombre, email, foto_perfil_url, verified, created_at, user_agent)
-                    VALUES (%s, %s, %s, TRUE, NOW(), %s)
+                    INSERT INTO usuarios (nombre, email, verified, created_at, user_agent)
+                    VALUES (%s, %s, TRUE, NOW(), %s)
                     RETURNING id
                     """,
-                    (name, email, picture, data.user_agent or "App")
+                    (name, email, data.user_agent or "App")
                 )
                 user_id = cursor.fetchone()['id']
                 conn.commit()
