@@ -2487,18 +2487,31 @@ function cancelReply(postId) {
 }
 
 async function cargarComentarios(postId, commentsContainer, loadMoreLink, offset = 0) {
+  // 1. Si el contenedor ya no existe desde el principio, abortamos en silencio
+  if (!commentsContainer) return; 
+
   try {
     const response = await fetch(`/publicacion/${postId}/comentarios?limit=${commentLimit}&offset=${offset}`, {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
+
     if (!response.ok) {
-      if (response.status === 401) { showNotification(translations[localStorage.getItem('language') || 'es'].inicio.comment_login_required, true); return; }
+      if (response.status === 401) { 
+        showNotification(translations[localStorage.getItem('language') || 'es'].inicio.comment_login_required, true); 
+        return; 
+      }
       throw new Error(`Error: ${response.status}`);
     }
+
     const comentarios = await response.json();
+
+    // 🚀 2. LA MAGIA: Verificamos si el usuario buscó otra cosa y el post ya se borró del HTML
+    if (!document.body.contains(commentsContainer)) return; 
+
     const lang = localStorage.getItem('language') || 'es';
     if (!Array.isArray(comentarios.comentarios)) throw new Error("No es un array");
+    
     const totalComments = comentarios.total || 0;
     const currentCount = commentsContainer.children.length + comentarios.comentarios.length;
 
@@ -2530,11 +2543,17 @@ async function cargarComentarios(postId, commentsContainer, loadMoreLink, offset
       commentDiv.innerHTML = commentContent;
       commentsContainer.appendChild(commentDiv);
     });
+    
     loadMoreLink.style.display = currentCount < totalComments ? 'block' : 'none';
     loadMoreLink.dataset.offset = Number(loadMoreLink.dataset.offset || 0) + commentLimit;
-  } catch (error) { showNotification(translations[localStorage.getItem('language') || 'es'].inicio.comments_error, true); }
+    
+  } catch (error) { 
+    // 🚀 3. Solo mostramos el error rojo SI el post sigue en pantalla. Si no, lo ignoramos.
+    if (commentsContainer && document.body.contains(commentsContainer)) {
+       showNotification(translations[localStorage.getItem('language') || 'es'].inicio.comments_error, true); 
+    }
+  }
 }
-
 async function submitComment(postId, inputElement, commentsContainer) {
   if (!currentUserId) { showNotification(translations[localStorage.getItem('language') || 'es'].inicio.comment_login_required, true); return; }
   const contenido = inputElement.value.trim();
@@ -2895,56 +2914,54 @@ if (needsReadMore) {
   } catch (e) { console.error(e); } finally { isLoading = false; }
 }
 
-// --- CORRECCIÓN DE BÚSQUEDA Y FILTROS ---
-let searchAbortController = null; // 🚀 1. Controlador para cancelar peticiones anteriores
+// --- CORRECCIÓN DE BÚSQUEDA Y FILTROS (ANTIBLOQUEO) ---
+let searchAbortController = null; 
 
 async function search() {
   const query = document.getElementById('buscador').value.trim();
   const feedDiv = document.getElementById('feed');
   
-  // 🚀 2. Cancelar la búsqueda anterior si el usuario sigue escribiendo
-  if (searchAbortController) {
-    searchAbortController.abort();
-  }
+  // 1. Matamos la búsqueda anterior si escribes o borras rápido
+  if (searchAbortController) searchAbortController.abort();
   searchAbortController = new AbortController();
   const signal = searchAbortController.signal;
 
-  // 🚀 3. Solo limpiamos las variables y la pantalla ANTES de iniciar una búsqueda nueva
   loadedPostIds.clear();
   offset = 0; 
   hasMore = true;
   isSearching = true; 
   
-  // Si el buscador está vacío, recargamos el feed normal
+  // 2. Si el buscador está vacío (borraste todo), recargamos seguro
   if (!query) { 
     isSearching = false; 
-    feedDiv.innerHTML = ''; 
-    await cargarFeed(); 
+    feedDiv.innerHTML = ''; // Limpiamos la pantalla
+    await cargarFeed(); // Traemos el feed normal
     return; 
   }
   
-  feedDiv.innerHTML = '<p style="text-align: center; color: #666;">Buscando...</p>'; // Indicador visual
+  // Aviso visual para que no parezca que se borró todo por error
+  feedDiv.innerHTML = '<p style="text-align: center; color: #666; margin-top: 20px;"><i class="fas fa-spinner fa-spin"></i> Buscando...</p>';
   
   try {
       const res = await fetch(`/search?query=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`, { 
           headers: {'Content-Type': 'application/json'}, 
           credentials: 'include',
-          signal: signal // 🚀 4. Pasamos la señal al fetch
+          signal: signal // Pasamos la señal de aborto al servidor
       });
       
       if(!res.ok) throw new Error("Error en red");
       const publicaciones = await res.json();
       
-      // 🚀 5. Verificamos si esta respuesta aún es válida antes de pintar
+      // 3. Si esta búsqueda fue cancelada porque seguiste escribiendo, la ignoramos en silencio
       if (signal.aborted) return; 
 
       if(publicaciones.length < limit) hasMore = false;
       const lang = localStorage.getItem('language') || 'es';
 
-      feedDiv.innerHTML = ''; // Limpiamos el "Buscando..." solo si tuvimos éxito
+      feedDiv.innerHTML = ''; 
       
       if (publicaciones.length === 0) {
-          feedDiv.innerHTML = '<p style="text-align: center; color: #666;">No se encontraron resultados.</p>';
+          feedDiv.innerHTML = '<p style="text-align: center; color: #666; margin-top: 20px;">No se encontraron resultados.</p>';
           return;
       }
 
@@ -2971,8 +2988,8 @@ async function search() {
       }
       offset += limit;
   } catch(e) {
-      if (e.name !== 'AbortError') { // Ignoramos los errores de cancelación intencional
-          console.error("Error en búsqueda:", e);
+      if (e.name !== 'AbortError') { 
+          console.error(e);
           if (feedDiv.innerHTML.includes('Buscando')) {
               feedDiv.innerHTML = '<p style="text-align: center; color: red;">Error al buscar.</p>';
           }
@@ -2988,7 +3005,6 @@ async function filterByCategory(categoria) {
     if (btn.getAttribute('data-categoria') === categoria) btn.classList.add('active');
   });
 
-  // 🚀 Reutilizamos la misma lógica robusta de cancelación
   if (searchAbortController) searchAbortController.abort();
   searchAbortController = new AbortController();
   const signal = searchAbortController.signal;
@@ -3005,7 +3021,7 @@ async function filterByCategory(categoria) {
     return; 
   }
   
-  feedDiv.innerHTML = '<p style="text-align: center; color: #666;">Filtrando...</p>';
+  feedDiv.innerHTML = '<p style="text-align: center; color: #666; margin-top: 20px;"><i class="fas fa-spinner fa-spin"></i> Filtrando...</p>';
 
   try {
       const res = await fetch(`/search?query=${encodeURIComponent(categoria)}&limit=${limit}&offset=${offset}`, { 
@@ -3022,7 +3038,7 @@ async function filterByCategory(categoria) {
       feedDiv.innerHTML = ''; 
       
       if (publicaciones.length === 0) {
-          feedDiv.innerHTML = '<p style="text-align: center; color: #666;">No hay publicaciones en esta categoría.</p>';
+          feedDiv.innerHTML = '<p style="text-align: center; color: #666; margin-top: 20px;">No hay publicaciones en esta categoría.</p>';
           return;
       }
 
