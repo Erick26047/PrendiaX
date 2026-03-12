@@ -76,7 +76,7 @@ def get_db_connection():
         raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
 
 # Tamaño máximo de archivo (10 MB)
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB en bytes
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB en bytes
 
 # --- MODELOS PYDANTIC ACTUALIZADOS ---
 class InterestRequest(BaseModel):

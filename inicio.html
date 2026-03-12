@@ -2895,20 +2895,58 @@ if (needsReadMore) {
   } catch (e) { console.error(e); } finally { isLoading = false; }
 }
 
+// --- CORRECCIÓN DE BÚSQUEDA Y FILTROS ---
+let searchAbortController = null; // 🚀 1. Controlador para cancelar peticiones anteriores
+
 async function search() {
   const query = document.getElementById('buscador').value.trim();
   const feedDiv = document.getElementById('feed');
+  
+  // 🚀 2. Cancelar la búsqueda anterior si el usuario sigue escribiendo
+  if (searchAbortController) {
+    searchAbortController.abort();
+  }
+  searchAbortController = new AbortController();
+  const signal = searchAbortController.signal;
+
+  // 🚀 3. Solo limpiamos las variables y la pantalla ANTES de iniciar una búsqueda nueva
   loadedPostIds.clear();
-  offset = 0; hasMore = true;
-  if (!query) { isSearching = false; feedDiv.innerHTML = ''; await cargarFeed(); return; }
-  isSearching = true; feedDiv.innerHTML = '';
+  offset = 0; 
+  hasMore = true;
+  isSearching = true; 
+  
+  // Si el buscador está vacío, recargamos el feed normal
+  if (!query) { 
+    isSearching = false; 
+    feedDiv.innerHTML = ''; 
+    await cargarFeed(); 
+    return; 
+  }
+  
+  feedDiv.innerHTML = '<p style="text-align: center; color: #666;">Buscando...</p>'; // Indicador visual
   
   try {
-      const res = await fetch(`/search?query=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`, { headers: {'Content-Type': 'application/json'}, credentials: 'include' });
-      if(!res.ok) return;
+      const res = await fetch(`/search?query=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`, { 
+          headers: {'Content-Type': 'application/json'}, 
+          credentials: 'include',
+          signal: signal // 🚀 4. Pasamos la señal al fetch
+      });
+      
+      if(!res.ok) throw new Error("Error en red");
       const publicaciones = await res.json();
+      
+      // 🚀 5. Verificamos si esta respuesta aún es válida antes de pintar
+      if (signal.aborted) return; 
+
       if(publicaciones.length < limit) hasMore = false;
       const lang = localStorage.getItem('language') || 'es';
+
+      feedDiv.innerHTML = ''; // Limpiamos el "Buscando..." solo si tuvimos éxito
+      
+      if (publicaciones.length === 0) {
+          feedDiv.innerHTML = '<p style="text-align: center; color: #666;">No se encontraron resultados.</p>';
+          return;
+      }
 
       for (const pub of publicaciones) {
           if (loadedPostIds.has(pub.id)) continue;
@@ -2919,39 +2957,75 @@ async function search() {
           div.innerHTML = generatePostHTML(pub, lang, currentUserId);
           feedDiv.appendChild(div);
 
-          // --- DENTRO DE LAS FUNCIONES DE CARGA (Feed, Search, etc) ---
-const postContentElement = div.querySelector('.post-content');
-const needsReadMore = await checkContentHeight(postContentElement);
+          const postContentElement = div.querySelector('.post-content');
+          const needsReadMore = await checkContentHeight(postContentElement);
 
-if (needsReadMore) {
-    const readMoreButton = document.createElement('span');
-    readMoreButton.classList.add('read-more', 'visible'); // Añadimos 'visible' aquí
-    readMoreButton.textContent = "Ver más"; 
-    readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
-    
-    // Insertamos después del contenido
-    postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
-}
+          if (needsReadMore && !signal.aborted) {
+              const readMoreButton = document.createElement('span');
+              readMoreButton.classList.add('read-more', 'visible');
+              readMoreButton.textContent = "Ver más"; 
+              readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
+              postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
+          }
           cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
       }
       offset += limit;
-  } catch(e) {}
+  } catch(e) {
+      if (e.name !== 'AbortError') { // Ignoramos los errores de cancelación intencional
+          console.error("Error en búsqueda:", e);
+          if (feedDiv.innerHTML.includes('Buscando')) {
+              feedDiv.innerHTML = '<p style="text-align: center; color: red;">Error al buscar.</p>';
+          }
+      }
+  }
 }
 
 async function filterByCategory(categoria) {
   const feedDiv = document.getElementById('feed');
-  loadedPostIds.clear(); offset = 0; hasMore = true;
+  
   document.querySelectorAll('.categoria-filter').forEach(btn => {
     btn.classList.remove('active');
     if (btn.getAttribute('data-categoria') === categoria) btn.classList.add('active');
   });
-  if (!categoria) { isSearching = false; feedDiv.innerHTML = ''; await cargarFeed(); return; }
-  isSearching = true; feedDiv.innerHTML = '';
-  // Reutiliza la misma lógica de search...
+
+  // 🚀 Reutilizamos la misma lógica robusta de cancelación
+  if (searchAbortController) searchAbortController.abort();
+  searchAbortController = new AbortController();
+  const signal = searchAbortController.signal;
+
+  loadedPostIds.clear(); 
+  offset = 0; 
+  hasMore = true;
+  isSearching = true;
+
+  if (!categoria) { 
+    isSearching = false; 
+    feedDiv.innerHTML = ''; 
+    await cargarFeed(); 
+    return; 
+  }
+  
+  feedDiv.innerHTML = '<p style="text-align: center; color: #666;">Filtrando...</p>';
+
   try {
-      const res = await fetch(`/search?query=${encodeURIComponent(categoria)}&limit=${limit}&offset=${offset}`, { headers: {'Content-Type': 'application/json'}, credentials: 'include' });
+      const res = await fetch(`/search?query=${encodeURIComponent(categoria)}&limit=${limit}&offset=${offset}`, { 
+          headers: {'Content-Type': 'application/json'}, 
+          credentials: 'include',
+          signal: signal
+      });
+      if(!res.ok) throw new Error("Error de red");
+      
       const publicaciones = await res.json();
+      if (signal.aborted) return;
+      
       const lang = localStorage.getItem('language') || 'es';
+      feedDiv.innerHTML = ''; 
+      
+      if (publicaciones.length === 0) {
+          feedDiv.innerHTML = '<p style="text-align: center; color: #666;">No hay publicaciones en esta categoría.</p>';
+          return;
+      }
+
       for (const pub of publicaciones) {
           if (loadedPostIds.has(pub.id)) continue;
           loadedPostIds.add(pub.id);
@@ -2961,22 +3035,22 @@ async function filterByCategory(categoria) {
           div.innerHTML = generatePostHTML(pub, lang, currentUserId);
           feedDiv.appendChild(div);
           
-          // --- DENTRO DE LAS FUNCIONES DE CARGA (Feed, Search, etc) ---
-const postContentElement = div.querySelector('.post-content');
-const needsReadMore = await checkContentHeight(postContentElement);
+          const postContentElement = div.querySelector('.post-content');
+          const needsReadMore = await checkContentHeight(postContentElement);
 
-if (needsReadMore) {
-    const readMoreButton = document.createElement('span');
-    readMoreButton.classList.add('read-more', 'visible'); // Añadimos 'visible' aquí
-    readMoreButton.textContent = "Ver más"; 
-    readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
-    
-    // Insertamos después del contenido
-    postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
-}
+          if (needsReadMore && !signal.aborted) {
+              const readMoreButton = document.createElement('span');
+              readMoreButton.classList.add('read-more', 'visible');
+              readMoreButton.textContent = "Ver más"; 
+              readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
+              postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
+          }
           cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
       }
-  } catch(e){}
+      offset += limit;
+  } catch(e){
+       if (e.name !== 'AbortError') console.error(e);
+  }
 }
 
 const imagenInput = document.getElementById('imagen');
