@@ -2136,15 +2136,15 @@ body.dark-mode .report-option span { color: #fff; }
 </button>
     </button>
     <button class="icon-button categoria-filter" data-categoria="" title="Mostrar todo">
-      <i class="fas fa-bars"></i>
-    </button>
-  </div>
-</div>
+          <i class="fas fa-bars"></i>
+        </button>
+      </div>
+    </div>
 
     <div id="feed" class="feed"></div>
-  </div>
+    <div id="search-feed" class="feed" style="display: none;"></div>
 
-  <div id="confirm-modal" class="modal">
+  </div> <div id="confirm-modal" class="modal">
     <div class="modal-content">
       <p id="modal-message" data-translate="inicio.delete_confirm">¿Estás seguro de que quieres eliminar esta publicación?</p>
       <button id="confirm-btn" data-translate="inicio.delete_button">Eliminar</button>
@@ -2229,6 +2229,14 @@ const notificationLimit = 10;
 let notificationCount = 0;
 let wsNotifications = null;
 let replyState = {}; 
+
+// NUEVAS VARIABLES PARA BÚSQUEDA Y FILTROS
+let searchAbortController = null;
+let searchOffset = 0;
+let searchHasMore = true;
+let searchLoadedPostIds = new Set();
+let currentSearchQuery = "";
+let currentCategoryFilter = "";
 
 // --- LÓGICA DE MENÚ Y REPORTES ---
 function togglePostMenu(postId, event) {
@@ -2363,7 +2371,6 @@ function updateLanguage(lang) {
     p.textContent = originalDate ? formatDate(originalDate, lang) : translations[lang].inicio.invalid_date;
   });
 
-  // Asegurar que los botones "Ver más" mantengan su texto correcto según estado
   document.querySelectorAll('.read-more').forEach(button => {
     const isExpanded = button.previousElementSibling.classList.contains('expanded');
     button.textContent = isExpanded ? "Ver menos" : "Ver más";
@@ -2487,7 +2494,6 @@ function cancelReply(postId) {
 }
 
 async function cargarComentarios(postId, commentsContainer, loadMoreLink, offset = 0) {
-  // 1. Si el contenedor ya no existe desde el principio, abortamos en silencio
   if (!commentsContainer) return; 
 
   try {
@@ -2506,7 +2512,6 @@ async function cargarComentarios(postId, commentsContainer, loadMoreLink, offset
 
     const comentarios = await response.json();
 
-    // 🚀 2. LA MAGIA: Verificamos si el usuario buscó otra cosa y el post ya se borró del HTML
     if (!document.body.contains(commentsContainer)) return; 
 
     const lang = localStorage.getItem('language') || 'es';
@@ -2548,12 +2553,12 @@ async function cargarComentarios(postId, commentsContainer, loadMoreLink, offset
     loadMoreLink.dataset.offset = Number(loadMoreLink.dataset.offset || 0) + commentLimit;
     
   } catch (error) { 
-    // 🚀 3. Solo mostramos el error rojo SI el post sigue en pantalla. Si no, lo ignoramos.
     if (commentsContainer && document.body.contains(commentsContainer)) {
        showNotification(translations[localStorage.getItem('language') || 'es'].inicio.comments_error, true); 
     }
   }
 }
+
 async function submitComment(postId, inputElement, commentsContainer) {
   if (!currentUserId) { showNotification(translations[localStorage.getItem('language') || 'es'].inicio.comment_login_required, true); return; }
   const contenido = inputElement.value.trim();
@@ -2713,22 +2718,15 @@ function scrollToPost(postId) {
   else loadSinglePost(postId);
 }
 
-// --- FUNCIÓN MEJORADA PARA DETECTAR TEXTO LARGO ---
-// Busca esta función en tu script y reemplázala
 function checkContentHeight(postContent) {
   return new Promise(resolve => {
-    // Un pequeño delay para asegurar que el DOM y las fuentes se hayan renderizado
     setTimeout(() => {
       const pElement = postContent.querySelector('p');
       if (!pElement) {
          resolve(false);
          return;
       }
-      
-      // Si la altura total del contenido es mayor a la altura máxima permitida (4.5em)
-      // significa que el texto está siendo cortado por el CSS
       const isOverflowing = postContent.scrollHeight > postContent.clientHeight;
-      
       resolve(isOverflowing);
     }, 50); 
   });
@@ -2760,28 +2758,19 @@ async function loadSinglePost(postId) {
       const div = document.createElement('div');
       div.classList.add('post');
       div.setAttribute('data-post-id', pub.id);
-      // ... (Generación del HTML del post similar a cargarFeed)
-      // Para simplificar, se asume que cargarFeed maneja la estructura. 
-      // Si necesitas esta función completa, usa la lógica de renderizado de abajo.
-      // (Aquí inyecto el HTML simplificado para no repetir todo el bloque gigante, la lógica visual es la misma)
-      
-      // Renderizamos:
       div.innerHTML = generatePostHTML(pub, lang, currentUserId);
       feedDiv.prepend(div);
       
-      // --- DENTRO DE LAS FUNCIONES DE CARGA (Feed, Search, etc) ---
-const postContentElement = div.querySelector('.post-content');
-const needsReadMore = await checkContentHeight(postContentElement);
+      const postContentElement = div.querySelector('.post-content');
+      const needsReadMore = await checkContentHeight(postContentElement);
 
-if (needsReadMore) {
-    const readMoreButton = document.createElement('span');
-    readMoreButton.classList.add('read-more', 'visible'); // Añadimos 'visible' aquí
-    readMoreButton.textContent = "Ver más"; 
-    readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
-    
-    // Insertamos después del contenido
-    postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
-}
+      if (needsReadMore) {
+          const readMoreButton = document.createElement('span');
+          readMoreButton.classList.add('read-more', 'visible');
+          readMoreButton.textContent = "Ver más"; 
+          readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
+          postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
+      }
       
       cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
       div.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2799,9 +2788,6 @@ async function initializeNotificationsWebSocket() {
     wsNotifications.onopen = () => console.log('WS Notificaciones conectado');
     wsNotifications.onmessage = (event) => {
         const n = JSON.parse(event.data);
-        // Lógica de actualización en tiempo real (mismo que tu código anterior)
-        // ...
-        // Se omite por brevedad pero mantén tu lógica original aquí
     };
   } catch(e){}
 }
@@ -2815,7 +2801,6 @@ function startNotificationPolling() {
   }, 30000);
 }
 
-// Helper para generar HTML (DRY)
 function generatePostHTML(pub, lang, currentUserId) {
     let menuOpciones = '';
     if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
@@ -2893,20 +2878,16 @@ async function cargarFeed() {
       div.innerHTML = generatePostHTML(pub, lang, currentUserId);
       feedDiv.appendChild(div);
 
-      // --- AQUÍ ESTÁ LA MAGIA DEL BOTÓN VER MÁS ---
-      // --- DENTRO DE LAS FUNCIONES DE CARGA (Feed, Search, etc) ---
-const postContentElement = div.querySelector('.post-content');
-const needsReadMore = await checkContentHeight(postContentElement);
+      const postContentElement = div.querySelector('.post-content');
+      const needsReadMore = await checkContentHeight(postContentElement);
 
-if (needsReadMore) {
-    const readMoreButton = document.createElement('span');
-    readMoreButton.classList.add('read-more', 'visible'); // Añadimos 'visible' aquí
-    readMoreButton.textContent = "Ver más"; 
-    readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
-    
-    // Insertamos después del contenido
-    postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
-}
+      if (needsReadMore) {
+          const readMoreButton = document.createElement('span');
+          readMoreButton.classList.add('read-more', 'visible'); 
+          readMoreButton.textContent = "Ver más"; 
+          readMoreButton.addEventListener('click', () => toggleContent(pub.id, readMoreButton));
+          postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
+      }
       
       cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
     }
@@ -2914,65 +2895,69 @@ if (needsReadMore) {
   } catch (e) { console.error(e); } finally { isLoading = false; }
 }
 
-// --- CORRECCIÓN DE BÚSQUEDA Y FILTROS (ANTIBLOQUEO) ---
-let searchAbortController = null; 
-
-async function search() {
+async function search(isLoadMore = false) {
   const query = document.getElementById('buscador').value.trim();
-  const feedDiv = document.getElementById('feed');
+  const mainFeed = document.getElementById('feed');
+  const searchFeed = document.getElementById('search-feed');
   
-  // 1. Matamos la búsqueda anterior si escribes o borras rápido
-  if (searchAbortController) searchAbortController.abort();
-  searchAbortController = new AbortController();
+  if (!isLoadMore) {
+      if (searchAbortController) searchAbortController.abort();
+      searchAbortController = new AbortController();
+      currentSearchQuery = query;
+      searchOffset = 0;
+      searchHasMore = true;
+      searchLoadedPostIds.clear();
+  }
+  
   const signal = searchAbortController.signal;
 
-  loadedPostIds.clear();
-  offset = 0; 
-  hasMore = true;
-  isSearching = true; 
-  
-  // 2. Si el buscador está vacío (borraste todo), recargamos seguro
-  if (!query) { 
+  if (!query && !currentCategoryFilter) { 
     isSearching = false; 
-    feedDiv.innerHTML = ''; // Limpiamos la pantalla
-    await cargarFeed(); // Traemos el feed normal
+    searchFeed.style.display = 'none';
+    searchFeed.innerHTML = '';
+    mainFeed.style.display = 'flex';
     return; 
   }
   
-  // Aviso visual para que no parezca que se borró todo por error
-  feedDiv.innerHTML = '<p style="text-align: center; color: #666; margin-top: 20px;"><i class="fas fa-spinner fa-spin"></i> Buscando...</p>';
+  isSearching = true; 
+  mainFeed.style.display = 'none';
+  searchFeed.style.display = 'flex';
   
+  if (!isLoadMore) {
+      searchFeed.innerHTML = '<p style="text-align: center; color: #666; margin-top: 20px;"><i class="fas fa-spinner fa-spin"></i> Buscando...</p>';
+  }
+  
+  isLoading = true;
   try {
-      const res = await fetch(`/search?query=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`, { 
+      const res = await fetch(`/search?query=${encodeURIComponent(query)}&limit=${limit}&offset=${searchOffset}`, { 
           headers: {'Content-Type': 'application/json'}, 
           credentials: 'include',
-          signal: signal // Pasamos la señal de aborto al servidor
+          signal: signal 
       });
       
       if(!res.ok) throw new Error("Error en red");
       const publicaciones = await res.json();
       
-      // 3. Si esta búsqueda fue cancelada porque seguiste escribiendo, la ignoramos en silencio
       if (signal.aborted) return; 
 
-      if(publicaciones.length < limit) hasMore = false;
+      if(publicaciones.length < limit) searchHasMore = false;
       const lang = localStorage.getItem('language') || 'es';
 
-      feedDiv.innerHTML = ''; 
+      if (!isLoadMore) searchFeed.innerHTML = ''; 
       
-      if (publicaciones.length === 0) {
-          feedDiv.innerHTML = '<p style="text-align: center; color: #666; margin-top: 20px;">No se encontraron resultados.</p>';
+      if (publicaciones.length === 0 && !isLoadMore) {
+          searchFeed.innerHTML = '<p style="text-align: center; color: #666; margin-top: 20px;">No se encontraron resultados.</p>';
           return;
       }
 
       for (const pub of publicaciones) {
-          if (loadedPostIds.has(pub.id)) continue;
-          loadedPostIds.add(pub.id);
+          if (searchLoadedPostIds.has(pub.id)) continue;
+          searchLoadedPostIds.add(pub.id);
           const div = document.createElement('div');
           div.classList.add('post');
           div.setAttribute('data-post-id', pub.id);
           div.innerHTML = generatePostHTML(pub, lang, currentUserId);
-          feedDiv.appendChild(div);
+          searchFeed.appendChild(div);
 
           const postContentElement = div.querySelector('.post-content');
           const needsReadMore = await checkContentHeight(postContentElement);
@@ -2986,45 +2971,62 @@ async function search() {
           }
           cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
       }
-      offset += limit;
+      searchOffset += limit;
   } catch(e) {
       if (e.name !== 'AbortError') { 
           console.error(e);
-          if (feedDiv.innerHTML.includes('Buscando')) {
-              feedDiv.innerHTML = '<p style="text-align: center; color: red;">Error al buscar.</p>';
+          if (searchFeed.innerHTML.includes('Buscando')) {
+              searchFeed.innerHTML = '<p style="text-align: center; color: red;">Error al buscar.</p>';
           }
       }
+  } finally {
+      isLoading = false;
   }
 }
 
-async function filterByCategory(categoria) {
-  const feedDiv = document.getElementById('feed');
+async function filterByCategory(categoria, isLoadMore = false) {
+  const mainFeed = document.getElementById('feed');
+  const searchFeed = document.getElementById('search-feed');
   
-  document.querySelectorAll('.categoria-filter').forEach(btn => {
-    btn.classList.remove('active');
-    if (btn.getAttribute('data-categoria') === categoria) btn.classList.add('active');
-  });
+  if (!isLoadMore) {
+      document.querySelectorAll('.categoria-filter').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-categoria') === categoria) btn.classList.add('active');
+      });
 
-  if (searchAbortController) searchAbortController.abort();
-  searchAbortController = new AbortController();
+      if (searchAbortController) searchAbortController.abort();
+      searchAbortController = new AbortController();
+      currentCategoryFilter = categoria;
+      searchOffset = 0; 
+      searchHasMore = true;
+      searchLoadedPostIds.clear();
+  }
+
   const signal = searchAbortController.signal;
 
-  loadedPostIds.clear(); 
-  offset = 0; 
-  hasMore = true;
-  isSearching = true;
-
-  if (!categoria) { 
+  if (!categoria && !currentSearchQuery) { 
     isSearching = false; 
-    feedDiv.innerHTML = ''; 
-    await cargarFeed(); 
+    searchFeed.style.display = 'none';
+    searchFeed.innerHTML = '';
+    mainFeed.style.display = 'flex';
     return; 
   }
   
-  feedDiv.innerHTML = '<p style="text-align: center; color: #666; margin-top: 20px;"><i class="fas fa-spinner fa-spin"></i> Filtrando...</p>';
+  if(!categoria && currentSearchQuery && !isLoadMore) {
+     return search();
+  }
 
+  isSearching = true; 
+  mainFeed.style.display = 'none';
+  searchFeed.style.display = 'flex';
+  
+  if (!isLoadMore) {
+      searchFeed.innerHTML = '<p style="text-align: center; color: #666; margin-top: 20px;"><i class="fas fa-spinner fa-spin"></i> Filtrando...</p>';
+  }
+
+  isLoading = true;
   try {
-      const res = await fetch(`/search?query=${encodeURIComponent(categoria)}&limit=${limit}&offset=${offset}`, { 
+      const res = await fetch(`/search?query=${encodeURIComponent(categoria)}&limit=${limit}&offset=${searchOffset}`, { 
           headers: {'Content-Type': 'application/json'}, 
           credentials: 'include',
           signal: signal
@@ -3034,22 +3036,24 @@ async function filterByCategory(categoria) {
       const publicaciones = await res.json();
       if (signal.aborted) return;
       
+      if(publicaciones.length < limit) searchHasMore = false;
       const lang = localStorage.getItem('language') || 'es';
-      feedDiv.innerHTML = ''; 
       
-      if (publicaciones.length === 0) {
-          feedDiv.innerHTML = '<p style="text-align: center; color: #666; margin-top: 20px;">No hay publicaciones en esta categoría.</p>';
+      if (!isLoadMore) searchFeed.innerHTML = ''; 
+      
+      if (publicaciones.length === 0 && !isLoadMore) {
+          searchFeed.innerHTML = '<p style="text-align: center; color: #666; margin-top: 20px;">No hay publicaciones en esta categoría.</p>';
           return;
       }
 
       for (const pub of publicaciones) {
-          if (loadedPostIds.has(pub.id)) continue;
-          loadedPostIds.add(pub.id);
+          if (searchLoadedPostIds.has(pub.id)) continue;
+          searchLoadedPostIds.add(pub.id);
           const div = document.createElement('div');
           div.classList.add('post');
           div.setAttribute('data-post-id', pub.id);
           div.innerHTML = generatePostHTML(pub, lang, currentUserId);
-          feedDiv.appendChild(div);
+          searchFeed.appendChild(div);
           
           const postContentElement = div.querySelector('.post-content');
           const needsReadMore = await checkContentHeight(postContentElement);
@@ -3063,9 +3067,11 @@ async function filterByCategory(categoria) {
           }
           cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
       }
-      offset += limit;
+      searchOffset += limit;
   } catch(e){
        if (e.name !== 'AbortError') console.error(e);
+  } finally {
+      isLoading = false;
   }
 }
 
@@ -3205,11 +3211,17 @@ function handleScroll() {
   if (isScrolling) return;
   isScrolling = true;
   setTimeout(() => {
-    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100 && !isLoading && hasMore) {
-      if (isSearching) {
-        const active = document.querySelector('.categoria-filter.active');
-        if (active) filterByCategory(active.getAttribute('data-categoria')); else search();
-      } else { cargarFeed(); }
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+      if (isSearching && !isLoading && searchHasMore) {
+         const active = document.querySelector('.categoria-filter.active');
+         if (active && active.getAttribute('data-categoria')) {
+             filterByCategory(active.getAttribute('data-categoria'), true);
+         } else {
+             search(true);
+         }
+      } else if (!isSearching && !isLoading && hasMore) { 
+         cargarFeed(); 
+      }
     }
     isScrolling = false;
   }, 100);
