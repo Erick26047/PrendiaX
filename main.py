@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from typing import Optional
 import firebase_admin
 from firebase_admin import credentials
+import admin
 
 # --- Configurar logs ---
 logging.basicConfig(level=logging.DEBUG)
@@ -74,12 +75,28 @@ app.include_router(email_router)
 app.include_router(chats_router)
 app.include_router(resenas_router)
 app.include_router(apple_router)
+app.include_router(admin.router)
 
 # --- Rutas principales ---
 @app.get("/")
 def home():
     return FileResponse("index.html")
 
+
+# Asegúrate de tener esta importación hasta arriba en tu main.py:
+# from fastapi.responses import HTMLResponse
+
+@app.get("/admin-prendiax")
+def admin_prendiax():
+    # Esta ruta lee tu archivo admin.html y lo muestra en el navegador
+    try:
+        with open("admin.html", "r", encoding="utf-8") as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+    except FileNotFoundError:
+        return {"error": "No se encontró el archivo admin.html. Asegúrate de que esté en la misma carpeta que main.py"}
+    
+    
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     try:

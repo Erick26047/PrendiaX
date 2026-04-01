@@ -532,9 +532,13 @@ async def reportar_publicacion(request: Request, reporte: ReportePublicacionRequ
     finally:
         if conn: conn.close()
 
-# --- RUTA FEED MEJORADA (CON FILTRO DE BLOQUEOS) ---
+# --- RUTA FEED MEJORADA (CON FILTRO DE BLOQUEOS Y SALVA-ZTE) ---
 @router.get("/feed")
 async def feed(limit: int = 10, offset: int = 0, request: Request = None):
+    # 🚨 PARCHE SALVA-ZTE: Forzar máximo 3 publicaciones por carga para no saturar RAM 🚨
+    if limit > 3:
+        limit = 3
+
     conn = None
     try:
         current_user = get_user_id_hybrid(request) if request else -1
@@ -586,7 +590,7 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conn: conn.close()
-
+        
 # Ruta SEARCH (ACTUALIZADA CON FILTRO DE BLOQUEOS)
 @router.get("/search")
 async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, request: Request = None):
