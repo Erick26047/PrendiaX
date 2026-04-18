@@ -163,7 +163,7 @@ async def actualizar_perfil(
 #  SECCIÓN 2: API PARA LA APP MÓVIL (FLUTTER) - AQUI ESTAN LAS CORRECCIONES
 # ==============================================================================
 
-# 1. Endpoint para ACTUALIZAR perfil desde la APP (Tu código original, correcto)
+# 1. Endpoint para ACTUALIZAR perfil desde la APP
 @router.post("/api/perfil/actualizar")
 async def actualizar_perfil_api(
     nombre_empresa: str = Form(...),
@@ -185,8 +185,20 @@ async def actualizar_perfil_api(
     
     try:
         token_str = authorization.split(" ")[1]
-        user_id = int(token_str.split("_")[-1])
-    except:
+        
+        # 🔥 AQUÍ ESTÁ LA MAGIA DEL DOBLE FILTRO 🔥
+        if "_" in token_str:
+            # 1. Si tiene guión bajo, es el token viejo de Google (ej. "google_12")
+            user_id = int(token_str.split("_")[-1])
+        else:
+            # 2. Si NO tiene guión bajo, es el JWT Real de Apple
+            import jwt
+            SECRET_KEY = "Elbicho7"
+            payload = jwt.decode(token_str, SECRET_KEY, algorithms=["HS256"])
+            user_id = int(payload.get("sub"))
+            
+    except Exception as e:
+        logging.error(f"Error descifrando token: {e}")
         raise HTTPException(status_code=401, detail="Token inválido")
 
     contenido_foto = None
@@ -236,8 +248,7 @@ async def actualizar_perfil_api(
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
     finally:
         db.close()
-
-
+        
 # 2. Endpoint IMPORTANTE: Sirve la imagen como archivo JPG para que Flutter la pueda leer
 @router.get("/api/imagenes/perfil/{user_id}")
 def obtener_imagen_perfil(user_id: int):
