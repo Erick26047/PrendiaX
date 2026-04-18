@@ -112,7 +112,6 @@ def process_unified_login(apple_sub, email, name, tipo, user_agent):
                 redirect_url = "/dashboard"
 
         # 🔥🔥🔥 CORRECCIÓN: GENERAR TOKEN JWT REAL 🔥🔥🔥
-        # ¡IMPORTANTE!: Esta CLAVE debe ser IGUAL a la que usas para validar tokens en el resto de tu app.
         SECRET_KEY = "Elbicho7"  # En producción, usa una clave segura y mantenla en secreto (env var)
         
         payload = {
@@ -127,13 +126,13 @@ def process_unified_login(apple_sub, email, name, tipo, user_agent):
         # Generamos el token real
         real_token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
-        # Aseguramos que sea string (en versiones viejas de PyJWT devuelve bytes)
+        # Aseguramos que sea string
         if isinstance(real_token, bytes):
             real_token = real_token.decode('utf-8')
 
         return {
             "status": "ok",
-            "token": real_token, # <--- AHORA SÍ ES UN TOKEN REAL QUE LA APP PUEDE USAR
+            "token": real_token, 
             "user_id": user_id,
             "email": email,
             "redirect_url": redirect_url,
@@ -160,7 +159,7 @@ def get_apple_public_key(kid):
     return None
 
 # ==========================================
-# 📱 RUTA 1: APP MÓVIL (iOS - Flutter)
+# 📱 RUTA 1: APP MÓVIL (iOS y Android - Flutter)
 # ==========================================
 
 class AppleLoginAppModel(BaseModel):
@@ -168,17 +167,32 @@ class AppleLoginAppModel(BaseModel):
     email: Optional[str] = None
     fullName: Optional[str] = None
     tipo: str = "explorador"
-    user_agent: Optional[str] = "App iOS"
+    user_agent: Optional[str] = "App Movil"
 
 @router.post("/api/auth/apple/ios")
 async def login_apple_ios(data: AppleLoginAppModel):
-    print("[APPLE iOS] Procesando login...")
+    print("=======================================")
+    print(f"[APPLE APP] Procesando login...")
+    print(f"TOKEN RECIBIDO: '{data.identityToken}'")
+    print("=======================================")
     try:
+        if not data.identityToken or data.identityToken == "null" or len(data.identityToken.split('.')) != 3:
+             raise Exception("El token recibido está vacío o no es un JWT válido (Not enough segments).")
+
         # Validar Token
         header = jwt.get_unverified_header(data.identityToken)
         public_key = get_apple_public_key(header['kid'])
         
-        decoded = jwt.decode(data.identityToken, public_key, algorithms=['RS256'], audience=APPLE_BUNDLE_ID_IOS)
+        if not public_key:
+             raise Exception("No se pudo obtener la llave pública de Apple")
+
+        # 🔥 DOBLE FILTRO 🔥 (Acepta tokens de iOS nativo y de Android Webview)
+        decoded = jwt.decode(
+            data.identityToken, 
+            public_key, 
+            algorithms=['RS256'], 
+            audience=[APPLE_BUNDLE_ID_IOS, APPLE_CLIENT_ID_WEB] 
+        )
         
         apple_sub = decoded['sub']
         token_email = decoded.get('email')
@@ -191,6 +205,12 @@ async def login_apple_ios(data: AppleLoginAppModel):
         
         return JSONResponse(content=result)
 
+    except jwt.ExpiredSignatureError:
+        print("[ERROR APPLE] El token ya expiró.")
+        raise HTTPException(status_code=400, detail="Token de Apple expirado")
+    except jwt.InvalidAudienceError:
+        print("[ERROR APPLE] Audiencia inválida. El token no coincide con los IDs de iOS ni Web.")
+        raise HTTPException(status_code=400, detail="Token inválido para esta app")
     except Exception as e:
         print(f"[ERROR iOS] {e}")
         raise HTTPException(status_code=400, detail=str(e))
