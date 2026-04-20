@@ -269,9 +269,6 @@ async def get_foto_perfil(user_id: int):
     finally:
         if conn: conn.close()
 
-# =================================================================
-# 🔥 NUEVA RUTA: DESPACHAR IMÁGENES DEL CARRUSEL
-# =================================================================
 @router.get("/media/imagen/{img_id}")
 def get_media_imagen_carrusel(img_id: int):
     conn = None
@@ -296,7 +293,6 @@ def get_media_imagen_carrusel(img_id: int):
     finally:
         if conn: conn.close()
 
-# RUTA VIEJA PARA VIDEOS
 @router.get("/media/{post_id}")
 def get_media(post_id: int, request: Request):
     conn = None
@@ -395,12 +391,14 @@ async def inicio(request: Request, limit: int = 10, offset: int = 0):
         finally:
             if conn: conn.close()
 
+        # 🔥 AQUÍ INYECTAMOS LA RETROCOMPATIBILIDAD (imagen_url)
         publicaciones_list = [
             {
                 "id": row[0],
                 "user_id": int(row[1]),
                 "contenido": row[2] or "",
                 "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7]] if row[7] else [],
+                "imagen_url": f"/media/imagen/{row[7][0]}" if row[7] else "", # <--- PARCHE SALVA-VIDAS
                 "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] or [],
                 "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
@@ -423,9 +421,6 @@ async def inicio(request: Request, limit: int = 10, offset: int = 0):
         logging.error(f"Error en /inicio: {e}")
         return RedirectResponse(url="/login", status_code=302)
 
-# =================================================================
-# 🔥 PUBLICAR MEJORADO (SOPORTA HASTA 10 IMÁGENES)
-# =================================================================
 @router.post("/publicar")
 async def publicar(request: Request, contenido: str = Form(None), imagenes: List[UploadFile] = File(default=[]), video: UploadFile = File(None), etiquetas: str = Form(None)):
     try:
@@ -434,7 +429,6 @@ async def publicar(request: Request, contenido: str = Form(None), imagenes: List
             if request.headers.get("Authorization"): raise HTTPException(status_code=401, detail="No autorizado")
             return RedirectResponse(url="/login", status_code=302)
 
-        # Filtrar archivos vacíos
         imagenes_validas = [img for img in imagenes if img.filename and img.size > 0]
 
         if not contenido and not imagenes_validas and (not video or video.size == 0):
@@ -452,7 +446,6 @@ async def publicar(request: Request, contenido: str = Form(None), imagenes: List
             conn = get_db_connection()
             cur = conn.cursor()
             
-            # 1. Insertar el post principal (Ya NO guardamos 'imagen' aquí)
             cur.execute("""
                 INSERT INTO publicaciones (user_id, contenido, video, etiquetas, fecha_creacion)
                 VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
@@ -461,7 +454,6 @@ async def publicar(request: Request, contenido: str = Form(None), imagenes: List
             
             post_id = cur.fetchone()[0]
 
-            # 2. Insertar todas las fotos en el carrusel
             for img in imagenes_validas:
                 img_data = await img.read()
                 if len(img_data) <= MAX_FILE_SIZE:
@@ -480,7 +472,6 @@ async def publicar(request: Request, contenido: str = Form(None), imagenes: List
         logging.error(f"Error en /publicar: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     
-
 @router.post("/api/reportar/publicacion")
 async def reportar_publicacion(request: Request, reporte: ReportePublicacionRequest):
     conn = None
@@ -558,6 +549,7 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
             {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
                 "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7]] if row[7] else [],
+                "imagen_url": f"/media/imagen/{row[7][0]}" if row[7] else "", # <--- PARCHE SALVA-VIDAS
                 "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
@@ -598,23 +590,13 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
                 (
                     LOWER(COALESCE(du.nombre_empresa, u.nombre)) LIKE %s
                     OR EXISTS (SELECT 1 FROM unnest(p.etiquetas) AS etiqueta WHERE LOWER(etiqueta) LIKE %s)
-                    -- 🔥 AQUÍ ESTÁ LA MAGIA: Ahora busca la palabra clave DENTRO del texto del post 🔥
-                    OR LOWER(p.contenido) LIKE %s
+                    OR LOWER(p.contenido) LIKE %s -- 🔥 BÚSQUEDA INTELIGENTE EN TEXTO 🔥
                 )
                 AND p.user_id NOT IN (SELECT bloqueado_id FROM bloqueos WHERE bloqueador_id = %s)
                 AND p.user_id NOT IN (SELECT bloqueador_id FROM bloqueos WHERE bloqueado_id = %s)
             GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
             ORDER BY p.fecha_creacion DESC LIMIT %s OFFSET %s
-        """, (
-            current_user, 
-            f"%{query}%", # Busca en nombre del negocio
-            f"%{query}%", # Busca en etiquetas
-            f"%{query}%", # Busca en el contenido del post
-            current_user, 
-            current_user, 
-            limit, 
-            offset
-        ))
+        """, (current_user, f"%{query}%", f"%{query}%", f"%{query}%", current_user, current_user, limit, offset))
         
         publicaciones = cur.fetchall()
         cur.close()
@@ -623,6 +605,7 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
             {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
                 "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7]] if row[7] else [], 
+                "imagen_url": f"/media/imagen/{row[7][0]}" if row[7] else "", # <--- PARCHE SALVA-VIDAS
                 "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
@@ -635,7 +618,7 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conn: conn.close()
-        
+
 @router.get("/perfil/feed")
 async def perfil_feed(request: Request, limit: int = 10, offset: int = 0):
     try:
@@ -668,6 +651,7 @@ async def perfil_feed(request: Request, limit: int = 10, offset: int = 0):
             {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
                 "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7]] if row[7] else [], 
+                "imagen_url": f"/media/imagen/{row[7][0]}" if row[7] else "", # <--- PARCHE SALVA-VIDAS
                 "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
@@ -709,6 +693,7 @@ async def get_publicacion(post_id: int, request: Request):
             return {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
                 "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7]] if row[7] else [], 
+                "imagen_url": f"/media/imagen/{row[7][0]}" if row[7] else "", # <--- PARCHE SALVA-VIDAS
                 "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
@@ -782,6 +767,7 @@ async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0,
             {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
                 "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7]] if row[7] else [], 
+                "imagen_url": f"/media/imagen/{row[7][0]}" if row[7] else "", # <--- PARCHE SALVA-VIDAS
                 "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
