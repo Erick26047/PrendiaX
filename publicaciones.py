@@ -598,12 +598,23 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
                 (
                     LOWER(COALESCE(du.nombre_empresa, u.nombre)) LIKE %s
                     OR EXISTS (SELECT 1 FROM unnest(p.etiquetas) AS etiqueta WHERE LOWER(etiqueta) LIKE %s)
+                    -- 🔥 AQUÍ ESTÁ LA MAGIA: Ahora busca la palabra clave DENTRO del texto del post 🔥
+                    OR LOWER(p.contenido) LIKE %s
                 )
                 AND p.user_id NOT IN (SELECT bloqueado_id FROM bloqueos WHERE bloqueador_id = %s)
                 AND p.user_id NOT IN (SELECT bloqueador_id FROM bloqueos WHERE bloqueado_id = %s)
             GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
             ORDER BY p.fecha_creacion DESC LIMIT %s OFFSET %s
-        """, (current_user, f"%{query}%", f"%{query}%", current_user, current_user, limit, offset))
+        """, (
+            current_user, 
+            f"%{query}%", # Busca en nombre del negocio
+            f"%{query}%", # Busca en etiquetas
+            f"%{query}%", # Busca en el contenido del post
+            current_user, 
+            current_user, 
+            limit, 
+            offset
+        ))
         
         publicaciones = cur.fetchall()
         cur.close()
@@ -624,7 +635,7 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conn: conn.close()
-
+        
 @router.get("/perfil/feed")
 async def perfil_feed(request: Request, limit: int = 10, offset: int = 0):
     try:
