@@ -248,7 +248,7 @@ async def actualizar_perfil_api(
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
     finally:
         db.close()
-        
+
 # 2. Endpoint IMPORTANTE: Sirve la imagen como archivo JPG para que Flutter la pueda leer
 @router.get("/api/imagenes/perfil/{user_id}")
 def obtener_imagen_perfil(user_id: int):
