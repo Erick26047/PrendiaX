@@ -448,27 +448,27 @@ async def inicio(request: Request, limit: int = 10, offset: int = 0):
         return RedirectResponse(url="/login", status_code=302)
 
 @router.post("/publicar")
-async def publicar(
-    request: Request, 
-    contenido: str = Form(None), 
-    etiquetas: str = Form(None),
-    imagenes: List[UploadFile] = File(default=[]), 
-    video: UploadFile = File(None)
-):
+async def publicar(request: Request):
     try:
         user_id = get_user_id_hybrid(request)
         if not user_id:
             if request.headers.get("Authorization"): raise HTTPException(status_code=401, detail="No autorizado")
             return RedirectResponse(url="/login", status_code=302)
 
-        # 1. Filtramos los archivos válidos SIN usar .size (que es lo que rompía FastAPI antes)
-        imagenes_validas = [img for img in imagenes if img.filename]
-        video_valido = video if video and video.filename else None
+        # 🔥 ABRIMOS EL PAQUETE MANUALMENTE (A PRUEBA DE FLUTTER) 🔥
+        form = await request.form()
+        
+        contenido = form.get("contenido", "")
+        etiquetas = form.get("etiquetas", "")
+        video = form.get("video")
+        imagenes = form.getlist("imagenes") # Atrapamos TODA la lista de fotos
 
-        texto = contenido if contenido else ""
+        # Filtramos para quedarnos solo con archivos reales
+        imagenes_validas = [img for img in imagenes if getattr(img, "filename", None)]
+        video_valido = video if getattr(video, "filename", None) else None
+        texto = contenido.strip() if contenido else ""
 
-        # 2. Validaciones
-        if not texto.strip() and not imagenes_validas and not video_valido:
+        if not texto and not imagenes_validas and not video_valido:
             raise HTTPException(status_code=400, detail="Debe incluir contenido o multimedia")
 
         if imagenes_validas and video_valido: 
@@ -476,7 +476,7 @@ async def publicar(
         if len(imagenes_validas) > 10: 
             raise HTTPException(status_code=400, detail="Máximo 10 imágenes permitidas")
 
-        etiquetas_lista = [e.strip() for e in etiquetas.split(",") if e.strip()] if etiquetas else []
+        etiquetas_lista = [e.strip() for e in etiquetas.split(",") if e.strip()] if isinstance(etiquetas, str) and etiquetas else []
         
         video_data = None
         if video_valido:
@@ -497,10 +497,10 @@ async def publicar(
             
             post_id = cur.fetchone()[0]
 
-            # 3. Guardamos las fotos múltiples leyendo sus bytes
+            # 🔥 GUARDAMOS LAS FOTOS EN LA NUEVA TABLA 🔥
             for img in imagenes_validas:
                 img_data = await img.read()
-                if img_data: # Si los datos existen, pa' adentro
+                if img_data:
                     cur.execute("""
                         INSERT INTO publicacion_imagenes (publicacion_id, imagen)
                         VALUES (%s, %s)
@@ -508,9 +508,7 @@ async def publicar(
 
             conn.commit()
 
-            # =================================================================
-            # 🔥 ALGORITMO DESPERTADOR 🔥
-            # =================================================================
+            # --- ALGORITMO DESPERTADOR ---
             try:
                 cur.execute("""
                     SELECT id, fcm_token FROM usuarios 
@@ -524,7 +522,8 @@ async def publicar(
 
                 if usuarios_dormidos:
                     cur.execute("SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s", (user_id,))
-                    nombre_autor = cur.fetchone()[0] or "Alguien"
+                    autor = cur.fetchone()
+                    nombre_autor = autor[0] if autor and autor[0] else "Alguien"
                     ids_despertados = []
 
                     for user_dormido in usuarios_dormidos:
@@ -542,7 +541,7 @@ async def publicar(
 
             except Exception as push_err:
                 logging.error(f"Error en Algoritmo Despertador: {push_err}")
-            # =================================================================
+            # ------------------------------
 
             cur.close()
         finally:
@@ -903,41 +902,40 @@ async def salir(request: Request):
 # =================================================================
 # 🔥 EDITAR PUBLICACIÓN 
 # =================================================================
+# =================================================================
 @router.post("/api/publicacion/{post_id}/editar")
-async def editar_publicacion(
-    post_id: int,
-    request: Request,
-    contenido: str = Form(...),
-    etiquetas: str = Form(None),
-    imagenes: List[UploadFile] = File(default=[]),
-    video: UploadFile = File(None),
-    reemplazar_media: str = Form("false")
-):
+async def editar_publicacion(post_id: int, request: Request):
     conn = None
     try:
         user_id = get_user_id_hybrid(request)
         if not user_id: raise HTTPException(status_code=401, detail="No autorizado")
 
+        form = await request.form()
+        contenido = form.get("contenido", "")
+        etiquetas = form.get("etiquetas", "")
+        reemplazar_media = form.get("reemplazar_media", "false")
+        video = form.get("video")
+        imagenes = form.getlist("imagenes")
+
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # 1. Verificar que el usuario sea el dueño de la publicación
         cur.execute("SELECT user_id FROM publicaciones WHERE id = %s", (post_id,))
         row = cur.fetchone()
         if not row: raise HTTPException(status_code=404, detail="Publicación no encontrada")
-        if row[0] != user_id: raise HTTPException(status_code=403, detail="No tienes permiso para editar esto")
+        if row[0] != user_id: raise HTTPException(status_code=403, detail="No tienes permiso")
 
-        etiquetas_lista = [e.strip() for e in etiquetas.split(",") if e.strip()] if etiquetas else []
+        etiquetas_lista = [e.strip() for e in etiquetas.split(",") if e.strip()] if isinstance(etiquetas, str) and etiquetas else []
 
         if reemplazar_media == "true":
-            # 2A. El usuario decidió cambiar las fotos/video. Borramos lo viejo.
             cur.execute("DELETE FROM publicacion_imagenes WHERE publicacion_id = %s", (post_id,))
             
-            video_data = await video.read() if video and video.size > 0 else None
-            imagenes_validas = [img for img in imagenes if img.filename and img.size > 0]
+            imagenes_validas = [img for img in imagenes if getattr(img, "filename", None)]
+            video_valido = video if getattr(video, "filename", None) else None
+            video_data = await video_valido.read() if video_valido else None
             
-            if len(imagenes_validas) > 10: raise HTTPException(status_code=400, detail="Máximo 10 imágenes permitidas")
-            if imagenes_validas and video_data: raise HTTPException(status_code=400, detail="Solo imágenes o video, no ambos")
+            if len(imagenes_validas) > 10: raise HTTPException(status_code=400, detail="Máximo 10 imágenes")
+            if imagenes_validas and video_data: raise HTTPException(status_code=400, detail="Imágenes o video, no ambos")
 
             cur.execute("""
                 UPDATE publicaciones SET contenido = %s, etiquetas = %s, video = %s
@@ -946,18 +944,17 @@ async def editar_publicacion(
 
             for img in imagenes_validas:
                 img_data = await img.read()
-                if len(img_data) <= MAX_FILE_SIZE:
+                if img_data:
                     cur.execute("INSERT INTO publicacion_imagenes (publicacion_id, imagen) VALUES (%s, %s)", 
                                 (post_id, psycopg2.Binary(img_data)))
         else:
-            # 2B. Solo editó el texto o categorías, conservamos la multimedia intacta
             cur.execute("""
                 UPDATE publicaciones SET contenido = %s, etiquetas = %s
                 WHERE id = %s
             """, (contenido, etiquetas_lista, post_id))
 
         conn.commit()
-        return JSONResponse(content={"status": "ok", "message": "Publicación actualizada correctamente"})
+        return JSONResponse(content={"status": "ok", "message": "Publicación actualizada"})
 
     except Exception as e:
         if conn: conn.rollback()
