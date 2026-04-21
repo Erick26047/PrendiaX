@@ -469,6 +469,76 @@ async def publicar(request: Request, contenido: str = Form(None), imagenes: List
                     """, (post_id, psycopg2.Binary(img_data)))
 
             conn.commit()
+
+            # =================================================================
+            # 🔥 ALGORITMO DESPERTADOR (Re-engagement) 🔥
+            # =================================================================
+            try:
+                # Buscamos hasta 50 usuarios que lleven más de 2 días sin entrar 
+                # y que no hayan recibido este aviso en los últimos 7 días.
+                cur.execute("""
+                    SELECT id, fcm_token 
+                    FROM usuarios 
+                    WHERE id != %s 
+                      AND fcm_token IS NOT NULL
+                      AND ultima_conexion < CURRENT_TIMESTAMP - INTERVAL '2 days'
+                      AND (ultima_noti_despertador IS NULL OR ultima_noti_despertador < CURRENT_TIMESTAMP - INTERVAL '7 days')
+                    LIMIT 50
+                """, (user_id,))
+                
+                usuarios_dormidos = cur.fetchall()
+
+                if usuarios_dormidos:
+                    # Obtenemos el nombre de quien publicó
+                    cur.execute("""
+                        SELECT COALESCE(du.nombre_empresa, u.nombre) 
+                        FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id 
+                        WHERE u.id = %s
+                    """, (user_id,))
+                    nombre_autor = cur.fetchone()[0] or "Alguien"
+                    
+                    titulo_push = "¡Nuevos servicios en PrendiaX! 👀"
+                    cuerpo_push = f"{nombre_autor} acaba de publicar algo que podría interesarte. ¡Entra a verlo!"
+
+                    ids_despertados = []
+
+                    for user_dormido in usuarios_dormidos:
+                        dormido_id = user_dormido[0]
+                        fcm_token = user_dormido[1]
+                        ids_despertados.append(dormido_id)
+
+                        push_msg = messaging.Message(
+                            notification=messaging.Notification(
+                                title=titulo_push, 
+                                body=cuerpo_push
+                            ), 
+                            apns=messaging.APNSConfig(
+                                payload=messaging.APNSPayload(
+                                    aps=messaging.Aps(sound="default")
+                                )
+                            ),
+                            data={
+                                "tipo": "general", 
+                                "publicacion_id": str(post_id) 
+                            },
+                            token=fcm_token,
+                        )
+                        messaging.send(push_msg)
+
+                    # Marcamos a los usuarios despertados para no hacerles spam mañana
+                    if ids_despertados:
+                        cur.execute("""
+                            UPDATE usuarios 
+                            SET ultima_noti_despertador = CURRENT_TIMESTAMP 
+                            WHERE id = ANY(%s)
+                        """, (ids_despertados,))
+                        conn.commit()
+                        logging.debug(f"⏰ Se mandó despertador a {len(ids_despertados)} usuarios.")
+
+            except Exception as push_err:
+                logging.error(f"Error en Algoritmo Despertador: {push_err}")
+            # =================================================================
+
             cur.close()
         finally:
             if conn: conn.close()
@@ -797,16 +867,26 @@ async def get_current_user(request: Request):
         try:
             conn = get_db_connection()
             cur = conn.cursor()
+
+            # 🔥 NUEVO: ACTUALIZAMOS SU ÚLTIMA CONEXIÓN 🔥
+            cur.execute("""
+                UPDATE usuarios 
+                SET ultima_conexion = CURRENT_TIMESTAMP 
+                WHERE id = %s
+            """, (user_id,))
+            conn.commit()
+
             cur.execute("""
                 SELECT CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END
                 FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s
             """, (user_id,))
             result = cur.fetchone()
-            cur.close()
             return {"user_id": user_id, "tipo": result[0] if result else 'explorador', "id": user_id}
         finally:
+            if cur: cur.close()
             if conn: conn.close()
     except Exception as e:
+        logging.error(f"Error en get_current_user: {e}")
         return {"user_id": None, "tipo": None}
 
 @router.post("/salir")
