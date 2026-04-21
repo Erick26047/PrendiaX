@@ -447,6 +447,9 @@ async def inicio(request: Request, limit: int = 10, offset: int = 0):
         logging.error(f"Error en /inicio: {e}")
         return RedirectResponse(url="/login", status_code=302)
 
+# =================================================================
+# 🔥 1. RUTA PARA PUBLICAR (BLINDADA) 🔥
+# =================================================================
 @router.post("/publicar")
 async def publicar(request: Request):
     try:
@@ -551,6 +554,69 @@ async def publicar(request: Request):
     except Exception as e:
         logging.error(f"Error en /publicar: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# =================================================================
+# 🔥 2. RUTA PARA EDITAR (BLINDADA) 🔥
+# =================================================================
+@router.post("/api/publicacion/{post_id}/editar")
+async def editar_publicacion(post_id: int, request: Request):
+    conn = None
+    try:
+        user_id = get_user_id_hybrid(request)
+        if not user_id: raise HTTPException(status_code=401, detail="No autorizado")
+
+        form = await request.form()
+        contenido = form.get("contenido", "")
+        etiquetas = form.get("etiquetas", "")
+        reemplazar_media = form.get("reemplazar_media", "false")
+        video = form.get("video")
+        imagenes = form.getlist("imagenes")
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        cur.execute("SELECT user_id FROM publicaciones WHERE id = %s", (post_id,))
+        row = cur.fetchone()
+        if not row: raise HTTPException(status_code=404, detail="Publicación no encontrada")
+        if row[0] != user_id: raise HTTPException(status_code=403, detail="No tienes permiso")
+
+        etiquetas_lista = [e.strip() for e in etiquetas.split(",") if e.strip()] if isinstance(etiquetas, str) and etiquetas else []
+
+        if reemplazar_media == "true":
+            cur.execute("DELETE FROM publicacion_imagenes WHERE publicacion_id = %s", (post_id,))
+            
+            imagenes_validas = [img for img in imagenes if getattr(img, "filename", None)]
+            video_valido = video if getattr(video, "filename", None) else None
+            video_data = await video_valido.read() if video_valido else None
+            
+            if len(imagenes_validas) > 10: raise HTTPException(status_code=400, detail="Máximo 10 imágenes")
+            if imagenes_validas and video_data: raise HTTPException(status_code=400, detail="Imágenes o video, no ambos")
+
+            cur.execute("""
+                UPDATE publicaciones SET contenido = %s, etiquetas = %s, video = %s
+                WHERE id = %s
+            """, (contenido, etiquetas_lista, psycopg2.Binary(video_data) if video_data else None, post_id))
+
+            for img in imagenes_validas:
+                img_data = await img.read()
+                if img_data:
+                    cur.execute("INSERT INTO publicacion_imagenes (publicacion_id, imagen) VALUES (%s, %s)", 
+                                (post_id, psycopg2.Binary(img_data)))
+        else:
+            cur.execute("""
+                UPDATE publicaciones SET contenido = %s, etiquetas = %s
+                WHERE id = %s
+            """, (contenido, etiquetas_lista, post_id))
+
+        conn.commit()
+        return JSONResponse(content={"status": "ok", "message": "Publicación actualizada"})
+
+    except Exception as e:
+        if conn: conn.rollback()
+        logging.error(f"Error al editar post {post_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn: conn.close()
     
 @router.post("/api/reportar/publicacion")
 async def reportar_publicacion(request: Request, reporte: ReportePublicacionRequest):
@@ -629,9 +695,9 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
         return [
             {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
-                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7]] if row[7] else [],
-                # 🔥 EL PARCHE MAGISTRAL: Si tiene foto vieja, muestra la ruta vieja, si no, usa la nueva 🔥
-                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] else ""),
+                # 🔥 EL PARCHE MAGISTRAL ANTI-[NONE] 🔥
+                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
+                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
                 "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
@@ -732,12 +798,14 @@ async def perfil_feed(request: Request, limit: int = 10, offset: int = 0):
         return [
             {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
-                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7]] if row[7] else [], 
-                "imagen_url": f"/media/imagen/{row[7][0]}" if row[7] else "", # <--- PARCHE SALVA-VIDAS
+                # 🔥 EL PARCHE MAGISTRAL ANTI-[NONE] 🔥
+                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
+                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
                 "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
-                "nombre_empresa": row[5], "tipo_usuario": row[6], "comentarios_count": int(row[9])
+                "nombre_empresa": row[5], "tipo_usuario": row[6],
+                "interesados_count": int(row[9]), "interesado": row[10], "comentarios_count": int(row[11])
             } for row in publicaciones
         ]
     except Exception as e:
@@ -772,16 +840,19 @@ async def get_publicacion(post_id: int, request: Request):
             cur.close()
             if not row: raise HTTPException(status_code=404, detail="No encontrado")
 
-            return {
+            return [
+            {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
-                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7]] if row[7] else [], 
-                "imagen_url": f"/media/imagen/{row[7][0]}" if row[7] else "", # <--- PARCHE SALVA-VIDAS
+                # 🔥 EL PARCHE MAGISTRAL ANTI-[NONE] 🔥
+                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
+                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
                 "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
                 "nombre_empresa": row[5], "tipo_usuario": row[6],
                 "interesados_count": int(row[9]), "interesado": row[10], "comentarios_count": int(row[11])
-            }
+            } for row in [row]
+        ]
         finally:
             if conn: conn.close()
     except Exception as e:
@@ -899,69 +970,6 @@ async def get_current_user(request: Request):
 async def salir(request: Request):
     request.session.clear()
     return RedirectResponse(url="/login", status_code=302)
-# =================================================================
-# 🔥 EDITAR PUBLICACIÓN 
-# =================================================================
-# =================================================================
-@router.post("/api/publicacion/{post_id}/editar")
-async def editar_publicacion(post_id: int, request: Request):
-    conn = None
-    try:
-        user_id = get_user_id_hybrid(request)
-        if not user_id: raise HTTPException(status_code=401, detail="No autorizado")
-
-        form = await request.form()
-        contenido = form.get("contenido", "")
-        etiquetas = form.get("etiquetas", "")
-        reemplazar_media = form.get("reemplazar_media", "false")
-        video = form.get("video")
-        imagenes = form.getlist("imagenes")
-
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        cur.execute("SELECT user_id FROM publicaciones WHERE id = %s", (post_id,))
-        row = cur.fetchone()
-        if not row: raise HTTPException(status_code=404, detail="Publicación no encontrada")
-        if row[0] != user_id: raise HTTPException(status_code=403, detail="No tienes permiso")
-
-        etiquetas_lista = [e.strip() for e in etiquetas.split(",") if e.strip()] if isinstance(etiquetas, str) and etiquetas else []
-
-        if reemplazar_media == "true":
-            cur.execute("DELETE FROM publicacion_imagenes WHERE publicacion_id = %s", (post_id,))
-            
-            imagenes_validas = [img for img in imagenes if getattr(img, "filename", None)]
-            video_valido = video if getattr(video, "filename", None) else None
-            video_data = await video_valido.read() if video_valido else None
-            
-            if len(imagenes_validas) > 10: raise HTTPException(status_code=400, detail="Máximo 10 imágenes")
-            if imagenes_validas and video_data: raise HTTPException(status_code=400, detail="Imágenes o video, no ambos")
-
-            cur.execute("""
-                UPDATE publicaciones SET contenido = %s, etiquetas = %s, video = %s
-                WHERE id = %s
-            """, (contenido, etiquetas_lista, psycopg2.Binary(video_data) if video_data else None, post_id))
-
-            for img in imagenes_validas:
-                img_data = await img.read()
-                if img_data:
-                    cur.execute("INSERT INTO publicacion_imagenes (publicacion_id, imagen) VALUES (%s, %s)", 
-                                (post_id, psycopg2.Binary(img_data)))
-        else:
-            cur.execute("""
-                UPDATE publicaciones SET contenido = %s, etiquetas = %s
-                WHERE id = %s
-            """, (contenido, etiquetas_lista, post_id))
-
-        conn.commit()
-        return JSONResponse(content={"status": "ok", "message": "Publicación actualizada"})
-
-    except Exception as e:
-        if conn: conn.rollback()
-        logging.error(f"Error al editar post {post_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if conn: conn.close()
         
 @router.delete("/borrar_publicacion/{post_id}")
 async def borrar_publicacion(post_id: int, request: Request):
