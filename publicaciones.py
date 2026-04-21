@@ -189,14 +189,20 @@ async def crear_notificacion(publicacion_id: int, tipo: str, actor_id: int, mens
                 titulos = {'interes': "¡Nueva interacción!", 'comentario': "Nuevo comentario", 'respuesta': "Te han respondido", 'mencion': "Te mencionaron"}
                 cuerpos = {'interes': f"A {actor_name} le interesó tu publicación.", 'comentario': f"{actor_name} comentó: {mensaje}", 'respuesta': f"{actor_name} respondió a tu comentario.", 'mencion': f"{actor_name} te mencionó: {mensaje}"}
                 
+                # 🔥 1. CALCULAMOS EL TOTAL DE NO LEÍDAS PARA EL GLOBO ROJO (BADGE) 🔥
+                cur.execute("SELECT COUNT(*) FROM notifications WHERE user_id = %s AND leida = FALSE", (receptor_id,))
+                total_notis = cur.fetchone()[0]
+                badge_count = total_notis 
+
                 try:
                     push_msg = messaging.Message(
                         notification=messaging.Notification(title=titulos.get(tipo, "Notificación"), body=cuerpos.get(tipo, "Tienes una nueva notificación")), 
                         apns=messaging.APNSConfig(
-                        payload=messaging.APNSPayload(
-                            aps=messaging.Aps(sound="default")
-                        )
-                    ),
+                            payload=messaging.APNSPayload(
+                                # 🔥 2. LE INYECTAMOS EL BADGE A APPLE AQUÍ 🔥
+                                aps=messaging.Aps(sound="default", badge=badge_count)
+                            )
+                        ),
                         data={"tipo": tipo, "publicacion_id": str(publicacion_id)},
                         token=fcm_token,
                     )
