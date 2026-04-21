@@ -91,7 +91,31 @@ body {
     border-top: 1px solid #bbdefb;
 }
 
-/* --- FIN NUEVOS ESTILOS --- */
+/* --- ESTILOS CARRUSEL WEB --- */
+.carousel-container {
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    padding-bottom: 10px;
+    scroll-snap-type: x mandatory;
+    margin-top: 10px;
+}
+.carousel-container::-webkit-scrollbar {
+    height: 6px;
+}
+.carousel-container::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 4px;
+}
+.carousel-item {
+    scroll-snap-align: center;
+    flex-shrink: 0;
+    width: 100%;
+    max-height: 500px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+}
 
 .stars {
   position: fixed;
@@ -1945,7 +1969,7 @@ body.dark-mode .report-option span { color: #fff; }
   <header>
     <a href="/inicio.html" class="logo" data-translate="inicio.logo" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); window.location.reload();">PrendiaX</a>
     <div class="header-icons">
-      <input type="text" placeholder="Buscar en PrendiaX" id="buscador" oninput="search()" data-translate="inicio.search_placeholder" />
+      <input type="text" placeholder="Buscar" id="buscador" oninput="search()" />
       <button class="icon-button" id="notifications-toggle" title="Notificaciones">
   <i class="fas fa-bell"></i>
   <span class="notification-counter" id="notification-counter" style="display: none;">0</span>
@@ -2005,7 +2029,7 @@ body.dark-mode .report-option span { color: #fff; }
 
     <div class="publicar">
       <form id="form-publicar" action="/publicar" method="post" enctype="multipart/form-data">
-        <div id="content-input" contenteditable="true" class="content-input" data-placeholder="{{ 'inicio.post_placeholder' | translate }}"></div>
+        <div id="content-input" contenteditable="true" class="content-input" data-placeholder="¿Qué ofreces hoy?"></div>
         <input type="hidden" name="contenido" id="contenido-hidden">
         <input type="hidden" name="etiquetas" id="etiquetas-hidden">
         <div id="preview-area" class="preview-area"></div>
@@ -2013,7 +2037,7 @@ body.dark-mode .report-option span { color: #fff; }
           <button type="button" class="icon-button" title="Agregar imagen" onclick="document.getElementById('imagen').click()">
             <i class="fas fa-image"></i>
           </button>
-          <input type="file" id="imagen" name="imagen" accept="image/*" style="display: none" />
+          <input type="file" id="imagen" name="imagenes" accept="image/*" multiple style="display: none" />
           <button type="button" class="icon-button" title="Agregar video" onclick="document.getElementById('video').click()">
             <i class="fas fa-video"></i>
           </button>
@@ -2026,59 +2050,59 @@ body.dark-mode .report-option span { color: #fff; }
             <div class="categorias-desplegable" id="categorias-menu">
               <ul>
                 <li>
-                  <input type="checkbox" id="cat-1" name="categorias" value="Restaurantes y comida rápida">
-                  <label for="cat-1">Restaurantes y comida rápida</label>
+                  <input type="checkbox" id="cat-1" name="categorias" value="Comida">
+                  <label for="cat-1">Comida</label>
                 </li>
                 <li>
-                  <input type="checkbox" id="cat-2" name="categorias" value="Alimentos y bebidas">
-                  <label for="cat-2">Alimentos y bebidas</label>
+                  <input type="checkbox" id="cat-2" name="categorias" value="Bebidas">
+                  <label for="cat-2">Bebidas</label>
                 </li>
                 <li>
                   <input type="checkbox" id="cat-3" name="categorias" value="Ropa">
                   <label for="cat-3">Ropa</label>
                 </li>
                 <li>
-                  <input type="checkbox" id="cat-4" name="categorias" value="Artículos religiosos">
-                  <label for="cat-4">Artículos religiosos</label>
+                  <input type="checkbox" id="cat-4" name="categorias" value="Religión">
+                  <label for="cat-4">Religión</label>
                 </li>
                 <li>
-                  <input type="checkbox" id="cat-5" name="categorias" value="Tecnología y electrónica">
-                  <label for="cat-5">Tecnología y electrónica</label>
+                  <input type="checkbox" id="cat-5" name="categorias" value="Tecnología">
+                  <label for="cat-5">Tecnología</label>
                 </li>
                 <li>
-                  <input type="checkbox" id="cat-6" name="categorias" value="Servicios profesionales">
-                  <label for="cat-6">Servicios profesionales</label>
+                  <input type="checkbox" id="cat-6" name="categorias" value="Servicios">
+                  <label for="cat-6">Servicios</label>
                 </li>
                 <li>
-                  <input type="checkbox" id="cat-7" name="categorias" value="Salud y bienestar">
-                  <label for="cat-7">Salud y bienestar</label>
+                  <input type="checkbox" id="cat-7" name="categorias" value="Salud y belleza">
+                  <label for="cat-7">Salud y belleza</label>
                 </li>
                 <li>
-                  <input type="checkbox" id="cat-8" name="categorias" value="Créditos y servicios financieros">
-                  <label for="cat-8">Créditos y servicios financieros</label>
+                  <input type="checkbox" id="cat-8" name="categorias" value="Finanzas">
+                  <label for="cat-8">Finanzas</label>
                 </li>
                 <li>
-                  <input type="checkbox" id="cat-9" name="categorias" value="Bienes raíces">
-                  <label for="cat-9">Bienes raíces</label>
+                  <input type="checkbox" id="cat-9" name="categorias" value="Casas">
+                  <label for="cat-9">Casas</label>
                 </li>
                 <li>
-                  <input type="checkbox" id="cat-10" name="categorias" value="Entretenimiento y eventos">
-                  <label for="cat-10">Entretenimiento y eventos</label>
+                  <input type="checkbox" id="cat-10" name="categorias" value="Eventos">
+                  <label for="cat-10">Eventos</label>
                 </li>
                 <li>
                   <input type="checkbox" id="cat-11" name="categorias" value="Educación">
                   <label for="cat-11">Educación</label>
                 </li>
                 <li>
-                  <input type="checkbox" id="cat-12" name="categorias" value="Mascotas y veterinarias">
-                  <label for="cat-12">Mascotas y veterinarias</label>
+                  <input type="checkbox" id="cat-12" name="categorias" value="Mascotas">
+                  <label for="cat-12">Mascotas</label>
                 </li>
                 <li>
-                  <input type="checkbox" id="cat-13" name="categorias" value="Productos artesanales o locales">
-                  <label for="cat-13">Productos artesanales o locales</label>
+                  <input type="checkbox" id="cat-13" name="categorias" value="Artesanías">
+                  <label for="cat-13">Artesanías</label>
                 </li>
                 <li>
-                  <input type="checkbox" id="cat-otro" name="categorias" value="otro">
+                  <input type="checkbox" id="cat-otro" name="categorias" value="Otro">
                   <label for="cat-otro">Otro</label>
                 </li>
               </ul>
@@ -2095,45 +2119,44 @@ body.dark-mode .report-option span { color: #fff; }
 <div class="filtros-categorias">
   <h3 class="filter-title" data-translate="inicio.filter_title">Filtrar feed por categoría</h3>
   <div class="categoria-buttons">
-    <button class="icon-button categoria-filter" data-categoria="Restaurantes y comida rápida" title="Restaurantes y comida rápida">
+    <button class="icon-button categoria-filter" data-categoria="Comida" title="Comida">
       <i class="fas fa-utensils"></i>
     </button>
-    <button class="icon-button categoria-filter" data-categoria="Alimentos y bebidas" title="Alimentos y bebidas">
+    <button class="icon-button categoria-filter" data-categoria="Bebidas" title="Bebidas">
       <i class="fas fa-coffee"></i>
     </button>
     <button class="icon-button categoria-filter" data-categoria="Ropa" title="Ropa">
       <i class="fas fa-tshirt"></i>
     </button>
-    <button class="icon-button categoria-filter" data-categoria="Artículos religiosos" title="Artículos religiosos">
-      <i class="fas fa-cross"></i>
+    <button class="icon-button categoria-filter" data-categoria="Religión" title="Religión">
+      <i class="fas fa-star"></i>
     </button>
-    <button class="icon-button categoria-filter" data-categoria="Tecnología y electrónica" title="Tecnología y electrónica">
+    <button class="icon-button categoria-filter" data-categoria="Tecnología" title="Tecnología">
       <i class="fas fa-laptop"></i>
     </button>
-    <button class="icon-button categoria-filter" data-categoria="Servicios profesionales" title="Servicios profesionales">
+    <button class="icon-button categoria-filter" data-categoria="Servicios" title="Servicios">
       <i class="fas fa-briefcase"></i>
     </button>
-    <button class="icon-button categoria-filter" data-categoria="Salud y bienestar" title="Salud y bienestar">
+    <button class="icon-button categoria-filter" data-categoria="Salud y belleza" title="Salud y belleza">
       <i class="fas fa-heartbeat"></i>
     </button>
-    <button class="icon-button categoria-filter" data-categoria="Créditos y servicios financieros" title="Créditos y servicios financieros">
+    <button class="icon-button categoria-filter" data-categoria="Finanzas" title="Finanzas">
       <i class="fas fa-money-bill"></i>
     </button>
-    <button class="icon-button categoria-filter" data-categoria="Bienes raíces" title="Bienes raíces">
+    <button class="icon-button categoria-filter" data-categoria="Casas" title="Casas">
       <i class="fas fa-home"></i>
     </button>
-    <button class="icon-button categoria-filter" data-categoria="Entretenimiento y eventos" title="Entretenimiento y eventos">
-      <i class="fas fa-ticket-alt"></i>
+    <button class="icon-button categoria-filter" data-categoria="Eventos" title="Eventos">
+      <i class="fas fa-theater-masks"></i>
     </button>
     <button class="icon-button categoria-filter" data-categoria="Educación" title="Educación">
       <i class="fas fa-graduation-cap"></i>
     </button>
-    <button class="icon-button categoria-filter" data-categoria="Mascotas y veterinarias" title="Mascotas y veterinarias">
+    <button class="icon-button categoria-filter" data-categoria="Mascotas" title="Mascotas">
       <i class="fas fa-paw"></i>
     </button>
-    <button class="icon-button categoria-filter" data-categoria="Productos artesanales o locales" title="Productos artesanales o locales">
-  <i class="fas fa-hand-holding-heart"></i>
-</button>
+    <button class="icon-button categoria-filter" data-categoria="Artesanías" title="Artesanías">
+      <i class="fas fa-handshake"></i>
     </button>
     <button class="icon-button categoria-filter" data-categoria="" title="Mostrar todo">
           <i class="fas fa-bars"></i>
@@ -2237,6 +2260,10 @@ let searchHasMore = true;
 let searchLoadedPostIds = new Set();
 let currentSearchQuery = "";
 let currentCategoryFilter = "";
+
+// 🔥 VARIABLES PARA MÚLTIPLES FOTOS 🔥
+let selectedImagesArray = [];
+let selectedVideoFile = null;
 
 // --- LÓGICA DE MENÚ Y REPORTES ---
 function togglePostMenu(postId, event) {
@@ -2378,9 +2405,7 @@ function updateLanguage(lang) {
 }
 
 function updatePlaceholder() {
-  const contentInput = document.getElementById('content-input');
   const lang = localStorage.getItem('language') || 'es';
-  contentInput.setAttribute('data-placeholder', translations[lang].inicio.post_placeholder);
   document.querySelectorAll('.comment-input').forEach(input => {
     input.placeholder = translations[lang].inicio.comment_placeholder;
   });
@@ -2801,6 +2826,7 @@ function startNotificationPolling() {
   }, 30000);
 }
 
+// 🔥 EL GENERADOR DE POSTS (CON MENÚ REPORTE/ELIMINAR Y CARRUSEL WEB) 🔥
 function generatePostHTML(pub, lang, currentUserId) {
     let menuOpciones = '';
     if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
@@ -2808,6 +2834,29 @@ function generatePostHTML(pub, lang, currentUserId) {
     } else {
         menuOpciones = `<button class="dropdown-item danger" onclick="openReportModal(${pub.id})"><i class="fas fa-flag"></i> Reportar</button>`;
     }
+
+    let mediaHtml = '';
+    if (pub.imagenes && pub.imagenes.length > 0) {
+      if(pub.imagenes.length === 1) {
+          mediaHtml = `<img src="${pub.imagenes[0]}" onclick="openMediaViewer('${pub.imagenes[0]}', 'image')">`;
+      } else {
+          mediaHtml = `<div class="carousel-container">`;
+          pub.imagenes.forEach(img => {
+              mediaHtml += `<img src="${img}" class="carousel-item" onclick="openMediaViewer('${img}', 'image')">`;
+          });
+          mediaHtml += `</div>`;
+      }
+    } else if (pub.imagen_url) {
+       mediaHtml = `<img src="${pub.imagen_url}" onclick="openMediaViewer('${pub.imagen_url}', 'image')">`;
+    }
+
+    let videoHtml = pub.video_url ? `
+  <div class="video-thumbnail-container" onclick="openMediaViewer('${pub.video_url}', 'video')">
+      <video src="${pub.video_url}#t=0.1" preload="metadata"></video>
+      <div class="play-icon-overlay">
+          <i class="fas fa-play"></i>
+      </div>
+  </div>` : '';
 
     return `
         <div class="post-header">
@@ -2822,21 +2871,14 @@ function generatePostHTML(pub, lang, currentUserId) {
         </div>
         <div class="post-content">${pub.contenido ? `<p>${pub.contenido}</p>` : ''}</div>
         <div class="post-media">
-          ${pub.imagen_url ? `<img src="${pub.imagen_url}" onclick="openMediaViewer('${pub.imagen_url}', 'image')">` : ''}
-
-${pub.video_url ? `
-  <div class="video-thumbnail-container" onclick="openMediaViewer('${pub.video_url}', 'video')">
-      <video src="${pub.video_url}#t=0.1" preload="metadata"></video>
-      <div class="play-icon-overlay">
-          <i class="fas fa-play"></i>
-      </div>
-  </div>` : ''}
+          ${mediaHtml}
+          ${videoHtml}
         </div>
         <div class="post-meta">
-          <p>${translations[lang].inicio.tags_label}: ${pub.etiquetas || ''}</p>
+          <p>${translations[lang]?.inicio?.tags_label || 'Etiquetas'}: ${pub.etiquetas || ''}</p>
           <p data-original-date="${pub.fecha_creacion}">${formatDate(pub.fecha_creacion, lang)}</p>
           <button class="interest-button ${pub.interesado ? 'interested' : ''}" data-post-id="${pub.id}" onclick="toggleInterest(${pub.id}, this)">
-            <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i> <span>${translations[lang].inicio[pub.interesado ? 'interested_button' : 'interest_button']}</span>
+            <i class="fas ${pub.interesado ? 'fa-check' : 'fa-plus'}"></i> <span>${translations[lang]?.inicio?.[pub.interesado ? 'interested_button' : 'interest_button'] || 'Me interesa'}</span>
           </button>
           <span class="interested-count">${pub.interesados_count || 0}</span>
         </div>
@@ -3084,47 +3126,83 @@ const previewArea = document.getElementById('preview-area');
 const form = document.getElementById('form-publicar');
 const etiquetasPreview = document.getElementById('etiquetas-preview');
 
-function clearPreview() { previewArea.innerHTML = ''; imagenInput.value = ''; videoInput.value = ''; }
+function clearPreview() { 
+  previewArea.innerHTML = ''; 
+  imagenInput.value = ''; 
+  videoInput.value = ''; 
+  selectedImagesArray = [];
+  selectedVideoFile = null;
+}
 
 function addPreview(file, type) {
   if (!file) return;
   const wrapper = document.createElement('span');
   wrapper.classList.add('preview-wrapper');
-  const previewElement = document.createElement('img');
+  const previewElement = document.createElement(type === 'image' ? 'img' : 'video');
   previewElement.classList.add(type === 'image' ? 'preview-image' : 'preview-video');
   const removeButton = document.createElement('button');
   removeButton.classList.add('remove-preview');
   removeButton.innerHTML = '×';
+  
   removeButton.addEventListener('click', () => {
     wrapper.remove();
-    if (type === 'image') imagenInput.value = ''; else videoInput.value = '';
+    if (type === 'image') {
+      selectedImagesArray = selectedImagesArray.filter(f => f !== file);
+    } else {
+      selectedVideoFile = null;
+    }
     if (previewElement.src.startsWith('blob:')) URL.revokeObjectURL(previewElement.src);
   });
+
   if (type === 'image') {
     previewElement.src = URL.createObjectURL(file);
-    wrapper.appendChild(previewElement); wrapper.appendChild(removeButton); previewArea.innerHTML = ''; previewArea.appendChild(wrapper);
+    wrapper.appendChild(previewElement); wrapper.appendChild(removeButton); previewArea.appendChild(wrapper);
   } else {
-    const video = document.createElement('video');
-    video.src = URL.createObjectURL(file);
-    video.addEventListener('loadeddata', () => video.currentTime = 1);
-    video.addEventListener('seeked', () => {
+    selectedVideoFile = file;
+    selectedImagesArray = []; 
+    previewArea.innerHTML = ''; 
+    
+    previewElement.src = URL.createObjectURL(file);
+    previewElement.addEventListener('loadeddata', () => previewElement.currentTime = 1);
+    previewElement.addEventListener('seeked', () => {
       const canvas = document.createElement('canvas'); canvas.width = 50; canvas.height = 50;
-      const ctx = canvas.getContext('2d'); ctx.drawImage(video, 0, 0, 50, 50);
-      previewElement.src = canvas.toDataURL('image/png');
-      wrapper.appendChild(previewElement); wrapper.appendChild(removeButton); previewArea.innerHTML = ''; previewArea.appendChild(wrapper);
-      URL.revokeObjectURL(video.src);
+      const ctx = canvas.getContext('2d'); ctx.drawImage(previewElement, 0, 0, 50, 50);
+      const imgPreview = document.createElement('img');
+      imgPreview.classList.add('preview-image');
+      imgPreview.src = canvas.toDataURL('image/png');
+      wrapper.appendChild(imgPreview); wrapper.appendChild(removeButton); 
+      previewArea.appendChild(wrapper);
+      URL.revokeObjectURL(previewElement.src);
     }, { once: true });
   }
 }
 
-imagenInput.addEventListener('change', () => { if (imagenInput.files && imagenInput.files[0]) addPreview(imagenInput.files[0], 'image'); });
-videoInput.addEventListener('change', () => { if (videoInput.files && videoInput.files[0]) addPreview(videoInput.files[0], 'video'); });
+imagenInput.addEventListener('change', (e) => { 
+  Array.from(e.target.files).forEach(file => {
+    if(selectedImagesArray.length >= 10) { showNotification("Máximo 10 imágenes permitidas", true); return; }
+    selectedVideoFile = null; 
+    const videoPrev = previewArea.querySelector('.preview-video');
+    if(videoPrev) previewArea.innerHTML = ''; 
+    selectedImagesArray.push(file);
+    addPreview(file, 'image');
+  });
+  imagenInput.value = ''; 
+});
+
+videoInput.addEventListener('change', (e) => { 
+  if (e.target.files && e.target.files[0]) { 
+     selectedImagesArray = [];
+     previewArea.innerHTML = '';
+     addPreview(e.target.files[0], 'video'); 
+  }
+  videoInput.value = '';
+});
 
 function updateEtiquetasPreview() {
   etiquetasPreview.innerHTML = '';
   const selectedCategorias = Array.from(document.querySelectorAll('input[name="categorias"]:checked')).map(input => input.value);
-  let etiquetas = selectedCategorias.filter(cat => cat !== 'otro');
-  if (selectedCategorias.includes('otro')) {
+  let etiquetas = selectedCategorias.filter(cat => cat !== 'otro' && cat !== 'Otro');
+  if (selectedCategorias.includes('otro') || selectedCategorias.includes('Otro')) {
     const otraCategoria = document.getElementById('otra-categoria-input').value.trim();
     if (otraCategoria) etiquetas.push(otraCategoria);
   }
@@ -3136,7 +3214,12 @@ function updateEtiquetasPreview() {
       pill.remove();
       const checkbox = document.querySelector(`input[name="categorias"][value="${tag}"]`);
       if (checkbox) checkbox.checked = false;
-      else { document.getElementById('cat-otro').checked = false; document.getElementById('otra-categoria-input').value = ''; document.getElementById('otra-categoria').style.display = 'none'; }
+      else { 
+        const catOtro = document.getElementById('cat-otro');
+        if (catOtro) catOtro.checked = false; 
+        document.getElementById('otra-categoria-input').value = ''; 
+        document.getElementById('otra-categoria').style.display = 'none'; 
+      }
       updateEtiquetasPreview();
     });
     etiquetasPreview.appendChild(pill);
@@ -3186,12 +3269,18 @@ form.addEventListener('submit', async (e) => {
   const lang = localStorage.getItem('language') || 'es';
   const contenido = contentInput.innerText.trim();
   const etiquetas = etiquetasHidden.value.trim();
-  if (!contenido && !imagenInput.files[0] && !videoInput.files[0] && !etiquetas) { showNotification("Completa algún campo", true); return; }
+  
+  if (!contenido) { showNotification("¡Debes escribir un título o descripción!", true); return; }
+  
   const formData = new FormData();
-  if (contenido) formData.append('contenido', contenido);
+  formData.append('contenido', contenido);
   if (etiquetas) formData.append('etiquetas', etiquetas);
-  if (imagenInput.files[0]) formData.append('imagen', imagenInput.files[0]);
-  else if (videoInput.files[0]) formData.append('video', videoInput.files[0]);
+  
+  if (selectedImagesArray.length > 0) {
+    selectedImagesArray.forEach(file => formData.append('imagenes', file));
+  } else if (selectedVideoFile) {
+    formData.append('video', selectedVideoFile);
+  }
 
   try {
     const res = await fetch('/publicar', { method: 'POST', body: formData, credentials: 'include' });
@@ -3199,7 +3288,7 @@ form.addEventListener('submit', async (e) => {
       form.reset(); contentInput.innerText = ''; contenidoHidden.value = ''; etiquetasHidden.value = ''; clearPreview(); etiquetasPreview.innerHTML = '';
       document.querySelectorAll('input[name="categorias"]').forEach(i => i.checked = false);
       document.getElementById('otra-categoria').style.display = 'none';
-      showNotification(translations[lang].inicio.post_success);
+      showNotification(translations[lang]?.inicio?.post_success || "Publicado con éxito");
       loadedPostIds.clear(); offset = 0; hasMore = true; document.getElementById('feed').innerHTML = '';
       await cargarFeed();
     } else { const d = await res.json(); showNotification(`Error: ${d.detail}`, true); }
@@ -3227,7 +3316,7 @@ function handleScroll() {
   }, 100);
 }
 
-// Inicialización de WebSockets para Chats (Simplificado para el ejemplo)
+// Inicialización de WebSockets para Chats
 async function initializeWebSocket() {
     try {
         const res = await fetch('/current_user', {headers: {'Content-Type': 'application/json'}, credentials: 'include'});
@@ -3280,9 +3369,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateChatsUnreadCounter();
   startChatsPolling();
   window.addEventListener('scroll', handleScroll);
-  document.querySelectorAll('.categoria-filter').forEach(btn => {
-    btn.addEventListener('click', () => filterByCategory(btn.getAttribute('data-categoria')));
-  });
 });
 
 document.getElementById('buscador').addEventListener('input', debounce(search, 300));
