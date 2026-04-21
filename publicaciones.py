@@ -299,6 +299,26 @@ def get_media_imagen_carrusel(img_id: int):
     finally:
         if conn: conn.close()
 
+
+    # 🔥 RUTA SALVA-VIDAS PARA FOTOS VIEJAS 🔥
+@router.get("/media/imagen_vieja/{post_id}")
+def get_media_imagen_vieja(post_id: int):
+    conn = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT imagen FROM publicaciones WHERE id = %s", (post_id,))
+        result = cur.fetchone()
+        cur.close()
+        if not result or not result[0]:
+            raise HTTPException(status_code=404, detail="Imagen no encontrada")
+        return StreamingResponse(
+            content=io.BytesIO(result[0]), media_type="image/jpeg",
+            headers={"Content-Disposition": f"inline; filename=old_img_{post_id}.jpg"}
+        )
+    finally:
+        if conn: conn.close()
+
 @router.get("/media/{post_id}")
 def get_media(post_id: int, request: Request):
     conn = None
@@ -428,24 +448,39 @@ async def inicio(request: Request, limit: int = 10, offset: int = 0):
         return RedirectResponse(url="/login", status_code=302)
 
 @router.post("/publicar")
-async def publicar(request: Request, contenido: str = Form(None), imagenes: List[UploadFile] = File(default=[]), video: UploadFile = File(None), etiquetas: str = Form(None)):
+async def publicar(request: Request):
     try:
         user_id = get_user_id_hybrid(request)
         if not user_id:
             if request.headers.get("Authorization"): raise HTTPException(status_code=401, detail="No autorizado")
             return RedirectResponse(url="/login", status_code=302)
 
-        imagenes_validas = [img for img in imagenes if img.filename and img.size > 0]
+        # 🔥 LEEMOS EL FORMULARIO A PRUEBA DE BALAS 🔥
+        form = await request.form()
+        contenido = form.get("contenido")
+        etiquetas = form.get("etiquetas")
+        video = form.get("video")
+        imagenes = form.getlist("imagenes")
 
-        if not contenido and not imagenes_validas and (not video or video.size == 0):
+        # Filtramos lo que sí es un archivo válido
+        imagenes_validas = [img for img in imagenes if getattr(img, "filename", None)]
+        video_valido = video if getattr(video, "filename", None) else None
+
+        if not contenido and not imagenes_validas and not video_valido:
             raise HTTPException(status_code=400, detail="Debe incluir contenido")
 
-        if video and video.size > MAX_FILE_SIZE: raise HTTPException(status_code=400, detail="Video muy pesado")
-        if imagenes_validas and video: raise HTTPException(status_code=400, detail="Solo imágenes o video, no ambos")
-        if len(imagenes_validas) > 10: raise HTTPException(status_code=400, detail="Máximo 10 imágenes permitidas")
+        if imagenes_validas and video_valido: 
+            raise HTTPException(status_code=400, detail="Solo imágenes o video, no ambos")
+        if len(imagenes_validas) > 10: 
+            raise HTTPException(status_code=400, detail="Máximo 10 imágenes permitidas")
 
         etiquetas_lista = [e.strip() for e in etiquetas.split(",") if e.strip()] if etiquetas else []
-        video_data = await video.read() if video and video.size > 0 else None
+        
+        video_data = None
+        if video_valido:
+            video_data = await video_valido.read()
+            if len(video_data) > MAX_FILE_SIZE:
+                raise HTTPException(status_code=400, detail="Video muy pesado")
 
         conn = None
         try:
@@ -462,7 +497,7 @@ async def publicar(request: Request, contenido: str = Form(None), imagenes: List
 
             for img in imagenes_validas:
                 img_data = await img.read()
-                if len(img_data) <= MAX_FILE_SIZE:
+                if 0 < len(img_data) <= MAX_FILE_SIZE:
                     cur.execute("""
                         INSERT INTO publicacion_imagenes (publicacion_id, imagen)
                         VALUES (%s, %s)
@@ -470,74 +505,36 @@ async def publicar(request: Request, contenido: str = Form(None), imagenes: List
 
             conn.commit()
 
-            # =================================================================
-            # 🔥 ALGORITMO DESPERTADOR (Re-engagement) 🔥
-            # =================================================================
+            # 🔥 ALGORITMO DESPERTADOR 🔥
             try:
-                # Buscamos hasta 50 usuarios que lleven más de 2 días sin entrar 
-                # y que no hayan recibido este aviso en los últimos 7 días.
                 cur.execute("""
-                    SELECT id, fcm_token 
-                    FROM usuarios 
-                    WHERE id != %s 
-                      AND fcm_token IS NOT NULL
+                    SELECT id, fcm_token FROM usuarios 
+                    WHERE id != %s AND fcm_token IS NOT NULL
                       AND ultima_conexion < CURRENT_TIMESTAMP - INTERVAL '2 days'
                       AND (ultima_noti_despertador IS NULL OR ultima_noti_despertador < CURRENT_TIMESTAMP - INTERVAL '7 days')
                     LIMIT 50
                 """, (user_id,))
-                
                 usuarios_dormidos = cur.fetchall()
 
                 if usuarios_dormidos:
-                    # Obtenemos el nombre de quien publicó
-                    cur.execute("""
-                        SELECT COALESCE(du.nombre_empresa, u.nombre) 
-                        FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id 
-                        WHERE u.id = %s
-                    """, (user_id,))
+                    cur.execute("SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s", (user_id,))
                     nombre_autor = cur.fetchone()[0] or "Alguien"
-                    
-                    titulo_push = "¡Nuevos servicios en PrendiaX! 👀"
-                    cuerpo_push = f"{nombre_autor} acaba de publicar algo que podría interesarte. ¡Entra a verlo!"
-
                     ids_despertados = []
 
                     for user_dormido in usuarios_dormidos:
-                        dormido_id = user_dormido[0]
-                        fcm_token = user_dormido[1]
-                        ids_despertados.append(dormido_id)
-
+                        ids_despertados.append(user_dormido[0])
                         push_msg = messaging.Message(
-                            notification=messaging.Notification(
-                                title=titulo_push, 
-                                body=cuerpo_push
-                            ), 
-                            apns=messaging.APNSConfig(
-                                payload=messaging.APNSPayload(
-                                    aps=messaging.Aps(sound="default")
-                                )
-                            ),
-                            data={
-                                "tipo": "general", 
-                                "publicacion_id": str(post_id) 
-                            },
-                            token=fcm_token,
+                            notification=messaging.Notification(title="¡Nuevos servicios en PrendiaX! 👀", body=f"{nombre_autor} acaba de publicar algo que podría interesarte."), 
+                            apns=messaging.APNSConfig(payload=messaging.APNSPayload(aps=messaging.Aps(sound="default"))),
+                            data={"tipo": "general", "publicacion_id": str(post_id)}, token=user_dormido[1]
                         )
                         messaging.send(push_msg)
 
-                    # Marcamos a los usuarios despertados para no hacerles spam mañana
                     if ids_despertados:
-                        cur.execute("""
-                            UPDATE usuarios 
-                            SET ultima_noti_despertador = CURRENT_TIMESTAMP 
-                            WHERE id = ANY(%s)
-                        """, (ids_despertados,))
+                        cur.execute("UPDATE usuarios SET ultima_noti_despertador = CURRENT_TIMESTAMP WHERE id = ANY(%s)", (ids_despertados,))
                         conn.commit()
-                        logging.debug(f"⏰ Se mandó despertador a {len(ids_despertados)} usuarios.")
-
             except Exception as push_err:
                 logging.error(f"Error en Algoritmo Despertador: {push_err}")
-            # =================================================================
 
             cur.close()
         finally:
@@ -604,7 +601,8 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
                 p.video IS NOT NULL AS has_video,
                 COUNT(DISTINCT i.user_id) AS interesados_count,
                 EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s) AS interesado,
-                (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id) AS comentarios_count
+                (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id) AS comentarios_count,
+                p.imagen IS NOT NULL AS has_old_image -- 🔥 DETECTA SI TIENE FOTO VIEJA
             FROM publicaciones p
             JOIN usuarios u ON p.user_id = u.id
             LEFT JOIN datos_usuario du ON p.user_id = du.user_id
@@ -613,7 +611,7 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
                 p.user_id NOT IN (SELECT bloqueado_id FROM bloqueos WHERE bloqueador_id = %s)
                 AND 
                 p.user_id NOT IN (SELECT bloqueador_id FROM bloqueos WHERE bloqueado_id = %s)
-            GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
+            GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
             ORDER BY p.fecha_creacion DESC LIMIT %s OFFSET %s
         """
         
@@ -625,7 +623,8 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
             {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
                 "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7]] if row[7] else [],
-                "imagen_url": f"/media/imagen/{row[7][0]}" if row[7] else "", # <--- PARCHE SALVA-VIDAS
+                # 🔥 EL PARCHE MAGISTRAL: Si tiene foto vieja, muestra la ruta vieja, si no, usa la nueva 🔥
+                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] else ""),
                 "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
