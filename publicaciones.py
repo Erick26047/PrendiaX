@@ -807,7 +807,72 @@ async def get_current_user(request: Request):
 async def salir(request: Request):
     request.session.clear()
     return RedirectResponse(url="/login", status_code=302)
+# =================================================================
+# 🔥 EDITAR PUBLICACIÓN 
+# =================================================================
+@router.post("/api/publicacion/{post_id}/editar")
+async def editar_publicacion(
+    post_id: int,
+    request: Request,
+    contenido: str = Form(...),
+    etiquetas: str = Form(None),
+    imagenes: List[UploadFile] = File(default=[]),
+    video: UploadFile = File(None),
+    reemplazar_media: str = Form("false")
+):
+    conn = None
+    try:
+        user_id = get_user_id_hybrid(request)
+        if not user_id: raise HTTPException(status_code=401, detail="No autorizado")
 
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # 1. Verificar que el usuario sea el dueño de la publicación
+        cur.execute("SELECT user_id FROM publicaciones WHERE id = %s", (post_id,))
+        row = cur.fetchone()
+        if not row: raise HTTPException(status_code=404, detail="Publicación no encontrada")
+        if row[0] != user_id: raise HTTPException(status_code=403, detail="No tienes permiso para editar esto")
+
+        etiquetas_lista = [e.strip() for e in etiquetas.split(",") if e.strip()] if etiquetas else []
+
+        if reemplazar_media == "true":
+            # 2A. El usuario decidió cambiar las fotos/video. Borramos lo viejo.
+            cur.execute("DELETE FROM publicacion_imagenes WHERE publicacion_id = %s", (post_id,))
+            
+            video_data = await video.read() if video and video.size > 0 else None
+            imagenes_validas = [img for img in imagenes if img.filename and img.size > 0]
+            
+            if len(imagenes_validas) > 10: raise HTTPException(status_code=400, detail="Máximo 10 imágenes permitidas")
+            if imagenes_validas and video_data: raise HTTPException(status_code=400, detail="Solo imágenes o video, no ambos")
+
+            cur.execute("""
+                UPDATE publicaciones SET contenido = %s, etiquetas = %s, video = %s
+                WHERE id = %s
+            """, (contenido, etiquetas_lista, psycopg2.Binary(video_data) if video_data else None, post_id))
+
+            for img in imagenes_validas:
+                img_data = await img.read()
+                if len(img_data) <= MAX_FILE_SIZE:
+                    cur.execute("INSERT INTO publicacion_imagenes (publicacion_id, imagen) VALUES (%s, %s)", 
+                                (post_id, psycopg2.Binary(img_data)))
+        else:
+            # 2B. Solo editó el texto o categorías, conservamos la multimedia intacta
+            cur.execute("""
+                UPDATE publicaciones SET contenido = %s, etiquetas = %s
+                WHERE id = %s
+            """, (contenido, etiquetas_lista, post_id))
+
+        conn.commit()
+        return JSONResponse(content={"status": "ok", "message": "Publicación actualizada correctamente"})
+
+    except Exception as e:
+        if conn: conn.rollback()
+        logging.error(f"Error al editar post {post_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn: conn.close()
+        
 @router.delete("/borrar_publicacion/{post_id}")
 async def borrar_publicacion(post_id: int, request: Request):
     try:
