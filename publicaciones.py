@@ -448,26 +448,28 @@ async def inicio(request: Request, limit: int = 10, offset: int = 0):
         return RedirectResponse(url="/login", status_code=302)
 
 @router.post("/publicar")
-async def publicar(request: Request):
+async def publicar(
+    request: Request, 
+    contenido: str = Form(None), 
+    etiquetas: str = Form(None),
+    imagenes: List[UploadFile] = File(default=[]), 
+    video: UploadFile = File(None)
+):
     try:
         user_id = get_user_id_hybrid(request)
         if not user_id:
             if request.headers.get("Authorization"): raise HTTPException(status_code=401, detail="No autorizado")
             return RedirectResponse(url="/login", status_code=302)
 
-        # 🔥 LEEMOS EL FORMULARIO A PRUEBA DE BALAS 🔥
-        form = await request.form()
-        contenido = form.get("contenido")
-        etiquetas = form.get("etiquetas")
-        video = form.get("video")
-        imagenes = form.getlist("imagenes")
+        # 1. Filtramos los archivos válidos SIN usar .size (que es lo que rompía FastAPI antes)
+        imagenes_validas = [img for img in imagenes if img.filename]
+        video_valido = video if video and video.filename else None
 
-        # Filtramos lo que sí es un archivo válido
-        imagenes_validas = [img for img in imagenes if getattr(img, "filename", None)]
-        video_valido = video if getattr(video, "filename", None) else None
+        texto = contenido if contenido else ""
 
-        if not contenido and not imagenes_validas and not video_valido:
-            raise HTTPException(status_code=400, detail="Debe incluir contenido")
+        # 2. Validaciones
+        if not texto.strip() and not imagenes_validas and not video_valido:
+            raise HTTPException(status_code=400, detail="Debe incluir contenido o multimedia")
 
         if imagenes_validas and video_valido: 
             raise HTTPException(status_code=400, detail="Solo imágenes o video, no ambos")
@@ -491,13 +493,14 @@ async def publicar(request: Request):
                 INSERT INTO publicaciones (user_id, contenido, video, etiquetas, fecha_creacion)
                 VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
                 RETURNING id
-            """, (user_id, contenido, psycopg2.Binary(video_data) if video_data else None, etiquetas_lista))
+            """, (user_id, texto, psycopg2.Binary(video_data) if video_data else None, etiquetas_lista))
             
             post_id = cur.fetchone()[0]
 
+            # 3. Guardamos las fotos múltiples leyendo sus bytes
             for img in imagenes_validas:
                 img_data = await img.read()
-                if 0 < len(img_data) <= MAX_FILE_SIZE:
+                if img_data: # Si los datos existen, pa' adentro
                     cur.execute("""
                         INSERT INTO publicacion_imagenes (publicacion_id, imagen)
                         VALUES (%s, %s)
@@ -505,7 +508,9 @@ async def publicar(request: Request):
 
             conn.commit()
 
+            # =================================================================
             # 🔥 ALGORITMO DESPERTADOR 🔥
+            # =================================================================
             try:
                 cur.execute("""
                     SELECT id, fcm_token FROM usuarios 
@@ -514,6 +519,7 @@ async def publicar(request: Request):
                       AND (ultima_noti_despertador IS NULL OR ultima_noti_despertador < CURRENT_TIMESTAMP - INTERVAL '7 days')
                     LIMIT 50
                 """, (user_id,))
+                
                 usuarios_dormidos = cur.fetchall()
 
                 if usuarios_dormidos:
@@ -533,8 +539,10 @@ async def publicar(request: Request):
                     if ids_despertados:
                         cur.execute("UPDATE usuarios SET ultima_noti_despertador = CURRENT_TIMESTAMP WHERE id = ANY(%s)", (ids_despertados,))
                         conn.commit()
+
             except Exception as push_err:
                 logging.error(f"Error en Algoritmo Despertador: {push_err}")
+            # =================================================================
 
             cur.close()
         finally:
