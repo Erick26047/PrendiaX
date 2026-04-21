@@ -3369,10 +3369,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateChatsUnreadCounter();
   startChatsPolling();
   window.addEventListener('scroll', handleScroll);
+  // 🔥 ESTO FALTABA: Conectar los botones de categorías con la función 🔥
+  document.querySelectorAll('.categoria-filter').forEach(btn => {
+    btn.addEventListener('click', () => filterByCategory(btn.getAttribute('data-categoria')));
+  });
 });
 
 document.getElementById('buscador').addEventListener('input', debounce(search, 300));
-function debounce(func, wait) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func(...args), wait); }; }
-</script>
+function debounce(func, wait) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func(...args), wait); }; }</script>
 </body>
 </html>
