@@ -12,7 +12,6 @@ from pydantic import BaseModel
 import jwt
 from firebase_admin import messaging 
 
-
 router = APIRouter()
 
 # Configurar Jinja2
@@ -99,26 +98,6 @@ class ReportePublicacionRequest(BaseModel):
 class FCMTokenRequest(BaseModel):
     fcm_token: str
 
-@router.post("/api/update_fcm_token")
-async def update_fcm_token(request: Request, data: FCMTokenRequest):
-    conn = None
-    try:
-        user_id = get_user_id_hybrid(request)
-        if not user_id:
-            raise HTTPException(status_code=401, detail="No autorizado")
-
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("UPDATE usuarios SET fcm_token = %s WHERE id = %s", (data.fcm_token, user_id))
-        conn.commit()
-        return JSONResponse(content={"status": "ok", "message": "Token guardado"})
-    except Exception as e:
-        if conn: conn.rollback()
-        logging.error(f"Error guardando FCM: {e}")
-        raise HTTPException(status_code=500, detail="Error interno")
-    finally:
-        if conn: conn.close()
-
 SECRET_KEY_JWT = "Elbicho7"
 
 def get_user_id_hybrid(request: Request):
@@ -189,7 +168,6 @@ async def crear_notificacion(publicacion_id: int, tipo: str, actor_id: int, mens
                 titulos = {'interes': "¡Nueva interacción!", 'comentario': "Nuevo comentario", 'respuesta': "Te han respondido", 'mencion': "Te mencionaron"}
                 cuerpos = {'interes': f"A {actor_name} le interesó tu publicación.", 'comentario': f"{actor_name} comentó: {mensaje}", 'respuesta': f"{actor_name} respondió a tu comentario.", 'mencion': f"{actor_name} te mencionó: {mensaje}"}
                 
-                # 🔥 1. CALCULAMOS EL TOTAL DE NO LEÍDAS PARA EL GLOBO ROJO (BADGE) 🔥
                 cur.execute("SELECT COUNT(*) FROM notifications WHERE user_id = %s AND leida = FALSE", (receptor_id,))
                 total_notis = cur.fetchone()[0]
                 badge_count = total_notis 
@@ -199,7 +177,6 @@ async def crear_notificacion(publicacion_id: int, tipo: str, actor_id: int, mens
                         notification=messaging.Notification(title=titulos.get(tipo, "Notificación"), body=cuerpos.get(tipo, "Tienes una nueva notificación")), 
                         apns=messaging.APNSConfig(
                             payload=messaging.APNSPayload(
-                                # 🔥 2. LE INYECTAMOS EL BADGE A APPLE AQUÍ 🔥
                                 aps=messaging.Aps(sound="default", badge=badge_count)
                             )
                         ),
@@ -217,27 +194,70 @@ async def crear_notificacion(publicacion_id: int, tipo: str, actor_id: int, mens
     except Exception as e:
         logging.error(f"Error crear_notificacion: {e}")
         return None
-    
-@router.get("/perfil-especifico", response_class=HTMLResponse)
-async def perfil_especifico(request: Request):
+
+# =================================================================
+# MISCELÁNEAS Y TOKENS
+# =================================================================
+
+@router.post("/api/update_fcm_token")
+async def update_fcm_token(request: Request, data: FCMTokenRequest):
+    conn = None
     try:
         user_id = get_user_id_hybrid(request)
         if not user_id:
-            return RedirectResponse(url="/login", status_code=302)
+            raise HTTPException(status_code=401, detail="No autorizado")
 
-        viewed_user_id = request.query_params.get('user_id')
-        if not viewed_user_id or not viewed_user_id.isdigit():
-            raise HTTPException(status_code=400, detail="ID de usuario inválido en la URL")
-
-        viewed_user_id = int(viewed_user_id)
-        return templates.TemplateResponse("perfil-especifico.html", {
-            "request": request,
-            "current_user_id": user_id,
-            "viewed_user_id": viewed_user_id
-        })
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE usuarios SET fcm_token = %s WHERE id = %s", (data.fcm_token, user_id))
+        conn.commit()
+        return JSONResponse(content={"status": "ok", "message": "Token guardado"})
     except Exception as e:
-        logging.error(f"Error en /perfil-especifico: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al cargar perfil-especifico: {str(e)}")
+        if conn: conn.rollback()
+        logging.error(f"Error guardando FCM: {e}")
+        raise HTTPException(status_code=500, detail="Error interno")
+    finally:
+        if conn: conn.close()
+
+@router.get("/current_user")
+async def get_current_user(request: Request):
+    try:
+        user_id = get_user_id_hybrid(request)
+        if not user_id: return {"user_id": None, "tipo": None}
+        
+        conn = None
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+
+            cur.execute("""
+                UPDATE usuarios 
+                SET ultima_conexion = CURRENT_TIMESTAMP 
+                WHERE id = %s
+            """, (user_id,))
+            conn.commit()
+
+            cur.execute("""
+                SELECT CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END
+                FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s
+            """, (user_id,))
+            result = cur.fetchone()
+            return {"user_id": user_id, "tipo": result[0] if result else 'explorador', "id": user_id}
+        finally:
+            if cur: cur.close()
+            if conn: conn.close()
+    except Exception as e:
+        logging.error(f"Error en get_current_user: {e}")
+        return {"user_id": None, "tipo": None}
+
+@router.post("/salir")
+async def salir(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=302)
+
+# =================================================================
+# MULTIMEDIA Y FOTOS
+# =================================================================
 
 @router.get("/foto_perfil/{user_id}")
 async def get_foto_perfil(user_id: int):
@@ -299,8 +319,6 @@ def get_media_imagen_carrusel(img_id: int):
     finally:
         if conn: conn.close()
 
-
-    # 🔥 RUTA SALVA-VIDAS PARA FOTOS VIEJAS 🔥
 @router.get("/media/imagen_vieja/{post_id}")
 def get_media_imagen_vieja(post_id: int):
     conn = None
@@ -334,7 +352,6 @@ def get_media(post_id: int, request: Request):
             raise HTTPException(status_code=404, detail="Video no encontrado")
 
         video_data = result[0]
-        
         file_size = len(video_data)
         range_header = request.headers.get("range")
         headers = {
@@ -383,73 +400,10 @@ def get_media(post_id: int, request: Request):
         logging.error(f"Error media post {post_id}: {e}")
         raise HTTPException(status_code=500, detail="Error interno al servir media")
 
-
-@router.get("/inicio", response_class=HTMLResponse)
-async def inicio(request: Request, limit: int = 10, offset: int = 0):
-    try:
-        user_id = get_user_id_hybrid(request)
-        if not user_id:
-            return RedirectResponse(url="/login", status_code=302)
-
-        conn = None
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, 
-                    COALESCE(du.nombre_empresa, u.nombre) AS display_name,
-                    CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END AS tipo_usuario,
-                    (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id) AS imagenes_ids,
-                    p.video IS NOT NULL AS has_video,
-                    COUNT(DISTINCT i.user_id) AS interesados_count,
-                    EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s) AS interesado,
-                    (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id) AS comentarios_count
-                FROM publicaciones p
-                JOIN usuarios u ON p.user_id = u.id
-                LEFT JOIN datos_usuario du ON p.user_id = du.user_id
-                LEFT JOIN intereses i ON p.id = i.publicacion_id
-                GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
-                ORDER BY p.fecha_creacion DESC
-                LIMIT %s OFFSET %s
-            """, (user_id, limit, offset))
-            publicaciones = cur.fetchall()
-            cur.close()
-        finally:
-            if conn: conn.close()
-
-        # 🔥 AQUÍ INYECTAMOS LA RETROCOMPATIBILIDAD (imagen_url)
-        publicaciones_list = [
-            {
-                "id": row[0],
-                "user_id": int(row[1]),
-                "contenido": row[2] or "",
-                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7]] if row[7] else [],
-                "imagen_url": f"/media/imagen/{row[7][0]}" if row[7] else "", # <--- PARCHE SALVA-VIDAS
-                "video_url": f"/media/{row[0]}" if row[8] else "",
-                "etiquetas": row[3] or [],
-                "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
-                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
-                "nombre_empresa": row[5],
-                "tipo_usuario": row[6],
-                "interesados_count": int(row[9]),
-                "interesado": row[10],
-                "comentarios_count": int(row[11])
-            }
-            for row in publicaciones
-        ]
-
-        return templates.TemplateResponse("inicio.html", {
-            "request": request,
-            "publicaciones": publicaciones_list,
-            "user_id": user_id
-        })
-    except Exception as e:
-        logging.error(f"Error en /inicio: {e}")
-        return RedirectResponse(url="/login", status_code=302)
-
 # =================================================================
-# 🔥 1. RUTA PARA PUBLICAR (HÍBRIDA: APP VIEJA Y NUEVA) 🔥
+# CREAR, EDITAR Y BORRAR PUBLICACIONES
 # =================================================================
+
 @router.post("/publicar")
 async def publicar(request: Request):
     try:
@@ -459,20 +413,15 @@ async def publicar(request: Request):
             return RedirectResponse(url="/login", status_code=302)
 
         form = await request.form()
-        
         contenido = form.get("contenido", "")
         etiquetas = form.get("etiquetas", "")
         video = form.get("video")
         
-        # 🔥 EL TRUCO MAESTRO DE RETROCOMPATIBILIDAD 🔥
-        imagenes = form.getlist("imagenes") # Lo que manda la Web o la App Nueva
-        imagen_singular = form.get("imagen") # Lo que manda tu Flutter actual (viejo)
-        
-        # Si viene una imagen de la app vieja, la metemos a la lista de las nuevas
+        imagenes = form.getlist("imagenes") 
+        imagen_singular = form.get("imagen") 
         if imagen_singular and getattr(imagen_singular, "filename", None):
             imagenes.append(imagen_singular)
 
-        # Filtramos para quedarnos solo con archivos reales
         imagenes_validas = [img for img in imagenes if getattr(img, "filename", None)]
         video_valido = video if getattr(video, "filename", None) else None
         texto = contenido.strip() if contenido else ""
@@ -506,7 +455,6 @@ async def publicar(request: Request):
             
             post_id = cur.fetchone()[0]
 
-            # Guardamos las fotos en la nueva tabla (sin importar si vino de app vieja o nueva)
             for img in imagenes_validas:
                 img_data = await img.read()
                 if img_data:
@@ -517,7 +465,6 @@ async def publicar(request: Request):
 
             conn.commit()
 
-            # --- ALGORITMO DESPERTADOR ---
             try:
                 cur.execute("""
                     SELECT id, fcm_token FROM usuarios 
@@ -550,7 +497,6 @@ async def publicar(request: Request):
 
             except Exception as push_err:
                 logging.error(f"Error en Algoritmo Despertador: {push_err}")
-            # ------------------------------
 
             cur.close()
         finally:
@@ -562,9 +508,6 @@ async def publicar(request: Request):
         logging.error(f"💥 ERROR EN /PUBLICAR:\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# =================================================================
-# 🔥 2. RUTA PARA EDITAR (HÍBRIDA) 🔥
-# =================================================================
 @router.post("/api/publicacion/{post_id}/editar")
 async def editar_publicacion(post_id: int, request: Request):
     conn = None
@@ -578,7 +521,6 @@ async def editar_publicacion(post_id: int, request: Request):
         reemplazar_media = form.get("reemplazar_media", "false")
         video = form.get("video")
         
-        # 🔥 EL TRUCO MAESTRO AQUÍ TAMBIÉN 🔥
         imagenes = form.getlist("imagenes")
         imagen_singular = form.get("imagen")
         if imagen_singular and getattr(imagen_singular, "filename", None):
@@ -631,46 +573,98 @@ async def editar_publicacion(post_id: int, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conn: conn.close()
-    
-@router.post("/api/reportar/publicacion")
-async def reportar_publicacion(request: Request, reporte: ReportePublicacionRequest):
-    conn = None
+
+@router.delete("/borrar_publicacion/{post_id}")
+async def borrar_publicacion(post_id: int, request: Request):
+    try:
+        user_id = get_user_id_hybrid(request)
+        if not user_id: raise HTTPException(status_code=401, detail="No autorizado")
+
+        conn = None
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT user_id FROM publicaciones WHERE id = %s", (post_id,))
+            result = cur.fetchone()
+            if not result: raise HTTPException(status_code=404, detail="No encontrado")
+            if result[0] != user_id: raise HTTPException(status_code=403, detail="Sin permiso")
+
+            cur.execute("DELETE FROM publicaciones WHERE id = %s", (post_id,))
+            conn.commit()
+            cur.close()
+            return {"message": "Eliminado"}
+        finally:
+            if conn: conn.close()
+    except Exception as e:
+        logging.error(f"Error borrar post: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# =================================================================
+# FEED, BÚSQUEDA Y LECTURA DE POSTS
+# =================================================================
+
+@router.get("/inicio", response_class=HTMLResponse)
+async def inicio(request: Request, limit: int = 10, offset: int = 0):
     try:
         user_id = get_user_id_hybrid(request)
         if not user_id:
-            raise HTTPException(status_code=401, detail="Debes iniciar sesión para reportar.")
+            return RedirectResponse(url="/login", status_code=302)
 
-        conn = get_db_connection()
-        cur = conn.cursor()
+        conn = None
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, 
+                    COALESCE(du.nombre_empresa, u.nombre) AS display_name,
+                    CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END AS tipo_usuario,
+                    (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id) AS imagenes_ids,
+                    p.video IS NOT NULL AS has_video,
+                    COUNT(DISTINCT i.user_id) AS interesados_count,
+                    EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s) AS interesado,
+                    (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id) AS comentarios_count,
+                    p.imagen IS NOT NULL AS has_old_image
+                FROM publicaciones p
+                JOIN usuarios u ON p.user_id = u.id
+                LEFT JOIN datos_usuario du ON p.user_id = du.user_id
+                LEFT JOIN intereses i ON p.id = i.publicacion_id
+                GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
+                ORDER BY p.fecha_creacion DESC
+                LIMIT %s OFFSET %s
+            """, (user_id, limit, offset))
+            publicaciones = cur.fetchall()
+            cur.close()
+        finally:
+            if conn: conn.close()
 
-        cur.execute("SELECT id FROM publicaciones WHERE id = %s", (reporte.publicacion_id,))
-        if not cur.fetchone():
-            raise HTTPException(status_code=404, detail="La publicación no existe.")
+        publicaciones_list = [
+            {
+                "id": row[0],
+                "user_id": int(row[1]),
+                "contenido": row[2] or "",
+                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [],
+                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
+                "video_url": f"/media/{row[0]}" if row[8] else "",
+                "etiquetas": row[3] or [],
+                "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
+                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
+                "nombre_empresa": row[5],
+                "tipo_usuario": row[6],
+                "interesados_count": int(row[9]),
+                "interesado": row[10],
+                "comentarios_count": int(row[11])
+            }
+            for row in publicaciones
+        ]
 
-        cur.execute("""
-            SELECT id FROM reportes_publicaciones 
-            WHERE denunciante_id = %s AND publicacion_id = %s AND estatus = 'pendiente'
-        """, (user_id, reporte.publicacion_id))
-        
-        if cur.fetchone():
-            return JSONResponse(content={"status": "ok", "message": "Ya has reportado esta publicación anteriormente."})
-
-        cur.execute("""
-            INSERT INTO reportes_publicaciones (denunciante_id, publicacion_id, motivo, estatus, fecha_reporte)
-            VALUES (%s, %s, %s, 'pendiente', CURRENT_TIMESTAMP)
-        """, (user_id, reporte.publicacion_id, reporte.motivo))
-        
-        conn.commit()
-        return JSONResponse(content={"status": "ok", "message": "Reporte enviado. Gracias por ayudarnos."})
-
-    except HTTPException as he:
-        raise he
+        return templates.TemplateResponse("inicio.html", {
+            "request": request,
+            "publicaciones": publicaciones_list,
+            "user_id": user_id
+        })
     except Exception as e:
-        if conn: conn.rollback()
-        logging.error(f"Error al reportar: {e}")
-        raise HTTPException(status_code=500, detail="Error interno.")
-    finally:
-        if conn: conn.close()
+        logging.error(f"Error en /inicio: {e}")
+        return RedirectResponse(url="/login", status_code=302)
 
 @router.get("/feed")
 async def feed(limit: int = 10, offset: int = 0, request: Request = None):
@@ -689,7 +683,7 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
                 COUNT(DISTINCT i.user_id) AS interesados_count,
                 EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s) AS interesado,
                 (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id) AS comentarios_count,
-                p.imagen IS NOT NULL AS has_old_image -- 🔥 DETECTA SI TIENE FOTO VIEJA
+                p.imagen IS NOT NULL AS has_old_image
             FROM publicaciones p
             JOIN usuarios u ON p.user_id = u.id
             LEFT JOIN datos_usuario du ON p.user_id = du.user_id
@@ -709,7 +703,6 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
         return [
             {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
-                # 🔥 EL PARCHE MAGISTRAL ANTI-[NONE] 🔥
                 "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
                 "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
                 "video_url": f"/media/{row[0]}" if row[8] else "",
@@ -743,7 +736,8 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
                 p.video IS NOT NULL,
                 COUNT(DISTINCT i.user_id),
                 EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s),
-                (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id)
+                (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id),
+                p.imagen IS NOT NULL
             FROM publicaciones p
             JOIN usuarios u ON p.user_id = u.id
             LEFT JOIN datos_usuario du ON p.user_id = du.user_id
@@ -752,11 +746,11 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
                 (
                     LOWER(COALESCE(du.nombre_empresa, u.nombre)) LIKE %s
                     OR EXISTS (SELECT 1 FROM unnest(p.etiquetas) AS etiqueta WHERE LOWER(etiqueta) LIKE %s)
-                    OR LOWER(p.contenido) LIKE %s -- 🔥 BÚSQUEDA INTELIGENTE EN TEXTO 🔥
+                    OR LOWER(p.contenido) LIKE %s
                 )
                 AND p.user_id NOT IN (SELECT bloqueado_id FROM bloqueos WHERE bloqueador_id = %s)
                 AND p.user_id NOT IN (SELECT bloqueador_id FROM bloqueos WHERE bloqueado_id = %s)
-            GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
+            GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
             ORDER BY p.fecha_creacion DESC LIMIT %s OFFSET %s
         """, (current_user, f"%{query}%", f"%{query}%", f"%{query}%", current_user, current_user, limit, offset))
         
@@ -766,8 +760,8 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
         return [
             {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
-                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7]] if row[7] else [], 
-                "imagen_url": f"/media/imagen/{row[7][0]}" if row[7] else "", # <--- PARCHE SALVA-VIDAS
+                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
+                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
                 "video_url": f"/media/{row[0]}" if row[8] else "",
                 "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
@@ -797,13 +791,18 @@ async def perfil_feed(request: Request, limit: int = 10, offset: int = 0):
                     CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END,
                     (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id), 
                     p.video IS NOT NULL,
-                    (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id)
+                    COUNT(DISTINCT i.user_id),
+                    EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s),
+                    (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id),
+                    p.imagen IS NOT NULL
                 FROM publicaciones p
                 JOIN usuarios u ON p.user_id = u.id
                 LEFT JOIN datos_usuario du ON p.user_id = du.user_id
+                LEFT JOIN intereses i ON p.id = i.publicacion_id
                 WHERE p.user_id = %s
+                GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
                 ORDER BY p.fecha_creacion DESC LIMIT %s OFFSET %s
-            """, (user_id, limit, offset))
+            """, (user_id, user_id, limit, offset))
             publicaciones = cur.fetchall()
             cur.close()
         finally:
@@ -812,7 +811,6 @@ async def perfil_feed(request: Request, limit: int = 10, offset: int = 0):
         return [
             {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
-                # 🔥 EL PARCHE MAGISTRAL ANTI-[NONE] 🔥
                 "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
                 "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
                 "video_url": f"/media/{row[0]}" if row[8] else "",
@@ -825,6 +823,52 @@ async def perfil_feed(request: Request, limit: int = 10, offset: int = 0):
     except Exception as e:
         logging.error(f"Error perfil feed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/user/{user_id}/publicaciones")
+async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0, request: Request = None):
+    conn = None
+    try:
+        current_user = get_user_id_hybrid(request) if request else -1
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, 
+                COALESCE(du.nombre_empresa, u.nombre),
+                CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END,
+                (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id), 
+                p.video IS NOT NULL,
+                COUNT(DISTINCT i.user_id),
+                EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s),
+                (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id),
+                p.imagen IS NOT NULL
+            FROM publicaciones p
+            JOIN usuarios u ON p.user_id = u.id
+            LEFT JOIN datos_usuario du ON p.user_id = du.user_id
+            LEFT JOIN intereses i ON p.id = i.publicacion_id
+            WHERE p.user_id = %s
+            GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
+            ORDER BY p.fecha_creacion DESC LIMIT %s OFFSET %s
+        """, (current_user, user_id, limit, offset))
+        publicaciones = cur.fetchall()
+        cur.close()
+
+        return [
+            {
+                "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
+                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
+                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
+                "video_url": f"/media/{row[0]}" if row[8] else "",
+                "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
+                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
+                "nombre_empresa": row[5], "tipo_usuario": row[6],
+                "interesados_count": int(row[9]), "interesado": row[10], "comentarios_count": int(row[11])
+            } for row in publicaciones
+        ]
+    except Exception as e:
+        logging.error(f"Error user posts: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn: conn.close()
 
 @router.get("/publicacion/{post_id}")
 async def get_publicacion(post_id: int, request: Request):
@@ -842,22 +886,22 @@ async def get_publicacion(post_id: int, request: Request):
                     p.video IS NOT NULL,
                     COUNT(DISTINCT i.user_id),
                     EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s),
-                    (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id)
+                    (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id),
+                    p.imagen IS NOT NULL
                 FROM publicaciones p
                 JOIN usuarios u ON p.user_id = u.id
                 LEFT JOIN datos_usuario du ON p.user_id = du.user_id
                 LEFT JOIN intereses i ON p.id = i.publicacion_id
                 WHERE p.id = %s
-                GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
+                GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
             """, (current_user if current_user else -1, post_id))
             row = cur.fetchone()
             cur.close()
             if not row: raise HTTPException(status_code=404, detail="No encontrado")
 
-            return [
-            {
+            # 🔥 AHORA SÍ, DEVOLVEMOS UN DICCIONARIO DIRECTO (NO UNA LISTA) 🔥
+            return {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
-                # 🔥 EL PARCHE MAGISTRAL ANTI-[NONE] 🔥
                 "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
                 "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
                 "video_url": f"/media/{row[0]}" if row[8] else "",
@@ -865,13 +909,16 @@ async def get_publicacion(post_id: int, request: Request):
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
                 "nombre_empresa": row[5], "tipo_usuario": row[6],
                 "interesados_count": int(row[9]), "interesado": row[10], "comentarios_count": int(row[11])
-            } for row in [row]
-        ]
+            }
         finally:
             if conn: conn.close()
     except Exception as e:
         logging.error(f"Error single post: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# =================================================================
+# INTERACCIONES Y PERFIL
+# =================================================================
 
 @router.get("/user/{user_id}")
 async def get_user(user_id: int):
@@ -902,113 +949,6 @@ async def get_user(user_id: int):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conn: conn.close()
-
-@router.get("/user/{user_id}/publicaciones")
-async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0, request: Request = None):
-    conn = None
-    try:
-        current_user = get_user_id_hybrid(request) if request else -1
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, 
-                COALESCE(du.nombre_empresa, u.nombre),
-                CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END,
-                (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id), 
-                p.video IS NOT NULL,
-                COUNT(DISTINCT i.user_id),
-                EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s),
-                (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id)
-            FROM publicaciones p
-            JOIN usuarios u ON p.user_id = u.id
-            LEFT JOIN datos_usuario du ON p.user_id = du.user_id
-            LEFT JOIN intereses i ON p.id = i.publicacion_id
-            WHERE p.user_id = %s
-            GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, du.nombre_empresa, u.nombre, du.categoria
-            ORDER BY p.fecha_creacion DESC LIMIT %s OFFSET %s
-        """, (current_user, user_id, limit, offset))
-        publicaciones = cur.fetchall()
-        cur.close()
-
-        return [
-            {
-                "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
-                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7]] if row[7] else [], 
-                "imagen_url": f"/media/imagen/{row[7][0]}" if row[7] else "", # <--- PARCHE SALVA-VIDAS
-                "video_url": f"/media/{row[0]}" if row[8] else "",
-                "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
-                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
-                "nombre_empresa": row[5], "tipo_usuario": row[6],
-                "interesados_count": int(row[9]), "interesado": row[10], "comentarios_count": int(row[11])
-            } for row in publicaciones
-        ]
-    except Exception as e:
-        logging.error(f"Error user posts: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if conn: conn.close()
-
-@router.get("/current_user")
-async def get_current_user(request: Request):
-    try:
-        user_id = get_user_id_hybrid(request)
-        if not user_id: return {"user_id": None, "tipo": None}
-        
-        conn = None
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-
-            # 🔥 NUEVO: ACTUALIZAMOS SU ÚLTIMA CONEXIÓN 🔥
-            cur.execute("""
-                UPDATE usuarios 
-                SET ultima_conexion = CURRENT_TIMESTAMP 
-                WHERE id = %s
-            """, (user_id,))
-            conn.commit()
-
-            cur.execute("""
-                SELECT CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END
-                FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s
-            """, (user_id,))
-            result = cur.fetchone()
-            return {"user_id": user_id, "tipo": result[0] if result else 'explorador', "id": user_id}
-        finally:
-            if cur: cur.close()
-            if conn: conn.close()
-    except Exception as e:
-        logging.error(f"Error en get_current_user: {e}")
-        return {"user_id": None, "tipo": None}
-
-@router.post("/salir")
-async def salir(request: Request):
-    request.session.clear()
-    return RedirectResponse(url="/login", status_code=302)
-        
-@router.delete("/borrar_publicacion/{post_id}")
-async def borrar_publicacion(post_id: int, request: Request):
-    try:
-        user_id = get_user_id_hybrid(request)
-        if not user_id: raise HTTPException(status_code=401, detail="No autorizado")
-
-        conn = None
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("SELECT user_id FROM publicaciones WHERE id = %s", (post_id,))
-            result = cur.fetchone()
-            if not result: raise HTTPException(status_code=404, detail="No encontrado")
-            if result[0] != user_id: raise HTTPException(status_code=403, detail="Sin permiso")
-
-            cur.execute("DELETE FROM publicaciones WHERE id = %s", (post_id,))
-            conn.commit()
-            cur.close()
-            return {"message": "Eliminado"}
-        finally:
-            if conn: conn.close()
-    except Exception as e:
-        logging.error(f"Error borrar post: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/publicacion/{post_id}/comentarios")
 async def list_comments(post_id: int, limit: int = 50, offset: int = 0):
@@ -1398,7 +1338,6 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
     except Exception as e:
         logging.error(f"Error en WS notificaciones: {e}")
         notification_manager.disconnect(websocket, user_id)
-
 
 @router.post("/api/reportar/usuario")
 async def reportar_usuario(request: Request, reporte: ReporteUsuarioRequest):
