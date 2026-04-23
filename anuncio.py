@@ -67,7 +67,7 @@ def enviar_anuncio_masivo():
                 tokens=lote,
             )
             # ¡Fuego! Disparamos a los celulares
-            response = messaging.send_multicast(message)
+            response = messaging.send_each_for_multicast(message)
             exitos += response.success_count
             fallas += response.failure_count
 
