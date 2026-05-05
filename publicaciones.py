@@ -693,7 +693,7 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
                 AND 
                 p.user_id NOT IN (SELECT bloqueador_id FROM bloqueos WHERE bloqueado_id = %s)
             GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
-            ORDER BY p.fecha_creacion DESC LIMIT %s OFFSET %s
+            ORDER BY CASE WHEN nombre_empresa = 'PrendiaX' THEN 1 ELSE 0 END DESC, fecha_creacion DESC LIMIT %s OFFSET %s
         """
         
         cur.execute(query, (current_user, current_user, current_user, limit, offset))
