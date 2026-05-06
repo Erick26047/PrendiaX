@@ -7,12 +7,12 @@ from email.mime.multipart import MIMEMultipart
 DB_HOST = "localhost"
 DB_NAME = "prendia_db"
 DB_USER = "postgres"
-DB_PASS = "Elbicho7"
+DB_PASS = "Elbicho7" # <-- Corregido: esta es la de tu BD
 
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
-SMTP_USER = "prendiax@gmail.com" # Llénalo
-SMTP_PASSWORD = "Elbicho7" # Llénalo
+SMTP_USER = "prendiax@gmail.com" 
+SMTP_PASSWORD = "ekux nkus emdm azcv" # <-- Corregido: esta es la de Google
 
 ASUNTO = "¿Ya tienes PrendiaX en tu celular? 📱"
 CUERPO_HTML = """
@@ -58,8 +58,12 @@ def enviar_spam_retencion():
 
         print(f"Enviando correo de instalación a {len(lista_envios)} usuarios...")
 
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        # 🔥 CONEXIÓN A GMAIL OPTIMIZADA PARA EVITAR EL ERROR DE RED 🔥
+        print(f"Conectando a {SMTP_SERVER}...")
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=30)
+        server.ehlo()
         server.starttls()
+        server.ehlo()
         server.login(SMTP_USER, SMTP_PASSWORD)
 
         enviados = 0

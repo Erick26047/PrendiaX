@@ -20,7 +20,7 @@ from email.mime.multipart import MIMEMultipart
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_USER = "prendiax@gmail.com" # Tu correo oficial
-SMTP_PASSWORD = "Elbicho7" # Contraseña de aplicación
+SMTP_PASSWORD = "ekux nkus emdm azcv" # Contraseña de aplicación
 
 router = APIRouter()
 
