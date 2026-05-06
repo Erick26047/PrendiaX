@@ -133,6 +133,7 @@ def get_user_id_hybrid(request: Request):
         
     return None
 
+# 🔥 TAREA DE FONDO (NO RETRASA LA APP) 🔥
 async def enviar_notificaciones_masivas_background(post_id: int, autor_id: int, nombre_autor: str):
     """Tarea en segundo plano para no trabar la app mientras envía 100+ correos/pushes"""
     conn = None
@@ -478,8 +479,9 @@ def get_media(post_id: int, request: Request):
 # CREAR, EDITAR Y BORRAR PUBLICACIONES
 # =================================================================
 
+# 🔥 ENDPOINT CORREGIDO CON TAREA DE FONDO Y ALGORITMO DESPERTADOR 🔥
 @router.post("/publicar")
-async def publicar(request: Request):
+async def publicar(request: Request, background_tasks: BackgroundTasks):
     try:
         user_id = get_user_id_hybrid(request)
         if not user_id:
@@ -539,6 +541,15 @@ async def publicar(request: Request):
 
             conn.commit()
 
+            # 🔥 OBTENEMOS EL NOMBRE DEL AUTOR PARA LOS CORREOS Y PUSH MASIVOS 🔥
+            cur.execute("SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s", (user_id,))
+            autor = cur.fetchone()
+            nombre_autor = autor[0] if autor and autor[0] else "Alguien"
+            
+            # Lanzamos la tarea de envío masivo de correos/pushes en segundo plano
+            background_tasks.add_task(enviar_notificaciones_masivas_background, post_id, user_id, nombre_autor)
+
+            # 🔥 ALGORITMO DESPERTADOR (Notificación In-App para usuarios inactivos) 🔥
             try:
                 cur.execute("""
                     SELECT id, fcm_token FROM usuarios 
@@ -551,26 +562,21 @@ async def publicar(request: Request):
                 usuarios_dormidos = cur.fetchall()
 
                 if usuarios_dormidos:
-                    cur.execute("SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s", (user_id,))
-                    autor = cur.fetchone()
-                    nombre_autor = autor[0] if autor and autor[0] else "Alguien"
                     ids_despertados = []
-
                     for user_dormido in usuarios_dormidos:
                         ids_despertados.append(user_dormido[0])
-                        push_msg = messaging.Message(
-                            notification=messaging.Notification(title="¡Nuevos servicios en PrendiaX! 👀", body=f"{nombre_autor} acaba de publicar algo que podría interesarte."), 
-                            apns=messaging.APNSConfig(payload=messaging.APNSPayload(aps=messaging.Aps(sound="default"))),
-                            data={"tipo": "general", "publicacion_id": str(post_id)}, token=user_dormido[1]
-                        )
-                        messaging.send(push_msg)
+                        # Nota: Esto es solo un respaldo local. El Push principal ya se manda arriba
+                        # Creamos el registro en la base de datos de notificaciones (la campanita)
+                        cur.execute("""
+                            INSERT INTO notifications (user_id, publicacion_id, tipo, leida, fecha_creacion, actor_id, mensaje)
+                            VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, %s, %s)
+                        """, (user_dormido[0], post_id, 'interes', False, user_id, f"{nombre_autor} acaba de publicar algo nuevo."))
 
                     if ids_despertados:
                         cur.execute("UPDATE usuarios SET ultima_noti_despertador = CURRENT_TIMESTAMP WHERE id = ANY(%s)", (ids_despertados,))
                         conn.commit()
-
-            except Exception as push_err:
-                logging.error(f"Error en Algoritmo Despertador: {push_err}")
+            except Exception as alg_err:
+                logging.error(f"Error en Algoritmo Despertador: {alg_err}")
 
             cur.close()
         finally:
@@ -767,7 +773,7 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
                 AND 
                 p.user_id NOT IN (SELECT bloqueador_id FROM bloqueos WHERE bloqueado_id = %s)
             GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
-           ORDER BY CASE WHEN p.contenido LIKE 'Bienvenidos a PrendiaX!%%' THEN 1 ELSE 0 END DESC, p.fecha_creacion DESC LIMIT %s OFFSET %s
+            ORDER BY CASE WHEN p.contenido LIKE 'Bienvenidos a PrendiaX!%%' THEN 1 ELSE 0 END DESC, p.fecha_creacion DESC LIMIT %s OFFSET %s
         """
         
         cur.execute(query, (current_user, current_user, current_user, limit, offset))
@@ -973,7 +979,6 @@ async def get_publicacion(post_id: int, request: Request):
             cur.close()
             if not row: raise HTTPException(status_code=404, detail="No encontrado")
 
-            # 🔥 AHORA SÍ, DEVOLVEMOS UN DICCIONARIO DIRECTO (NO UNA LISTA) 🔥
             return {
                 "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
                 "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
