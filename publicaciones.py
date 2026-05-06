@@ -11,6 +11,16 @@ import json
 from pydantic import BaseModel
 import jwt
 from firebase_admin import messaging 
+from fastapi import BackgroundTasks
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# 🔥 CONFIGURACIÓN DE TU CORREO (Llena estos datos) 🔥
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+SMTP_USER = "prendiax@gmail.com" # Tu correo oficial
+SMTP_PASSWORD = "Elbicho7" # Contraseña de aplicación
 
 router = APIRouter()
 
@@ -122,6 +132,70 @@ def get_user_id_hybrid(request: Request):
         return int(request.session['user']['id'])
         
     return None
+
+async def enviar_notificaciones_masivas_background(post_id: int, autor_id: int, nombre_autor: str):
+    """Tarea en segundo plano para no trabar la app mientras envía 100+ correos/pushes"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Traemos TODOS los usuarios (menos el que publicó)
+        cur.execute("SELECT id, email, fcm_token FROM usuarios WHERE id != %s", (autor_id,))
+        usuarios = cur.fetchall()
+        cur.close()
+
+        # Preparamos la conexión de correo una sola vez para ser rápidos
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASSWORD)
+
+        for user in usuarios:
+            user_id, email, fcm_token = user
+
+            # 1. ENVIAR NOTIFICACIÓN PUSH (Si tiene la app)
+            if fcm_token:
+                try:
+                    push_msg = messaging.Message(
+                        notification=messaging.Notification(
+                            title="¡Nuevos servicios en PrendiaX! 👀", 
+                            body=f"{nombre_autor} acaba de publicar algo nuevo."
+                        ), 
+                        apns=messaging.APNSConfig(payload=messaging.APNSPayload(aps=messaging.Aps(sound="default"))),
+                        data={"tipo": "general", "publicacion_id": str(post_id)}, 
+                        token=fcm_token
+                    )
+                    messaging.send(push_msg)
+                except Exception as push_err:
+                    logging.error(f"Error enviando Push a {user_id}: {push_err}")
+
+            # 2. ENVIAR CORREO (A todos)
+            if email:
+                try:
+                    msg = MIMEMultipart()
+                    msg['From'] = f"PrendiaX <{SMTP_USER}>"
+                    msg['To'] = email
+                    msg['Subject'] = f"🆕 {nombre_autor} publicó algo nuevo en PrendiaX"
+                    
+                    cuerpo_correo = f"""
+                    <h2>¡Hay novedades en tu comunidad local!</h2>
+                    <p><b>{nombre_autor}</b> acaba de compartir una nueva actualización, producto o servicio en PrendiaX.</p>
+                    <p>No te pierdas la oportunidad de conectar y apoyar al talento local.</p>
+                    <br>
+                    <a href="https://www.prendiax.com" style="background-color: #000000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Abrir PrendiaX</a>
+                    <br><br>
+                    <p><i>¿Aún no tienes la App? Búscala en App Store y Google Play para recibir alertas al instante.</i></p>
+                    """
+                    msg.attach(MIMEText(cuerpo_correo, 'html'))
+                    server.send_message(msg)
+                except Exception as mail_err:
+                    logging.error(f"Error enviando correo a {email}: {mail_err}")
+
+        server.quit()
+    except Exception as e:
+        logging.error(f"Error en tarea de fondo masiva: {e}")
+    finally:
+        if conn: conn.close()
 
 async def crear_notificacion(publicacion_id: int, tipo: str, actor_id: int, mensaje: str = None, target_user_id: int = None, comentario_id: int = None):
     try:
