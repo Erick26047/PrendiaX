@@ -1,18 +1,26 @@
 import psycopg2
 import smtplib
+import socket
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+# 🔥 EL HACK MÁGICO: FORZAR A PYTHON A USAR SOLO IPv4 (MATA EL ERRNO 99 Y 101) 🔥
+old_getaddrinfo = socket.getaddrinfo
+def new_getaddrinfo(*args, **kwargs):
+    resp = old_getaddrinfo(*args, **kwargs)
+    return [r for r in resp if r[0] == socket.AF_INET]
+socket.getaddrinfo = new_getaddrinfo
 
 # --- CONFIGURACIÓN ---
 DB_HOST = "localhost"
 DB_NAME = "prendia_db"
 DB_USER = "postgres"
-DB_PASS = "Elbicho7" # <-- Corregido: esta es la de tu BD
+DB_PASS = "Elbicho7"
 
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_USER = "prendiax@gmail.com" 
-SMTP_PASSWORD = "ekux nkus emdm azcv" # <-- Corregido: esta es la de Google
+SMTP_PASSWORD = "ekux nkus emdm azcv"
 
 ASUNTO = "¿Ya tienes PrendiaX en tu celular? 📱"
 CUERPO_HTML = """
@@ -38,16 +46,13 @@ def enviar_spam_retencion():
         conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS)
         cur = conn.cursor()
 
-        # Solo selecciona a los que NO tienen la app (fcm_token nulo) y sí tienen correo
         cur.execute("SELECT email FROM usuarios WHERE fcm_token IS NULL AND email IS NOT NULL AND email != ''")
         usuarios_sin_app = cur.fetchall()
         cur.close()
         conn.close()
 
-        # Extraemos solo los correos a una lista limpia
         lista_envios = [user[0] for user in usuarios_sin_app]
 
-        # 🔥 AGREGAMOS TU CORREO SIEMPRE PARA PRUEBAS 🔥
         correo_prueba = "egutierez059@gmail.com"
         if correo_prueba not in lista_envios:
             lista_envios.append(correo_prueba)
@@ -58,7 +63,6 @@ def enviar_spam_retencion():
 
         print(f"Enviando correo de instalación a {len(lista_envios)} usuarios...")
 
-        # 🔥 CONEXIÓN A GMAIL OPTIMIZADA PARA EVITAR EL ERROR DE RED 🔥
         print(f"Conectando a {SMTP_SERVER}...")
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=30)
         server.ehlo()
