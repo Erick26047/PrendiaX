@@ -133,66 +133,44 @@ def get_user_id_hybrid(request: Request):
         
     return None
 
-# 🔥 TAREA DE FONDO (NO RETRASA LA APP) 🔥
-async def enviar_notificaciones_masivas_background(post_id: int, autor_id: int, nombre_autor: str):
-    """Tarea en segundo plano para no trabar la app mientras envía 100+ correos/pushes"""
+# 🔥 TAREA DE FONDO LIGERA (SOLO PUSH, CORREOS PAUSADOS) 🔥
+def enviar_notificaciones_masivas_background(post_id: int, autor_id: int, nombre_autor: str):
+    """Tarea en segundo plano que envía PUSH a todos sin trabar la app."""
     conn = None
     try:
+        # 1. Sacamos los tokens de la base de datos RÁPIDAMENTE
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Traemos TODOS los usuarios (menos el que publicó)
-        cur.execute("SELECT id, email, fcm_token FROM usuarios WHERE id != %s", (autor_id,))
-        usuarios = cur.fetchall()
+        # Solo traemos a los que SÍ tienen la app instalada (fcm_token)
+        cur.execute("SELECT id, fcm_token FROM usuarios WHERE id != %s AND fcm_token IS NOT NULL", (autor_id,))
+        usuarios_con_app = cur.fetchall()
         cur.close()
+        
+        # 🔥 CERRAMOS LA BD AQUÍ MISMO para liberar el servidor al instante 🔥
+        conn.close()
+        conn = None 
 
-        # Preparamos la conexión de correo una sola vez para ser rápidos
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASSWORD)
+        # 2. ENVIAR SOLO NOTIFICACIÓN PUSH A LOS CELULARES
+        for user in usuarios_con_app:
+            user_id, fcm_token = user
+            try:
+                push_msg = messaging.Message(
+                    notification=messaging.Notification(
+                        title="¡Nuevos servicios en PrendiaX! 👀", 
+                        body=f"{nombre_autor} acaba de publicar algo nuevo."
+                    ), 
+                    apns=messaging.APNSConfig(payload=messaging.APNSPayload(aps=messaging.Aps(sound="default"))),
+                    data={"tipo": "general", "publicacion_id": str(post_id)}, 
+                    token=fcm_token
+                )
+                messaging.send(push_msg)
+            except Exception as push_err:
+                logging.error(f"Error enviando Push masivo a {user_id}: {push_err}")
 
-        for user in usuarios:
-            user_id, email, fcm_token = user
+        # ⛔ NOTA: La parte de smtplib (Correos) está eliminada temporalmente 
+        # hasta que DigitalOcean nos responda el ticket. ⛔
 
-            # 1. ENVIAR NOTIFICACIÓN PUSH (Si tiene la app)
-            if fcm_token:
-                try:
-                    push_msg = messaging.Message(
-                        notification=messaging.Notification(
-                            title="¡Nuevos servicios en PrendiaX! 👀", 
-                            body=f"{nombre_autor} acaba de publicar algo nuevo."
-                        ), 
-                        apns=messaging.APNSConfig(payload=messaging.APNSPayload(aps=messaging.Aps(sound="default"))),
-                        data={"tipo": "general", "publicacion_id": str(post_id)}, 
-                        token=fcm_token
-                    )
-                    messaging.send(push_msg)
-                except Exception as push_err:
-                    logging.error(f"Error enviando Push a {user_id}: {push_err}")
-
-            # 2. ENVIAR CORREO (A todos)
-            if email:
-                try:
-                    msg = MIMEMultipart()
-                    msg['From'] = f"PrendiaX <{SMTP_USER}>"
-                    msg['To'] = email
-                    msg['Subject'] = f"🆕 {nombre_autor} publicó algo nuevo en PrendiaX"
-                    
-                    cuerpo_correo = f"""
-                    <h2>¡Hay novedades en tu comunidad local!</h2>
-                    <p><b>{nombre_autor}</b> acaba de compartir una nueva actualización, producto o servicio en PrendiaX.</p>
-                    <p>No te pierdas la oportunidad de conectar y apoyar al talento local.</p>
-                    <br>
-                    <a href="https://www.prendiax.com" style="background-color: #000000; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Abrir PrendiaX</a>
-                    <br><br>
-                    <p><i>¿Aún no tienes la App? Búscala en App Store y Google Play para recibir alertas al instante.</i></p>
-                    """
-                    msg.attach(MIMEText(cuerpo_correo, 'html'))
-                    server.send_message(msg)
-                except Exception as mail_err:
-                    logging.error(f"Error enviando correo a {email}: {mail_err}")
-
-        server.quit()
     except Exception as e:
         logging.error(f"Error en tarea de fondo masiva: {e}")
     finally:
