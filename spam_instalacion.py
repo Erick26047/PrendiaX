@@ -18,7 +18,7 @@ DB_USER = "postgres"
 DB_PASS = "Elbicho7"
 
 SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
+SMTP_PORT = 465
 SMTP_USER = "prendiax@gmail.com" 
 SMTP_PASSWORD = "ekux nkus emdm azcv"
 
@@ -63,7 +63,7 @@ def enviar_spam_retencion():
 
         print(f"Enviando correo de instalación a {len(lista_envios)} usuarios...")
 
-        print(f"Conectando a {SMTP_SERVER}...")
+        print(f"Conectando a {SMTP_SERVER} por el puerto 465...")
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=30)
         server.ehlo()
         server.starttls()
