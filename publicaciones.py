@@ -1483,18 +1483,17 @@ async def eliminar_cuenta(request: Request):
 
 @router.get("/post/{post_id}", response_class=HTMLResponse)
 async def ver_publicacion_web(post_id: int):
-    """
-    Ruta pública: Muestra la vista previa del post para WhatsApp/Facebook
-    y los botones de descarga si el usuario no tiene la app instalada.
-    """
     conn = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Buscamos quién publicó y el contenido para la vista previa
+        # 1. Buscamos TODO sobre la publicación (Texto, Autor, Fecha y Multimedia)
         cur.execute("""
-            SELECT p.contenido, COALESCE(du.nombre_empresa, u.nombre)
+            SELECT p.contenido, COALESCE(du.nombre_empresa, u.nombre), p.fecha_creacion,
+                   (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id) AS imagenes_ids,
+                   p.video IS NOT NULL AS has_video,
+                   p.imagen IS NOT NULL AS has_old_image
             FROM publicaciones p
             JOIN usuarios u ON p.user_id = u.id
             LEFT JOIN datos_usuario du ON u.id = du.user_id
@@ -1503,17 +1502,32 @@ async def ver_publicacion_web(post_id: int):
         post_data = cur.fetchone()
         cur.close()
 
-        if post_data:
-            # Cortamos a 90 caracteres para la vista previa de WhatsApp
-            contenido_raw = post_data[0] or ""
-            contenido_preview = (contenido_raw[:90] + "...") if len(contenido_raw) > 90 else contenido_raw
-            autor = post_data[1]
-            titulo_og = f"Publicación de {autor} en PrendiaX"
-        else:
-            contenido_preview = "Impulsa tu negocio local. Descubre los mejores productos y servicios."
-            titulo_og = "Publicación en PrendiaX"
+        if not post_data:
+            return HTMLResponse(content="<h1 style='color:white; text-align:center; font-family:sans-serif; margin-top:50px;'>Publicación no encontrada</h1>", status_code=404)
 
-        # HTML limpio, modo oscuro y con botones de descarga
+        # 2. Preparamos los datos
+        contenido_raw = post_data[0] or ""
+        contenido_preview = (contenido_raw[:90] + "...") if len(contenido_raw) > 90 else contenido_raw
+        autor = post_data[1]
+        fecha = post_data[2].strftime("%d/%m/%Y") if post_data[2] else "Reciente"
+        imagenes_ids = post_data[3]
+        has_video = post_data[4]
+        has_old_image = post_data[5]
+
+        titulo_og = f"Publicación de {autor} en PrendiaX"
+
+        # 3. Procesamos la multimedia para incrustarla en el HTML
+        media_html = ""
+        if has_video:
+            media_html = f'<video controls width="100%" style="border-radius:12px; margin-top:15px; background:black;"><source src="/media/{post_id}" type="video/mp4"></video>'
+        elif imagenes_ids and len(imagenes_ids) > 0:
+            # Apilamos las imágenes si hay varias
+            imgs = [f'<img src="/media/imagen/{img}" style="width:100%; border-radius:12px; margin-top:15px;" />' for img in imagenes_ids]
+            media_html = "".join(imgs)
+        elif has_old_image:
+            media_html = f'<img src="/media/imagen_vieja/{post_id}" style="width:100%; border-radius:12px; margin-top:15px;" />'
+
+        # 4. Armamos el HTML con el Overlay de Descarga + El botón "Ver en Web"
         html_content = f"""
         <!DOCTYPE html>
         <html lang="es">
@@ -1531,60 +1545,92 @@ async def ver_publicacion_web(post_id: int):
                     background-color: #000000;
                     color: white;
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    height: 100vh;
                     margin: 0;
+                    padding: 0;
+                }}
+                /* --- ESTILOS DEL AVISO FLOTANTE --- */
+                .overlay {{
+                    position: fixed;
+                    top: 0; left: 0; width: 100%; height: 100%;
+                    background: rgba(18, 18, 18, 0.95);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                    z-index: 1000;
+                    display: flex; flex-direction: column; align-items: center; justify-content: center;
                     text-align: center;
+                    transition: opacity 0.3s ease;
                 }}
-                .card {{
-                    background: rgba(18, 18, 18, 0.8);
-                    backdrop-filter: blur(10px);
-                    -webkit-backdrop-filter: blur(10px);
-                    padding: 40px 30px;
-                    border-radius: 16px;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    max-width: 400px;
-                    width: 85%;
-                }}
-                h1 {{ font-size: 22px; margin-bottom: 10px; }}
-                p {{ color: #a0a0a0; font-size: 15px; margin-bottom: 30px; line-height: 1.5; }}
-                .btn-container {{
-                    display: flex;
-                    flex-direction: column;
-                    gap: 15px;
-                    align-items: center;
-                }}
+                .overlay-content {{ padding: 20px; max-width: 400px; }}
                 .btn {{
-                    color: white;
-                    text-decoration: none;
-                    padding: 14px 30px;
-                    border-radius: 30px;
-                    font-weight: bold;
-                    display: inline-block;
-                    width: 80%;
-                    font-size: 16px;
-                    transition: transform 0.2s;
+                    color: white; text-decoration: none; padding: 14px 30px;
+                    border-radius: 30px; font-weight: bold; display: block;
+                    width: 80%; margin: 0 auto 15px auto; font-size: 16px;
                 }}
-                .btn:active {{ transform: scale(0.95); }}
                 .btn-android {{ background-color: #00b0ff; }}
                 .btn-ios {{ background-color: #333333; border: 1px solid #555; }}
-                .logo {{ font-size: 28px; font-weight: 900; letter-spacing: 1px; margin-bottom: 20px; }}
+                .btn-web {{
+                    background: none; border: none; color: #00b0ff;
+                    font-size: 16px; font-weight: bold; cursor: pointer; padding: 10px;
+                    margin-top: 10px;
+                }}
+                
+                /* --- ESTILOS DE LA PUBLICACIÓN WEB --- */
+                .post-container {{
+                    max-width: 500px;
+                    margin: 20px auto;
+                    background: #121212;
+                    border: 1px solid #222;
+                    border-radius: 16px;
+                    padding: 20px;
+                }}
+                .header {{ display: flex; align-items: center; margin-bottom: 15px; }}
+                .avatar {{
+                    width: 45px; height: 45px; border-radius: 50%;
+                    background: #333; display: flex; align-items: center; justify-content: center;
+                    margin-right: 12px; font-size: 20px;
+                }}
+                .author-name {{ font-weight: bold; font-size: 16px; }}
+                .post-date {{ color: #888; font-size: 12px; margin-top: 2px; }}
+                .post-text {{ line-height: 1.6; font-size: 15px; white-space: pre-wrap; }}
+                .footer-promo {{
+                    margin-top: 25px; padding-top: 20px; border-top: 1px solid #333;
+                    text-align: center;
+                }}
             </style>
         </head>
         <body>
-            <div class="card">
-                <div class="logo">PrendiaX</div>
-                <h1>Alguien compartió una publicación contigo</h1>
-                <p>Para ver las fotos, el video y contactar directamente al vendedor, abre esta publicación en la app.</p>
-                
-                <div class="btn-container">
+            
+            <div id="download-overlay" class="overlay">
+                <div class="overlay-content">
+                    <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 10px;">PrendiaX</h1>
+                    <p style="color: #aaa; margin-bottom: 30px; line-height: 1.5;">Alguien te compartió este negocio local. Para interactuar y ver más, descarga la app.</p>
+                    
                     <a href="https://play.google.com/store/apps/details?id=com.prendiax.app" class="btn btn-android">Descargar en Play Store</a>
                     <a href="https://apps.apple.com/mx/app/prendiax/id6757627630" class="btn btn-ios">Descargar en App Store</a>
+                    
+                    <button class="btn-web" onclick="document.getElementById('download-overlay').style.display='none'">Ver publicación en web</button>
                 </div>
             </div>
+
+            <div class="post-container">
+                <div class="header">
+                    <div class="avatar">👤</div>
+                    <div>
+                        <div class="author-name">{autor}</div>
+                        <div class="post-date">{fecha}</div>
+                    </div>
+                </div>
+                
+                <div class="post-text">{contenido_raw}</div>
+                
+                {media_html}
+                
+                <div class="footer-promo">
+                    <p style="color:#aaa; font-size:14px; margin-bottom:12px;">¿Te interesa este producto o servicio?</p>
+                    <a href="https://play.google.com/store/apps/details?id=com.prendiax.app" style="background:#222; color:white; padding:10px 20px; border-radius:20px; text-decoration:none; font-size:14px; font-weight:bold; display:inline-block;">Abre PrendiaX para contactar</a>
+                </div>
+            </div>
+
         </body>
         </html>
         """
@@ -1594,8 +1640,6 @@ async def ver_publicacion_web(post_id: int):
         return HTMLResponse(content="Error interno", status_code=500)
     finally:
         if conn: conn.close()
-
-
 # -----------------------------------------------------------------
 # ENDPOINTS DE SEGURIDAD PARA DEEP LINKS (App Links y Universal Links)
 # -----------------------------------------------------------------
