@@ -1476,3 +1476,169 @@ async def eliminar_cuenta(request: Request):
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
     finally:
         if conn: conn.close()
+
+# =================================================================
+# COMPARTIR ENLACES Y DEEP LINKS (WEB, ANDROID E IOS)
+# =================================================================
+
+@router.get("/post/{post_id}", response_class=HTMLResponse)
+async def ver_publicacion_web(post_id: int):
+    """
+    Ruta pública: Muestra la vista previa del post para WhatsApp/Facebook
+    y los botones de descarga si el usuario no tiene la app instalada.
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Buscamos quién publicó y el contenido para la vista previa
+        cur.execute("""
+            SELECT p.contenido, COALESCE(du.nombre_empresa, u.nombre)
+            FROM publicaciones p
+            JOIN usuarios u ON p.user_id = u.id
+            LEFT JOIN datos_usuario du ON u.id = du.user_id
+            WHERE p.id = %s
+        """, (post_id,))
+        post_data = cur.fetchone()
+        cur.close()
+
+        if post_data:
+            # Cortamos a 90 caracteres para la vista previa de WhatsApp
+            contenido_raw = post_data[0] or ""
+            contenido_preview = (contenido_raw[:90] + "...") if len(contenido_raw) > 90 else contenido_raw
+            autor = post_data[1]
+            titulo_og = f"Publicación de {autor} en PrendiaX"
+        else:
+            contenido_preview = "Impulsa tu negocio local. Descubre los mejores productos y servicios."
+            titulo_og = "Publicación en PrendiaX"
+
+        # HTML limpio, modo oscuro y con botones de descarga
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            
+            <meta property="og:title" content="{titulo_og}">
+            <meta property="og:description" content="{contenido_preview}">
+            <meta property="og:type" content="website">
+            
+            <title>{titulo_og}</title>
+            <style>
+                body {{
+                    background-color: #000000;
+                    color: white;
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100vh;
+                    margin: 0;
+                    text-align: center;
+                }}
+                .card {{
+                    background: rgba(18, 18, 18, 0.8);
+                    backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);
+                    padding: 40px 30px;
+                    border-radius: 16px;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    max-width: 400px;
+                    width: 85%;
+                }}
+                h1 {{ font-size: 22px; margin-bottom: 10px; }}
+                p {{ color: #a0a0a0; font-size: 15px; margin-bottom: 30px; line-height: 1.5; }}
+                .btn-container {{
+                    display: flex;
+                    flex-direction: column;
+                    gap: 15px;
+                    align-items: center;
+                }}
+                .btn {{
+                    color: white;
+                    text-decoration: none;
+                    padding: 14px 30px;
+                    border-radius: 30px;
+                    font-weight: bold;
+                    display: inline-block;
+                    width: 80%;
+                    font-size: 16px;
+                    transition: transform 0.2s;
+                }}
+                .btn:active {{ transform: scale(0.95); }}
+                .btn-android {{ background-color: #00b0ff; }}
+                .btn-ios {{ background-color: #333333; border: 1px solid #555; }}
+                .logo {{ font-size: 28px; font-weight: 900; letter-spacing: 1px; margin-bottom: 20px; }}
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="logo">PrendiaX</div>
+                <h1>Alguien compartió una publicación contigo</h1>
+                <p>Para ver las fotos, el video y contactar directamente al vendedor, abre esta publicación en la app.</p>
+                
+                <div class="btn-container">
+                    <a href="https://play.google.com/store/apps/details?id=com.prendiax.app" class="btn btn-android">Descargar en Play Store</a>
+                    <a href="https://apps.apple.com/mx/app/prendiax/id6757627630" class="btn btn-ios">Descargar en App Store</a>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=html_content)
+    except Exception as e:
+        logging.error(f"Error generando web compartida: {e}")
+        return HTMLResponse(content="Error interno", status_code=500)
+    finally:
+        if conn: conn.close()
+
+
+# -----------------------------------------------------------------
+# ENDPOINTS DE SEGURIDAD PARA DEEP LINKS (App Links y Universal Links)
+# -----------------------------------------------------------------
+
+@router.get("/.well-known/assetlinks.json")
+async def android_asset_links():
+    """
+    Certificado de seguridad para Android (App Links).
+    Permite que la app en Android intercepte los enlaces prendiax.com/post/
+    """
+    # ⚠️ MUY IMPORTANTE: Reemplaza las huellas digitales (sha256_cert_fingerprints)
+    # con las reales de tu app en Google Play Console cuando vayas a producción.
+    asset_links = [
+        {
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+                "namespace": "android_app",
+                "package_name": "com.prendiax.app",
+                "sha256_cert_fingerprints": [
+                    "7c:80:60:28:59:a4:f0:05:16:51:f4:e4:1d:9e:a4:d4:a3:76:ff:04:bb:b4:72:ac:55:65:64:ef:cb:24:29:7b"
+                ]
+            }
+        }
+    ]
+    return JSONResponse(content=asset_links)
+
+
+@router.get("/.well-known/apple-app-site-association")
+async def apple_app_site_association():
+    """
+    Certificado de seguridad para iOS (Universal Links).
+    Permite que la app en iPhone intercepte los enlaces prendiax.com/post/
+    """
+    # ⚠️ MUY IMPORTANTE: Asegúrate de que 'com.tuempresa.prendiax' sea tu Bundle ID exacto.
+    aasa = {
+        "applinks": {
+            "apps": [],
+            "details": [
+                {
+                    "appID": "ZRTLHL9GXR.com.prendiax.app",
+                    "paths": ["/post/*"]
+                }
+            ]
+        }
+    }
+    return JSONResponse(content=aasa)
