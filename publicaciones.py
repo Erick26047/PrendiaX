@@ -548,7 +548,7 @@ async def publicar(request: Request, background_tasks: BackgroundTasks):
                         cur.execute("""
                             INSERT INTO notifications (user_id, publicacion_id, tipo, leida, fecha_creacion, actor_id, mensaje)
                             VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, %s, %s)
-                        """, (user_dormido[0], post_id, 'interes', False, user_id, f"{nombre_autor} acaba de publicar algo nuevo."))
+                        """, (user_dormido[0], post_id, 'general', False, user_id, f"{nombre_autor} acaba de publicar algo nuevo."))
 
                     if ids_despertados:
                         cur.execute("UPDATE usuarios SET ultima_noti_despertador = CURRENT_TIMESTAMP WHERE id = ANY(%s)", (ids_despertados,))
