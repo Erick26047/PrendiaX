@@ -178,7 +178,7 @@ def enviar_notificaciones_masivas_background(post_id: int, autor_id: int, nombre
 
 async def crear_notificacion(publicacion_id: int, tipo: str, actor_id: int, mensaje: str = None, target_user_id: int = None, comentario_id: int = None):
     try:
-        if tipo not in ['interes', 'comentario', 'respuesta', 'mencion']:
+        if tipo not in ['interes', 'comentario', 'respuesta', 'mencion', 'general']:
             raise HTTPException(status_code=400, detail="Tipo inválido")
 
         conn = get_db_connection()
