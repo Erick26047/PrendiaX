@@ -299,8 +299,6 @@
     background-color: #fff;
     border-right: 1px solid #ddd;
     overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: #bbb #fff;
     z-index: 1000;
   }
 
@@ -309,13 +307,6 @@
     border-right: 1px solid #333;
   }
 
-  .sidebar::-webkit-scrollbar { width: 6px; }
-  .sidebar::-webkit-scrollbar-track { background: #fff; }
-  .sidebar::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
-  .sidebar::-webkit-scrollbar-thumb:hover { background: #999; }
-
-  body.dark-mode .sidebar::-webkit-scrollbar-track { background: #000; }
-  body.dark-mode .sidebar::-webkit-scrollbar-thumb { background: #888; }
 
   .chat-search {
     padding: 10px;
@@ -495,8 +486,6 @@
     flex-direction: column;
     gap: 10px;
     background-color: #ffffff;
-    scrollbar-width: thin;
-    scrollbar-color: #bbb #ffffff;
   }
 
   body.dark-mode .chat-messages {
@@ -504,13 +493,6 @@
     scrollbar-color: #888 #000000;
   }
 
-  .chat-messages::-webkit-scrollbar { width: 6px; }
-  .chat-messages::-webkit-scrollbar-track { background: #ffffff; }
-  .chat-messages::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
-  .chat-messages::-webkit-scrollbar-thumb:hover { background: #999; }
-
-  body.dark-mode .chat-messages::-webkit-scrollbar-track { background: #000000; }
-  body.dark-mode .chat-messages::-webkit-scrollbar-thumb { background: #888; }
 
   .date-separator {
     text-align: center;
