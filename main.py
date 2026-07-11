@@ -19,6 +19,7 @@ from typing import Optional
 import firebase_admin
 from firebase_admin import credentials
 import admin
+from download import router as download_router
 
 # --- Configurar logs ---
 logging.basicConfig(level=logging.DEBUG)
@@ -76,6 +77,8 @@ app.include_router(chats_router)
 app.include_router(resenas_router)
 app.include_router(apple_router)
 app.include_router(admin.router)
+app.include_router(download_router)
+
 
 # --- Rutas principales ---
 @app.get("/")
