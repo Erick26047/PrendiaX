@@ -448,7 +448,7 @@
 
   <footer>
     <div class="container">
-      <p data-translate="index.footer">© 2025 PrendiaX. Todos los derechos reservados.</p>
+     <p>Copyright &copy; <span id="anio-actual"></span> PrendiaX. Todos los derechos reservados.</p>
     </div>
   </footer>
 
@@ -537,6 +537,7 @@
       const savedLang = localStorage.getItem('language') || 'es';
       updateLanguage(savedLang);
     };
+    document.getElementById('anio-actual').textContent = new Date().getFullYear();
   </script>
 </body>
 </html>
