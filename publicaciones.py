@@ -320,6 +320,8 @@ async def get_foto_perfil(user_id: int):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Validamos si es emprendedor (código que ya tenías)
         cur.execute("""
             SELECT CASE 
                         WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor'
@@ -333,15 +335,26 @@ async def get_foto_perfil(user_id: int):
         if not result or result[0] != 'emprendedor':
             raise HTTPException(status_code=404, detail="Foto de perfil no disponible para exploradores")
 
-        cur.execute("SELECT foto FROM datos_usuario WHERE user_id = %s", (user_id,))
+        # 🔥 AQUI ESTA LA MAGIA: Traemos el bytea viejo (foto) y la ruta nueva (ruta_foto)
+        cur.execute("SELECT foto, ruta_foto FROM datos_usuario WHERE user_id = %s", (user_id,))
         result = cur.fetchone()
         cur.close()
 
-        if not result or not result[0]:
+        if not result:
             raise HTTPException(status_code=404, detail="Foto de perfil no encontrada")
 
         foto_data = result[0]
-        return StreamingResponse(io.BytesIO(foto_data), media_type="image/jpeg")
+        ruta = result[1]
+
+        # 1. Si tiene ruta (Es NUEVA), redirigimos a la carpeta física
+        if ruta:
+            return RedirectResponse(url=f"/archivos/perfiles/{ruta}")
+
+        # 2. Si tiene bytea (Es VIEJA), la procesamos normal
+        if foto_data:
+            return StreamingResponse(io.BytesIO(foto_data), media_type="image/jpeg")
+
+        raise HTTPException(status_code=404, detail="El usuario no tiene foto")
     except HTTPException as he:
         raise he
     except Exception as e:

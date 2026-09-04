@@ -7,6 +7,8 @@ from fastapi.templating import Jinja2Templates
 import psycopg2
 import base64
 import logging
+import os
+import uuid
 
 # Configuración básica
 logging.basicConfig(level=logging.DEBUG)
@@ -188,10 +190,8 @@ async def actualizar_perfil_api(
         
         # 🔥 AQUÍ ESTÁ LA MAGIA DEL DOBLE FILTRO 🔥
         if "_" in token_str:
-            # 1. Si tiene guión bajo, es el token viejo de Google (ej. "google_12")
             user_id = int(token_str.split("_")[-1])
         else:
-            # 2. Si NO tiene guión bajo, es el JWT Real de Apple
             import jwt
             SECRET_KEY = "Elbicho7"
             payload = jwt.decode(token_str, SECRET_KEY, algorithms=["HS256"])
@@ -202,10 +202,20 @@ async def actualizar_perfil_api(
         raise HTTPException(status_code=401, detail="Token inválido")
 
     contenido_foto = None
-    if foto:
+    ruta_foto_filename = None
+
+    if foto and foto.filename:
         contenido_foto = await foto.read()
         if not foto.content_type.startswith('image/'):
              raise HTTPException(status_code=400, detail="El archivo debe ser una imagen")
+             
+        # 🔥 MAGIA EN DISCO: Generamos nombre único y guardamos
+        ext = foto.filename.split('.')[-1] if '.' in foto.filename else 'jpg'
+        ruta_foto_filename = f"{uuid.uuid4().hex}.{ext}"
+        filepath = os.path.join("media", "perfiles", ruta_foto_filename)
+        
+        with open(filepath, "wb") as f:
+            f.write(contenido_foto)
 
     db: Session = SessionLocal()
     try:
@@ -221,8 +231,9 @@ async def actualizar_perfil_api(
             datos_usuario.otra_categoria = otra_categoria
             datos_usuario.servicios = servicios
             datos_usuario.sitio_web = sitio_web
-            if contenido_foto:
-                datos_usuario.foto = contenido_foto
+            # No guardamos la foto en SQLAlchemy para no inflar la DB si es nueva
+            if ruta_foto_filename:
+                datos_usuario.foto = None
         else:
             nuevo_dato = DatosUsuario(
                 user_id=user_id,
@@ -235,11 +246,25 @@ async def actualizar_perfil_api(
                 otra_categoria=otra_categoria,
                 servicios=servicios,
                 sitio_web=sitio_web,
-                foto=contenido_foto
+                foto=None if ruta_foto_filename else contenido_foto
             )
             db.add(nuevo_dato)
 
         db.commit()
+
+        # 🔥 PARCHE: Guardar la ruta nueva y limpiar el bytea usando SQL directo
+        if ruta_foto_filename:
+            conn_sql = get_db_connection()
+            cur_sql = conn_sql.cursor()
+            cur_sql.execute("""
+                UPDATE datos_usuario 
+                SET ruta_foto = %s, foto = NULL 
+                WHERE user_id = %s
+            """, (ruta_foto_filename, user_id))
+            conn_sql.commit()
+            cur_sql.close()
+            conn_sql.close()
+
         return JSONResponse(content={"status": "ok", "message": "Perfil guardado correctamente"}, status_code=200)
 
     except Exception as e:
@@ -249,27 +274,41 @@ async def actualizar_perfil_api(
     finally:
         db.close()
 
-# 2. Endpoint IMPORTANTE: Sirve la imagen como archivo JPG para que Flutter la pueda leer
+# 2. Endpoint IMPORTANTE: Sirve la imagen como archivo JPG para que Flutter la pueda leer (AHORA HÍBRIDO)
 @router.get("/api/imagenes/perfil/{user_id}")
 def obtener_imagen_perfil(user_id: int):
-    db = SessionLocal()
+    conn = None
     try:
-        datos = db.query(DatosUsuario).filter(DatosUsuario.user_id == user_id).first()
-        
-        if datos and datos.foto:
-            # RETORNAMOS LOS BYTES DIRECTAMENTE
-            return Response(content=datos.foto, media_type="image/jpeg")
-        else:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        # 🔥 Traemos el bytea viejo y la ruta nueva
+        cur.execute("SELECT foto, ruta_foto FROM datos_usuario WHERE user_id = %s", (user_id,))
+        result = cur.fetchone()
+        cur.close()
+
+        if not result:
             return Response(status_code=404)
+
+        foto_data = result[0]
+        ruta = result[1]
+
+        # 1. Si tiene ruta (Es NUEVA), redirigimos a la carpeta física
+        if ruta:
+            return RedirectResponse(url=f"/archivos/perfiles/{ruta}")
+
+        # 2. Si tiene bytea (Es VIEJA), la servimos normal
+        if foto_data:
+            return Response(content=foto_data, media_type="image/jpeg")
+
+        return Response(status_code=404)
     except Exception as e:
         logging.error(f"Error sirviendo imagen: {e}")
         return Response(status_code=500)
     finally:
-        db.close()
+        if conn: conn.close()
 
 
 # 3. Endpoint corregido para OBTENER DATOS en la APP
-# (Este reemplaza al que tenias con psycopg2 que estaba duplicado)
 # ==============================================================================
 #  ENDPOINT EXCLUSIVO PARA LA APP (Une Usuario + Posts en una sola llamada)
 # ==============================================================================
@@ -304,8 +343,9 @@ async def perfil_api_combo(user_id: int):
 
         # Preparar URL de foto de perfil
         foto_url = ""
-        # Si es emprendedor (tiene categoría) y tiene foto
-        if datos[6] and datos[6] != '' and datos[10]: 
+        # Si es emprendedor (tiene categoría)
+        if datos[6] and datos[6] != '': 
+             # Nota: Como el endpoint ya es híbrido, siempre mandamos la ruta si existe el usuario
              foto_url = f"/foto_perfil/{user_id}"
 
         user_object = {
