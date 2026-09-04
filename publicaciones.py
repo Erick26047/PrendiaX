@@ -356,18 +356,30 @@ def get_media_imagen_carrusel(img_id: int):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT imagen FROM publicacion_imagenes WHERE id = %s", (img_id,))
+        # Traemos el bytea viejo y la ruta nueva
+        cur.execute("SELECT imagen, ruta_imagen FROM publicacion_imagenes WHERE id = %s", (img_id,))
         result = cur.fetchone()
         cur.close()
         
-        if not result or not result[0]:
+        if not result:
             raise HTTPException(status_code=404, detail="Imagen no encontrada")
             
-        return StreamingResponse(
-            content=io.BytesIO(result[0]),
-            media_type="image/jpeg",
-            headers={"Content-Disposition": f"inline; filename=img_car_{img_id}.jpg"}
-        )
+        byte_data = result[0]
+        ruta = result[1]
+
+        # 1. Si tiene ruta (Es NUEVA), redirigimos al disco físico
+        if ruta:
+            return RedirectResponse(url=f"/archivos/publicaciones/{ruta}")
+
+        # 2. Si tiene bytea (Es VIEJA), la procesamos normal
+        if byte_data:
+            return StreamingResponse(
+                content=io.BytesIO(byte_data),
+                media_type="image/jpeg",
+                headers={"Content-Disposition": f"inline; filename=img_car_{img_id}.jpg"}
+            )
+
+        raise HTTPException(status_code=404, detail="Imagen vacía")
     except Exception as e:
         logging.error(f"Error sirviendo imagen carrusel {img_id}: {e}")
         raise HTTPException(status_code=500, detail="Error interno")
@@ -398,16 +410,28 @@ def get_media(post_id: int, request: Request):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT video FROM publicaciones WHERE id = %s", (post_id,))
+        # Traemos ambas columnas
+        cur.execute("SELECT video, ruta_video FROM publicaciones WHERE id = %s", (post_id,))
         result = cur.fetchone()
         cur.close()
         conn.close()
 
-        if not result or not result[0]:
+        if not result:
             raise HTTPException(status_code=404, detail="Video no encontrado")
 
         video_data = result[0]
+        ruta = result[1]
+
+        # 1. Si es video NUEVO, redirigimos a la carpeta física
+        if ruta:
+            return RedirectResponse(url=f"/archivos/publicaciones/{ruta}")
+
+        # 2. Si es video VIEJO, entra a la lógica normal del streaming
+        if not video_data:
+            raise HTTPException(status_code=404, detail="Video vacío")
+        
         file_size = len(video_data)
+        # ... (A partir de aquí DEJA INTACTO TODO TU CÓDIGO ACTUAL hasta abajo) ...
         range_header = request.headers.get("range")
         headers = {
             "Accept-Ranges": "bytes",
