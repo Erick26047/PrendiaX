@@ -89,7 +89,7 @@ class InterestRequest(BaseModel):
 
 class CommentRequest(BaseModel):
     contenido: str
-    parent_id: int | None = None       
+    parent_id: int | None = None        
     reply_to_user_id: int | None = None 
 
 class ReporteUsuarioRequest(BaseModel):
@@ -140,20 +140,16 @@ def enviar_notificaciones_masivas_background(post_id: int, autor_id: int, nombre
     """Tarea en segundo plano que envía PUSH a todos sin trabar la app."""
     conn = None
     try:
-        # 1. Sacamos los tokens de la base de datos RÁPIDAMENTE
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Solo traemos a los que SÍ tienen la app instalada (fcm_token)
         cur.execute("SELECT id, fcm_token FROM usuarios WHERE id != %s AND fcm_token IS NOT NULL", (autor_id,))
         usuarios_con_app = cur.fetchall()
         cur.close()
         
-        # 🔥 CERRAMOS LA BD AQUÍ MISMO para liberar el servidor al instante 🔥
         conn.close()
         conn = None 
 
-        # 2. ENVIAR SOLO NOTIFICACIÓN PUSH A LOS CELULARES
         for user in usuarios_con_app:
             user_id, fcm_token = user
             try:
@@ -169,9 +165,6 @@ def enviar_notificaciones_masivas_background(post_id: int, autor_id: int, nombre
                 messaging.send(push_msg)
             except Exception as push_err:
                 logging.error(f"Error enviando Push masivo a {user_id}: {push_err}")
-
-        # ⛔ NOTA: La parte de smtplib (Correos) está eliminada temporalmente 
-        # hasta que DigitalOcean nos responda el ticket. ⛔
 
     except Exception as e:
         logging.error(f"Error en tarea de fondo masiva: {e}")
@@ -321,7 +314,6 @@ async def get_foto_perfil(user_id: int):
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Validamos si es emprendedor (código que ya tenías)
         cur.execute("""
             SELECT CASE 
                         WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor'
@@ -335,7 +327,6 @@ async def get_foto_perfil(user_id: int):
         if not result or result[0] != 'emprendedor':
             raise HTTPException(status_code=404, detail="Foto de perfil no disponible para exploradores")
 
-        # 🔥 AQUI ESTA LA MAGIA: Traemos el bytea viejo (foto) y la ruta nueva (ruta_foto)
         cur.execute("SELECT foto, ruta_foto FROM datos_usuario WHERE user_id = %s", (user_id,))
         result = cur.fetchone()
         cur.close()
@@ -346,11 +337,9 @@ async def get_foto_perfil(user_id: int):
         foto_data = result[0]
         ruta = result[1]
 
-        # 1. Si tiene ruta (Es NUEVA), redirigimos a la carpeta física
         if ruta:
             return RedirectResponse(url=f"/archivos/perfiles/{ruta}")
 
-        # 2. Si tiene bytea (Es VIEJA), la procesamos normal
         if foto_data:
             return StreamingResponse(io.BytesIO(foto_data), media_type="image/jpeg")
 
@@ -369,7 +358,6 @@ def get_media_imagen_carrusel(img_id: int):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        # Traemos el bytea viejo y la ruta nueva
         cur.execute("SELECT imagen, ruta_imagen FROM publicacion_imagenes WHERE id = %s", (img_id,))
         result = cur.fetchone()
         cur.close()
@@ -380,11 +368,9 @@ def get_media_imagen_carrusel(img_id: int):
         byte_data = result[0]
         ruta = result[1]
 
-        # 1. Si tiene ruta (Es NUEVA), redirigimos al disco físico
         if ruta:
             return RedirectResponse(url=f"/archivos/publicaciones/{ruta}")
 
-        # 2. Si tiene bytea (Es VIEJA), la procesamos normal
         if byte_data:
             return StreamingResponse(
                 content=io.BytesIO(byte_data),
@@ -423,7 +409,6 @@ def get_media(post_id: int, request: Request):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        # Traemos ambas columnas
         cur.execute("SELECT video, ruta_video FROM publicaciones WHERE id = %s", (post_id,))
         result = cur.fetchone()
         cur.close()
@@ -435,16 +420,13 @@ def get_media(post_id: int, request: Request):
         video_data = result[0]
         ruta = result[1]
 
-        # 1. Si es video NUEVO, redirigimos a la carpeta física
         if ruta:
             return RedirectResponse(url=f"/archivos/publicaciones/{ruta}")
 
-        # 2. Si es video VIEJO, entra a la lógica normal del streaming
         if not video_data:
             raise HTTPException(status_code=404, detail="Video vacío")
         
         file_size = len(video_data)
-        # ... (A partir de aquí DEJA INTACTO TODO TU CÓDIGO ACTUAL hasta abajo) ...
         range_header = request.headers.get("range")
         headers = {
             "Accept-Ranges": "bytes",
@@ -496,7 +478,6 @@ def get_media(post_id: int, request: Request):
 # CREAR, EDITAR Y BORRAR PUBLICACIONES
 # =================================================================
 
-# 🔥 ENDPOINT CORREGIDO CON TAREA DE FONDO Y ALGORITMO DESPERTADOR 🔥
 @router.post("/publicar")
 async def publicar(request: Request, background_tasks: BackgroundTasks):
     try:
@@ -529,19 +510,16 @@ async def publicar(request: Request, background_tasks: BackgroundTasks):
 
         etiquetas_lista = [e.strip() for e in etiquetas.split(",") if e.strip()] if isinstance(etiquetas, str) and etiquetas else []
         
-        # 🔥 NUEVO MOTOR DE MULTIMEDIA (Guardado en Disco) 🔥
         video_filename = None
         if video_valido:
             video_data = await video_valido.read()
             if len(video_data) > MAX_FILE_SIZE:
                 raise HTTPException(status_code=400, detail="Video muy pesado")
             
-            # 1. Generamos un nombre único (ejemplo: 8f3a9b.mp4)
             ext = video_valido.filename.split('.')[-1] if '.' in video_valido.filename else 'mp4'
             video_filename = f"{uuid.uuid4().hex}.{ext}"
             ruta_video = os.path.join("media", "publicaciones", video_filename)
             
-            # 2. Guardamos físicamente en la Asus
             with open(ruta_video, "wb") as f:
                 f.write(video_data)
 
@@ -550,7 +528,6 @@ async def publicar(request: Request, background_tasks: BackgroundTasks):
             conn = get_db_connection()
             cur = conn.cursor()
             
-            # 3. Guardamos en la base de datos (Nota: mandamos NULL al bytea 'video')
             cur.execute("""
                 INSERT INTO publicaciones (user_id, contenido, video, ruta_video, etiquetas, fecha_creacion)
                 VALUES (%s, %s, NULL, %s, %s, CURRENT_TIMESTAMP)
@@ -562,7 +539,6 @@ async def publicar(request: Request, background_tasks: BackgroundTasks):
             for img in imagenes_validas:
                 img_data = await img.read()
                 if img_data:
-                    # 4. Hacemos lo mismo para cada imagen
                     ext = img.filename.split('.')[-1] if '.' in img.filename else 'jpg'
                     img_filename = f"{uuid.uuid4().hex}.{ext}"
                     ruta_img = os.path.join("media", "publicaciones", img_filename)
@@ -570,7 +546,6 @@ async def publicar(request: Request, background_tasks: BackgroundTasks):
                     with open(ruta_img, "wb") as f:
                         f.write(img_data)
 
-                    # Guardamos ruta_imagen y dejamos el bytea 'imagen' en NULL
                     cur.execute("""
                         INSERT INTO publicacion_imagenes (publicacion_id, imagen, ruta_imagen)
                         VALUES (%s, NULL, %s)
@@ -578,15 +553,12 @@ async def publicar(request: Request, background_tasks: BackgroundTasks):
 
             conn.commit()
 
-            # 🔥 OBTENEMOS EL NOMBRE DEL AUTOR PARA LOS CORREOS Y PUSH MASIVOS 🔥
             cur.execute("SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s", (user_id,))
             autor = cur.fetchone()
             nombre_autor = autor[0] if autor and autor[0] else "Alguien"
             
-            # Lanzamos la tarea de envío masivo de correos/pushes en segundo plano
             background_tasks.add_task(enviar_notificaciones_masivas_background, post_id, user_id, nombre_autor)
 
-            # 🔥 ALGORITMO DESPERTADOR (Notificación In-App para usuarios inactivos) 🔥
             try:
                 cur.execute("""
                     SELECT id, fcm_token FROM usuarios 
@@ -602,8 +574,6 @@ async def publicar(request: Request, background_tasks: BackgroundTasks):
                     ids_despertados = []
                     for user_dormido in usuarios_dormidos:
                         ids_despertados.append(user_dormido[0])
-                        # Nota: Esto es solo un respaldo local. El Push principal ya se manda arriba
-                        # Creamos el registro en la base de datos de notificaciones (la campanita)
                         cur.execute("""
                             INSERT INTO notifications (user_id, publicacion_id, tipo, leida, fecha_creacion, actor_id, mensaje)
                             VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, %s, %s)
@@ -659,21 +629,34 @@ async def editar_publicacion(post_id: int, request: Request):
             
             imagenes_validas = [img for img in imagenes if getattr(img, "filename", None)]
             video_valido = video if getattr(video, "filename", None) else None
-            video_data = await video_valido.read() if video_valido else None
+            
+            video_filename = None
+            if video_valido:
+                video_data = await video_valido.read()
+                ext = video_valido.filename.split('.')[-1] if '.' in video_valido.filename else 'mp4'
+                video_filename = f"{uuid.uuid4().hex}.{ext}"
+                ruta_video = os.path.join("media", "publicaciones", video_filename)
+                with open(ruta_video, "wb") as f:
+                    f.write(video_data)
             
             if len(imagenes_validas) > 10: raise HTTPException(status_code=400, detail="Máximo 10 imágenes")
-            if imagenes_validas and video_data: raise HTTPException(status_code=400, detail="Imágenes o video, no ambos")
+            if imagenes_validas and video_filename: raise HTTPException(status_code=400, detail="Imágenes o video, no ambos")
 
             cur.execute("""
-                UPDATE publicaciones SET contenido = %s, etiquetas = %s, video = %s
+                UPDATE publicaciones SET contenido = %s, etiquetas = %s, video = NULL, ruta_video = %s
                 WHERE id = %s
-            """, (texto, etiquetas_lista, psycopg2.Binary(video_data) if video_data else None, post_id))
+            """, (texto, etiquetas_lista, video_filename, post_id))
 
             for img in imagenes_validas:
                 img_data = await img.read()
                 if img_data:
-                    cur.execute("INSERT INTO publicacion_imagenes (publicacion_id, imagen) VALUES (%s, %s)", 
-                                (post_id, psycopg2.Binary(img_data)))
+                    ext = img.filename.split('.')[-1] if '.' in img.filename else 'jpg'
+                    img_filename = f"{uuid.uuid4().hex}.{ext}"
+                    ruta_img = os.path.join("media", "publicaciones", img_filename)
+                    with open(ruta_img, "wb") as f:
+                        f.write(img_data)
+                    cur.execute("INSERT INTO publicacion_imagenes (publicacion_id, imagen, ruta_imagen) VALUES (%s, NULL, %s)", 
+                                (post_id, img_filename))
         else:
             cur.execute("""
                 UPDATE publicaciones SET contenido = %s, etiquetas = %s
@@ -717,71 +700,8 @@ async def borrar_publicacion(post_id: int, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 # =================================================================
-# FEED, BÚSQUEDA Y LECTURA DE POSTS
+# FEED, BÚSQUEDA Y LECTURA DE POSTS (ACTUALIZADOS CON RUTA NUEVA)
 # =================================================================
-
-@router.get("/inicio", response_class=HTMLResponse)
-async def inicio(request: Request, limit: int = 10, offset: int = 0):
-    try:
-        user_id = get_user_id_hybrid(request)
-        if not user_id:
-            return RedirectResponse(url="/login", status_code=302)
-
-        conn = None
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, 
-                    COALESCE(du.nombre_empresa, u.nombre) AS display_name,
-                    CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END AS tipo_usuario,
-                    (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id) AS imagenes_ids,
-                    p.video IS NOT NULL AS has_video,
-                    COUNT(DISTINCT i.user_id) AS interesados_count,
-                    EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s) AS interesado,
-                    (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id) AS comentarios_count,
-                    p.imagen IS NOT NULL AS has_old_image
-                FROM publicaciones p
-                JOIN usuarios u ON p.user_id = u.id
-                LEFT JOIN datos_usuario du ON p.user_id = du.user_id
-                LEFT JOIN intereses i ON p.id = i.publicacion_id
-                GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
-                ORDER BY p.fecha_creacion DESC
-                LIMIT %s OFFSET %s
-            """, (user_id, limit, offset))
-            publicaciones = cur.fetchall()
-            cur.close()
-        finally:
-            if conn: conn.close()
-
-        publicaciones_list = [
-            {
-                "id": row[0],
-                "user_id": int(row[1]),
-                "contenido": row[2] or "",
-                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [],
-                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
-                "video_url": f"/media/{row[0]}" if row[8] else "",
-                "etiquetas": row[3] or [],
-                "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
-                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
-                "nombre_empresa": row[5],
-                "tipo_usuario": row[6],
-                "interesados_count": int(row[9]),
-                "interesado": row[10],
-                "comentarios_count": int(row[11])
-            }
-            for row in publicaciones
-        ]
-
-        return templates.TemplateResponse("inicio.html", {
-            "request": request,
-            "publicaciones": publicaciones_list,
-            "user_id": user_id
-        })
-    except Exception as e:
-        logging.error(f"Error en /inicio: {e}")
-        return RedirectResponse(url="/login", status_code=302)
 
 @router.get("/feed")
 async def feed(limit: int = 10, offset: int = 0, request: Request = None):
@@ -796,7 +716,9 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
                 COALESCE(du.nombre_empresa, u.nombre) AS display_name,
                 CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END AS tipo_usuario,
                 (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id) AS imagenes_ids,
+                (SELECT array_agg(ruta_imagen) FROM publicacion_imagenes WHERE publicacion_id = p.id) AS rutas_imagenes,
                 p.video IS NOT NULL AS has_video,
+                p.ruta_video IS NOT NULL AS has_ruta_video,
                 COUNT(DISTINCT i.user_id) AS interesados_count,
                 EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s) AS interesado,
                 (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id) AS comentarios_count,
@@ -809,7 +731,7 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
                 p.user_id NOT IN (SELECT bloqueado_id FROM bloqueos WHERE bloqueador_id = %s)
                 AND 
                 p.user_id NOT IN (SELECT bloqueador_id FROM bloqueos WHERE bloqueado_id = %s)
-            GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
+            GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, p.video, p.ruta_video, du.nombre_empresa, u.nombre, du.categoria
             ORDER BY CASE WHEN p.contenido LIKE 'Bienvenidos a PrendiaX!%%' THEN 1 ELSE 0 END DESC, p.fecha_creacion DESC LIMIT %s OFFSET %s
         """
         
@@ -817,23 +739,61 @@ async def feed(limit: int = 10, offset: int = 0, request: Request = None):
         publicaciones = cur.fetchall()
         cur.close()
 
-        return [
-            {
-                "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
-                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
-                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
-                "video_url": f"/media/{row[0]}" if row[8] else "",
-                "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
+        resultado = []
+        for row in publicaciones:
+            post_id = row[0]
+            imagenes_ids = row[7] or []
+            rutas_imgs = row[8] or []
+            
+            # Mapeo inteligente para imágenes (si tiene ruta nueva usa /archivos/, si no usa el endpoint viejo)
+            imgs_finales = []
+            for idx, img_id in enumerate(imagenes_ids):
+                if idx < len(rutas_imgs) and rutas_imgs[idx]:
+                    imgs_finales.append(f"/archivos/publicaciones/{rutas_imgs[idx]}")
+                else:
+                    imgs_finales.append(f"/media/imagen/{img_id}")
+
+            # Imagen principal URL
+            imagen_url_final = ""
+            if rutas_imgs and rutas_imgs[0]:
+                imagen_url_final = f"/archivos/publicaciones/{rutas_imgs[0]}"
+            elif row[14]: # has_old_image
+                imagen_url_final = f"/media/imagen_vieja/{post_id}"
+            elif imagenes_ids:
+                imagen_url_final = f"/media/imagen/{imagenes_ids[0]}"
+
+            resultado.append({
+                "id": post_id, 
+                "user_id": int(row[1]), 
+                "contenido": row[2] or "",
+                "imagenes": imgs_finales, 
+                "imagen_url": imagen_url_final,
+                "video_url": f"/media/{post_id}" if (row[9] or row[10]) else "",
+                "etiquetas": row[3] or [], 
+                "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
-                "nombre_empresa": row[5], "tipo_usuario": row[6],
-                "interesados_count": int(row[9]), "interesado": row[10], "comentarios_count": int(row[11])
-            } for row in publicaciones
-        ]
+                "nombre_empresa": row[5], 
+                "tipo_usuario": row[6],
+                "interesados_count": int(row[11]), 
+                "interesado": row[12], 
+                "comentarios_count": int(row[13])
+            })
+        return resultado
     except Exception as e:
         logging.error(f"Error feed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if conn: conn.close()
+
+@router.get("/inicio", response_class=HTMLResponse)
+async def inicio(request: Request, limit: int = 10, offset: int = 0):
+    # Reutilizamos la misma lógica robusta del feed para la web
+    feed_data = await feed(limit=limit, offset=offset, request=request)
+    return templates.TemplateResponse("inicio.html", {
+        "request": request,
+        "publicaciones": feed_data,
+        "user_id": get_user_id_hybrid(request)
+    })
 
 @router.get("/search")
 async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, request: Request = None):
@@ -850,7 +810,9 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
                 COALESCE(du.nombre_empresa, u.nombre),
                 CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END,
                 (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id),
+                (SELECT array_agg(ruta_imagen) FROM publicacion_imagenes WHERE publicacion_id = p.id),
                 p.video IS NOT NULL,
+                p.ruta_video IS NOT NULL,
                 COUNT(DISTINCT i.user_id),
                 EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s),
                 (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id),
@@ -867,25 +829,45 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
                 )
                 AND p.user_id NOT IN (SELECT bloqueado_id FROM bloqueos WHERE bloqueador_id = %s)
                 AND p.user_id NOT IN (SELECT bloqueador_id FROM bloqueos WHERE bloqueado_id = %s)
-            GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
+            GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, p.video, p.ruta_video, du.nombre_empresa, u.nombre, du.categoria
             ORDER BY p.fecha_creacion DESC LIMIT %s OFFSET %s
         """, (current_user, f"%{query}%", f"%{query}%", f"%{query}%", current_user, current_user, limit, offset))
         
         publicaciones = cur.fetchall()
         cur.close()
 
-        return [
-            {
-                "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
-                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
-                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
-                "video_url": f"/media/{row[0]}" if row[8] else "",
+        resultado = []
+        for row in publicaciones:
+            post_id = row[0]
+            imagenes_ids = row[7] or []
+            rutas_imgs = row[8] or []
+            
+            imgs_finales = []
+            for idx, img_id in enumerate(imagenes_ids):
+                if idx < len(rutas_imgs) and rutas_imgs[idx]:
+                    imgs_finales.append(f"/archivos/publicaciones/{rutas_imgs[idx]}")
+                else:
+                    imgs_finales.append(f"/media/imagen/{img_id}")
+
+            imagen_url_final = ""
+            if rutas_imgs and rutas_imgs[0]:
+                imagen_url_final = f"/archivos/publicaciones/{rutas_imgs[0]}"
+            elif row[14]:
+                imagen_url_final = f"/media/imagen_vieja/{post_id}"
+            elif imagenes_ids:
+                imagen_url_final = f"/media/imagen/{imagenes_ids[0]}"
+
+            resultado.append({
+                "id": post_id, "user_id": int(row[1]), "contenido": row[2] or "",
+                "imagenes": imgs_finales, 
+                "imagen_url": imagen_url_final,
+                "video_url": f"/media/{post_id}" if (row[9] or row[10]) else "",
                 "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
                 "nombre_empresa": row[5], "tipo_usuario": row[6],
-                "interesados_count": int(row[9]), "interesado": row[10], "comentarios_count": int(row[11])
-            } for row in publicaciones
-        ]
+                "interesados_count": int(row[11]), "interesado": row[12], "comentarios_count": int(row[13])
+            })
+        return resultado
     except Exception as e:
         logging.error(f"Error search: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -894,52 +876,9 @@ async def search_publicaciones(query: str, limit: int = 10, offset: int = 0, req
 
 @router.get("/perfil/feed")
 async def perfil_feed(request: Request, limit: int = 10, offset: int = 0):
-    try:
-        user_id = get_user_id_hybrid(request)
-        if not user_id: raise HTTPException(status_code=401, detail="No autorizado")
-
-        conn = None
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, 
-                    COALESCE(du.nombre_empresa, u.nombre),
-                    CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END,
-                    (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id), 
-                    p.video IS NOT NULL,
-                    COUNT(DISTINCT i.user_id),
-                    EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s),
-                    (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id),
-                    p.imagen IS NOT NULL
-                FROM publicaciones p
-                JOIN usuarios u ON p.user_id = u.id
-                LEFT JOIN datos_usuario du ON p.user_id = du.user_id
-                LEFT JOIN intereses i ON p.id = i.publicacion_id
-                WHERE p.user_id = %s
-                GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
-                ORDER BY p.fecha_creacion DESC LIMIT %s OFFSET %s
-            """, (user_id, user_id, limit, offset))
-            publicaciones = cur.fetchall()
-            cur.close()
-        finally:
-            if conn: conn.close()
-
-        return [
-            {
-                "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
-                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
-                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
-                "video_url": f"/media/{row[0]}" if row[8] else "",
-                "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
-                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
-                "nombre_empresa": row[5], "tipo_usuario": row[6],
-                "interesados_count": int(row[9]), "interesado": row[10], "comentarios_count": int(row[11])
-            } for row in publicaciones
-        ]
-    except Exception as e:
-        logging.error(f"Error perfil feed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    user_id = get_user_id_hybrid(request)
+    if not user_id: raise HTTPException(status_code=401, detail="No autorizado")
+    return await get_user_publicaciones(user_id=user_id, limit=limit, offset=offset, request=request)
 
 @router.get("/user/{user_id}/publicaciones")
 async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0, request: Request = None):
@@ -953,7 +892,9 @@ async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0,
                 COALESCE(du.nombre_empresa, u.nombre),
                 CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END,
                 (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id), 
+                (SELECT array_agg(ruta_imagen) FROM publicacion_imagenes WHERE publicacion_id = p.id), 
                 p.video IS NOT NULL,
+                p.ruta_video IS NOT NULL,
                 COUNT(DISTINCT i.user_id),
                 EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s),
                 (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id),
@@ -963,24 +904,44 @@ async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0,
             LEFT JOIN datos_usuario du ON p.user_id = du.user_id
             LEFT JOIN intereses i ON p.id = i.publicacion_id
             WHERE p.user_id = %s
-            GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
+            GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, p.video, p.ruta_video, du.nombre_empresa, u.nombre, du.categoria
             ORDER BY p.fecha_creacion DESC LIMIT %s OFFSET %s
         """, (current_user, user_id, limit, offset))
         publicaciones = cur.fetchall()
         cur.close()
 
-        return [
-            {
-                "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
-                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
-                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
-                "video_url": f"/media/{row[0]}" if row[8] else "",
+        resultado = []
+        for row in publicaciones:
+            post_id = row[0]
+            imagenes_ids = row[7] or []
+            rutas_imgs = row[8] or []
+            
+            imgs_finales = []
+            for idx, img_id in enumerate(imagenes_ids):
+                if idx < len(rutas_imgs) and rutas_imgs[idx]:
+                    imgs_finales.append(f"/archivos/publicaciones/{rutas_imgs[idx]}")
+                else:
+                    imgs_finales.append(f"/media/imagen/{img_id}")
+
+            imagen_url_final = ""
+            if rutas_imgs and rutas_imgs[0]:
+                imagen_url_final = f"/archivos/publicaciones/{rutas_imgs[0]}"
+            elif row[14]:
+                imagen_url_final = f"/media/imagen_vieja/{post_id}"
+            elif imagenes_ids:
+                imagen_url_final = f"/media/imagen/{imagenes_ids[0]}"
+
+            resultado.append({
+                "id": post_id, "user_id": int(row[1]), "contenido": row[2] or "",
+                "imagenes": imgs_finales, 
+                "imagen_url": imagen_url_final,
+                "video_url": f"/media/{post_id}" if (row[9] or row[10]) else "",
                 "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
                 "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
                 "nombre_empresa": row[5], "tipo_usuario": row[6],
-                "interesados_count": int(row[9]), "interesado": row[10], "comentarios_count": int(row[11])
-            } for row in publicaciones
-        ]
+                "interesados_count": int(row[11]), "interesado": row[12], "comentarios_count": int(row[13])
+            })
+        return resultado
     except Exception as e:
         logging.error(f"Error user posts: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -989,48 +950,64 @@ async def get_user_publicaciones(user_id: int, limit: int = 10, offset: int = 0,
 
 @router.get("/publicacion/{post_id}")
 async def get_publicacion(post_id: int, request: Request):
+    # Reutilizamos la lógica del usuario trayendo la publicación puntual
+    conn = None
     try:
         current_user = get_user_id_hybrid(request)
-        conn = None
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, 
-                    COALESCE(du.nombre_empresa, u.nombre),
-                    CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END,
-                    (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id), 
-                    p.video IS NOT NULL,
-                    COUNT(DISTINCT i.user_id),
-                    EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s),
-                    (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id),
-                    p.imagen IS NOT NULL
-                FROM publicaciones p
-                JOIN usuarios u ON p.user_id = u.id
-                LEFT JOIN datos_usuario du ON p.user_id = du.user_id
-                LEFT JOIN intereses i ON p.id = i.publicacion_id
-                WHERE p.id = %s
-                GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, du.nombre_empresa, u.nombre, du.categoria
-            """, (current_user if current_user else -1, post_id))
-            row = cur.fetchone()
-            cur.close()
-            if not row: raise HTTPException(status_code=404, detail="No encontrado")
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, 
+                COALESCE(du.nombre_empresa, u.nombre),
+                CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END,
+                (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id), 
+                (SELECT array_agg(ruta_imagen) FROM publicacion_imagenes WHERE publicacion_id = p.id), 
+                p.video IS NOT NULL,
+                p.ruta_video IS NOT NULL,
+                COUNT(DISTINCT i.user_id),
+                EXISTS (SELECT 1 FROM intereses i WHERE i.publicacion_id = p.id AND i.user_id = %s),
+                (SELECT COUNT(*) FROM comentarios c WHERE c.publicacion_id = p.id),
+                p.imagen IS NOT NULL
+            FROM publicaciones p
+            JOIN usuarios u ON p.user_id = u.id
+            LEFT JOIN datos_usuario du ON p.user_id = du.user_id
+            LEFT JOIN intereses i ON p.id = i.publicacion_id
+            WHERE p.id = %s
+            GROUP BY p.id, p.user_id, p.contenido, p.etiquetas, p.fecha_creacion, p.imagen, p.video, p.ruta_video, du.nombre_empresa, u.nombre, du.categoria
+        """, (current_user if current_user else -1, post_id))
+        row = cur.fetchone()
+        cur.close()
+        if not row: raise HTTPException(status_code=404, detail="No encontrado")
 
-            return {
-                "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
-                "imagenes": [f"/media/imagen/{img_id}" for img_id in row[7] if img_id is not None] if row[7] else [], 
-                "imagen_url": f"/media/imagen_vieja/{row[0]}" if row[12] else (f"/media/imagen/{row[7][0]}" if row[7] and row[7][0] is not None else ""),
-                "video_url": f"/media/{row[0]}" if row[8] else "",
-                "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
-                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
-                "nombre_empresa": row[5], "tipo_usuario": row[6],
-                "interesados_count": int(row[9]), "interesado": row[10], "comentarios_count": int(row[11])
-            }
-        finally:
-            if conn: conn.close()
-    except Exception as e:
-        logging.error(f"Error single post: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        imagenes_ids = row[7] or []
+        rutas_imgs = row[8] or []
+        imgs_finales = []
+        for idx, img_id in enumerate(imagenes_ids):
+            if idx < len(rutas_imgs) and rutas_imgs[idx]:
+                imgs_finales.append(f"/archivos/publicaciones/{rutas_imgs[idx]}")
+            else:
+                imgs_finales.append(f"/media/imagen/{img_id}")
+
+        imagen_url_final = ""
+        if rutas_imgs and rutas_imgs[0]:
+            imagen_url_final = f"/archivos/publicaciones/{rutas_imgs[0]}"
+        elif row[14]:
+            imagen_url_final = f"/media/imagen_vieja/{post_id}"
+        elif imagenes_ids:
+            imagen_url_final = f"/media/imagen/{imagenes_ids[0]}"
+
+        return {
+            "id": row[0], "user_id": int(row[1]), "contenido": row[2] or "",
+            "imagenes": imgs_finales, 
+            "imagen_url": imagen_url_final,
+            "video_url": f"/media/{post_id}" if (row[9] or row[10]) else "",
+            "etiquetas": row[3] or [], "fecha_creacion": row[4].strftime("%Y-%m-%d %H:%M:%S"),
+            "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[6] == 'emprendedor' else "",
+            "nombre_empresa": row[5], "tipo_usuario": row[6],
+            "interesados_count": int(row[11]), "interesado": row[12], "comentarios_count": int(row[13])
+        }
+    finally:
+        if conn: conn.close()
 
 # =================================================================
 # INTERACCIONES Y PERFIL
@@ -1547,11 +1524,12 @@ async def ver_publicacion_web(post_id: int):
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 1. Buscamos TODO sobre la publicación (Texto, Autor, Fecha y Multimedia)
         cur.execute("""
             SELECT p.contenido, COALESCE(du.nombre_empresa, u.nombre), p.fecha_creacion,
                    (SELECT array_agg(id) FROM publicacion_imagenes WHERE publicacion_id = p.id) AS imagenes_ids,
+                   (SELECT array_agg(ruta_imagen) FROM publicacion_imagenes WHERE publicacion_id = p.id) AS rutas_imgs,
                    p.video IS NOT NULL AS has_video,
+                   p.ruta_video IS NOT NULL AS has_ruta_video,
                    p.imagen IS NOT NULL AS has_old_image
             FROM publicaciones p
             JOIN usuarios u ON p.user_id = u.id
@@ -1564,29 +1542,28 @@ async def ver_publicacion_web(post_id: int):
         if not post_data:
             return HTMLResponse(content="<h1 style='color:white; text-align:center; font-family:sans-serif; margin-top:50px;'>Publicación no encontrada</h1>", status_code=404)
 
-        # 2. Preparamos los datos
         contenido_raw = post_data[0] or ""
         contenido_preview = (contenido_raw[:90] + "...") if len(contenido_raw) > 90 else contenido_raw
         autor = post_data[1]
         fecha = post_data[2].strftime("%d/%m/%Y") if post_data[2] else "Reciente"
-        imagenes_ids = post_data[3]
-        has_video = post_data[4]
-        has_old_image = post_data[5]
+        imagenes_ids = post_data[3] or []
+        rutas_imgs = post_data[4] or []
+        has_video = post_data[5] or post_data[6]
+        has_old_image = post_data[7]
 
         titulo_og = f"Publicación de {autor} en PrendiaX"
 
-        # 3. Procesamos la multimedia para incrustarla en el HTML
         media_html = ""
         if has_video:
             media_html = f'<video controls width="100%" style="border-radius:12px; margin-top:15px; background:black;"><source src="/media/{post_id}" type="video/mp4"></video>'
+        elif rutas_imgs and rutas_imgs[0]:
+            media_html = f'<img src="/archivos/publicaciones/{rutas_imgs[0]}" style="width:100%; border-radius:12px; margin-top:15px;" />'
         elif imagenes_ids and len(imagenes_ids) > 0:
-            # Apilamos las imágenes si hay varias
             imgs = [f'<img src="/media/imagen/{img}" style="width:100%; border-radius:12px; margin-top:15px;" />' for img in imagenes_ids]
             media_html = "".join(imgs)
         elif has_old_image:
             media_html = f'<img src="/media/imagen_vieja/{post_id}" style="width:100%; border-radius:12px; margin-top:15px;" />'
 
-        # 4. Armamos el HTML con el Overlay de Descarga + El botón "Ver en Web"
         html_content = f"""
         <!DOCTYPE html>
         <html lang="es">
@@ -1607,7 +1584,6 @@ async def ver_publicacion_web(post_id: int):
                     margin: 0;
                     padding: 0;
                 }}
-                /* --- ESTILOS DEL AVISO FLOTANTE --- */
                 .overlay {{
                     position: fixed;
                     top: 0; left: 0; width: 100%; height: 100%;
@@ -1632,8 +1608,6 @@ async def ver_publicacion_web(post_id: int):
                     font-size: 16px; font-weight: bold; cursor: pointer; padding: 10px;
                     margin-top: 10px;
                 }}
-                
-                /* --- ESTILOS DE LA PUBLICACIÓN WEB --- */
                 .post-container {{
                     max-width: 500px;
                     margin: 20px auto;
@@ -1699,18 +1673,13 @@ async def ver_publicacion_web(post_id: int):
         return HTMLResponse(content="Error interno", status_code=500)
     finally:
         if conn: conn.close()
+
 # -----------------------------------------------------------------
 # ENDPOINTS DE SEGURIDAD PARA DEEP LINKS (App Links y Universal Links)
 # -----------------------------------------------------------------
 
 @router.get("/.well-known/assetlinks.json")
 async def android_asset_links():
-    """
-    Certificado de seguridad para Android (App Links).
-    Permite que la app en Android intercepte los enlaces prendiax.com/post/
-    """
-    # ⚠️ MUY IMPORTANTE: Reemplaza las huellas digitales (sha256_cert_fingerprints)
-    # con las reales de tu app en Google Play Console cuando vayas a producción.
     asset_links = [
         {
             "relation": ["delegate_permission/common.handle_all_urls"],
@@ -1728,11 +1697,6 @@ async def android_asset_links():
 
 @router.get("/.well-known/apple-app-site-association")
 async def apple_app_site_association():
-    """
-    Certificado de seguridad para iOS (Universal Links).
-    Permite que la app en iPhone intercepte los enlaces prendiax.com/post/
-    """
-    # ⚠️ MUY IMPORTANTE: Asegúrate de que 'com.tuempresa.prendiax' sea tu Bundle ID exacto.
     aasa = {
         "applinks": {
             "apps": [],
