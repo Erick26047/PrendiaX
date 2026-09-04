@@ -15,6 +15,8 @@ from fastapi import BackgroundTasks
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import os
+import uuid
 
 # 🔥 CONFIGURACIÓN DE TU CORREO (Llena estos datos) 🔥
 SMTP_SERVER = "smtp.gmail.com"
@@ -490,32 +492,52 @@ async def publicar(request: Request, background_tasks: BackgroundTasks):
 
         etiquetas_lista = [e.strip() for e in etiquetas.split(",") if e.strip()] if isinstance(etiquetas, str) and etiquetas else []
         
-        video_data = None
+        # 🔥 NUEVO MOTOR DE MULTIMEDIA (Guardado en Disco) 🔥
+        video_filename = None
         if video_valido:
             video_data = await video_valido.read()
             if len(video_data) > MAX_FILE_SIZE:
                 raise HTTPException(status_code=400, detail="Video muy pesado")
+            
+            # 1. Generamos un nombre único (ejemplo: 8f3a9b.mp4)
+            ext = video_valido.filename.split('.')[-1] if '.' in video_valido.filename else 'mp4'
+            video_filename = f"{uuid.uuid4().hex}.{ext}"
+            ruta_video = os.path.join("media", "publicaciones", video_filename)
+            
+            # 2. Guardamos físicamente en la Asus
+            with open(ruta_video, "wb") as f:
+                f.write(video_data)
 
         conn = None
         try:
             conn = get_db_connection()
             cur = conn.cursor()
             
+            # 3. Guardamos en la base de datos (Nota: mandamos NULL al bytea 'video')
             cur.execute("""
-                INSERT INTO publicaciones (user_id, contenido, video, etiquetas, fecha_creacion)
-                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                INSERT INTO publicaciones (user_id, contenido, video, ruta_video, etiquetas, fecha_creacion)
+                VALUES (%s, %s, NULL, %s, %s, CURRENT_TIMESTAMP)
                 RETURNING id
-            """, (user_id, texto, psycopg2.Binary(video_data) if video_data else None, etiquetas_lista))
+            """, (user_id, texto, video_filename, etiquetas_lista))
             
             post_id = cur.fetchone()[0]
 
             for img in imagenes_validas:
                 img_data = await img.read()
                 if img_data:
+                    # 4. Hacemos lo mismo para cada imagen
+                    ext = img.filename.split('.')[-1] if '.' in img.filename else 'jpg'
+                    img_filename = f"{uuid.uuid4().hex}.{ext}"
+                    ruta_img = os.path.join("media", "publicaciones", img_filename)
+                    
+                    with open(ruta_img, "wb") as f:
+                        f.write(img_data)
+
+                    # Guardamos ruta_imagen y dejamos el bytea 'imagen' en NULL
                     cur.execute("""
-                        INSERT INTO publicacion_imagenes (publicacion_id, imagen)
-                        VALUES (%s, %s)
-                    """, (post_id, psycopg2.Binary(img_data)))
+                        INSERT INTO publicacion_imagenes (publicacion_id, imagen, ruta_imagen)
+                        VALUES (%s, NULL, %s)
+                    """, (post_id, img_filename))
 
             conn.commit()
 

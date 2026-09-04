@@ -57,6 +57,7 @@ def get_db_connection():
 
 # --- Configuración general ---
 app = FastAPI()
+app.mount("/media", StaticFiles(directory="media"), name="media")
 templates = Jinja2Templates(directory=".")
 app.add_middleware(SessionMiddleware, secret_key="Elbicho7")
 app.add_middleware(
