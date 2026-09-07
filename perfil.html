@@ -86,8 +86,6 @@
             background-color: #3e2727;
         }
 
-        /* --- FIN ESTILOS MENÚ --- */
-
         .stars {
             position: fixed;
             top: 0;
@@ -131,7 +129,8 @@
             position: fixed;
             top: 0;
             width: 100%;
-            z-index: 1000;
+            z-index: 5000;
+            box-sizing: border-box;
         }
 
         header h1 {
@@ -147,29 +146,10 @@
             align-items: center;
         }
 
-        .boton {
+        .boton, #theme-toggle {
             background-color: #fff;
+            color: #000;
             border: none;
-            border-radius: 8px;
-            padding: 10px;
-            font-size: 18px;
-            color: #000;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
-        .boton:hover {
-            background-color: #e0e0e0;
-        }
-
-        #theme-toggle {
-            background-color: #fff;
-            color: #000;
             border-radius: 8px;
             padding: 10px;
             font-size: 18px;
@@ -180,10 +160,9 @@
             width: 40px;
             height: 40px;
             transition: background-color 0.3s ease, color 0.3s ease;
-            border: none;
         }
 
-        #theme-toggle:hover {
+        .boton:hover, #theme-toggle:hover {
             background-color: #e0e0e0;
         }
 
@@ -201,7 +180,6 @@
             .container {
                 grid-template-columns: 1fr;
                 padding: 20px;
-                gap: 20px;
                 padding-top: 80px;
             }
         }
@@ -212,11 +190,9 @@
             border-radius: 10px;
             border: 1px solid #ccc;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+            height: fit-content;
         }
-
-        .column-left { height: fit-content; }
-        .column-right { height: fit-content; }
 
         .profile-data { text-align: center; }
 
@@ -228,160 +204,67 @@
             border: 2px solid #ccc;
             margin: 0 auto 20px;
             display: block;
-            transition: border-color 0.3s ease;
+            background-color: #e0e0e0;
         }
 
-        .profile-data h2 {
-            font-size: 24px;
-            margin: 0 0 10px;
-            color: #000;
-            transition: color 0.3s ease;
-        }
+        .profile-data h2 { font-size: 24px; margin: 0 0 10px; color: #000; }
 
         .campo { margin-bottom: 15px; text-align: left; }
+        .campo label { font-weight: bold; font-size: 16px; display: block; margin-bottom: 5px; color: #000; }
+        .campo p { margin: 0; padding: 8px; background: #f2f2f2; border-radius: 8px; font-size: 16px; color: #000; word-break: break-word; }
 
-        .campo label {
-            font-weight: bold;
-            font-size: 16px;
-            display: block;
-            margin-bottom: 5px;
-            color: #000;
-            transition: color 0.3s ease;
-        }
-
-        .campo p {
-            margin: 0;
-            padding: 8px;
-            background: #f2f2f2;
-            border-radius: 8px;
-            font-size: 16px;
-            color: #000;
-            transition: background-color 0.3s ease, color 0.3s ease;
-            word-break: break-word;
-        }
-
-        .google-maps-link {
-            color: #000;
-            text-decoration: underline;
-            word-break: break-all;
-            transition: color 0.3s ease;
-        }
-
+        .google-maps-link { color: #000; text-decoration: underline; word-break: break-all; }
         .google-maps-link:hover { color: #555; }
 
         .campo input, .campo textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font-size: 16px;
-            box-sizing: border-box;
-            transition: border-color 0.3s ease, background-color 0.3s ease;
+            width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box;
         }
 
         .campo input[type="file"] { padding: 3px; }
 
-        .edit-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .edit-buttons button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
+        .edit-buttons { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+        .edit-buttons button { padding: 10px 20px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
         .save-btn { background-color: #4caf50; color: white; }
         .save-btn:hover { background-color: #388e3c; }
-
         .cancel-btn { background-color: #f44336; color: white; }
         .cancel-btn:hover { background-color: #d32f2f; }
 
-        .feed {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
+        /* --- ESTILOS FEED, POSTS, COMENTARIOS Y PREMIUM --- */
+        .feed { display: flex; flex-direction: column; gap: 20px; }
         .post {
-            background-color: #fafafa;
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #ccc;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-            position: relative;
+            background-color: #fafafa; padding: 20px; border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03); transition: background-color 0.3s ease; position: relative;
         }
-
-        .post-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .post-profile-pic {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 1px solid #ccc;
-        }
-
-        .post-user-info { display: flex; flex-direction: column; flex: 1;}
-
-        .post-user-info .company-name {
-            font-size: 16px;
-            font-weight: bold;
-            color: #000;
-            margin: 0;
-            transition: color 0.3s ease;
-        }
-
+        .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .post-profile-pic-container { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; background: #e0e0e0; display: flex; align-items: center; justify-content: center;}
+        .post-profile-pic { width: 100%; height: 100%; object-fit: cover; }
+        .post-user-info { display: flex; flex-direction: column; flex: 1; }
+        .company-name { font-size: 16px; font-weight: bold; color: #000; margin: 0; cursor: pointer; }
+        .company-name:hover { text-decoration: underline; }
         .post-options { margin-left: auto; position: relative; }
         .options-btn { background: transparent; border: none; font-size: 18px; cursor: pointer; padding: 8px; color: #666; }
-        .options-btn:hover { background-color: #e0e0e0; color: #000; border-radius: 50%; }
-
         .post-dropdown-menu { display: none; position: absolute; right: 0; top: 40px; background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100; width: 180px; overflow: hidden; }
         .post-dropdown-menu.show { display: block; animation: slideDown 0.2s ease; }
         .dropdown-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 15px; border: none; background: none; text-align: left; cursor: pointer; font-size: 14px; color: #333; }
         .dropdown-item:hover { background-color: #f5f5f5; color: #1976d2; }
         .dropdown-item.danger { color: #d32f2f; }
-        .dropdown-item.danger:hover { background-color: #ffebee; }
 
-        .post-content { margin-bottom: 10px; }
-        .post-content p {
-            margin: 0 0 10px;
-            font-size: 16px;
-            color: #333;
-            line-height: 1.5;
-            transition: color 0.3s ease;
-        }
+        .post-content { max-height: 4.5em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; text-overflow: ellipsis; }
+        .post-content.expanded { max-height: none; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; }
+        .post-content p { margin: 0 0 10px; font-size: 16px; line-height: 1.5; color: #000;}
+        .read-more { display: none; color: #1976d2; font-size: 14px; cursor: pointer; margin-top: 5px; font-weight: bold; }
+        .read-more.visible { display: inline-block; }
 
         .post-media { margin-top: 10px; }
-        .post-media img, .post-media video {
-            max-width: 100%;
-            height: auto;
-            max-height: 500px;
-            object-fit: cover;
-            border-radius: 8px;
-            display: block;
-            cursor: pointer;
-        }
+        .carousel-container { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; scroll-snap-type: x mandatory; }
+        .carousel-item { scroll-snap-align: center; flex-shrink: 0; width: 100%; max-height: 500px; object-fit: cover; border-radius: 8px; cursor: pointer; }
+        .post-media img, .post-media video { width: 100%; height: auto; max-height: 500px; object-fit: cover; border-radius: 8px; display: block; cursor: pointer; margin-top: 10px; }
+        
+        .video-thumbnail-container { position: relative; display: flex; justify-content: center; align-items: center; width: 100%; cursor: pointer; margin-top: 10px; border-radius: 8px; overflow: hidden; }
+        .video-thumbnail-container video { width: 100%; height: auto; max-height: 500px; display: block; object-fit: contain; }
+        .play-icon-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; background-color: rgba(0, 0, 0, 0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #fff; z-index: 10; pointer-events: none; }
 
-        .post-meta p {
-            margin: 10px 0 0;
-            font-size: 14px;
-            color: #666;
-            transition: color 0.3s ease;
-        }
-
+        .post-meta p { margin: 10px 0 0; font-size: 14px; color: #666; }
         .post-meta p:last-child { font-size: 12px; color: #999; }
 
         /* 🔥 BOTONES PREMIUM ESTILO INSTAGRAM 🔥 */
@@ -392,364 +275,82 @@
         .action-icon-btn.active i { color: #ff9800; }
         .action-icon-btn:hover { transform: scale(1.1); }
 
-        .delete-review-button {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: #f44336;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            padding: 5px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 30px;
-            height: 30px;
-        }
+        .comments-section { margin-top: 15px; border-top: 1px solid #e0e0e0; padding-top: 10px; }
+        .comment-form { display: flex; flex-direction: column; margin-bottom: 10px; }
+        .comment-input-wrapper { display: flex; gap: 10px; width: 100%; }
+        .comment-input { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.05); background-color: #f0f2f5; outline: none; }
+        .comment-submit { background-color: #000; color: #fff; border: none; border-radius: 15px; padding: 8px 15px; cursor: pointer; }
+        
+        .comments-list { display: flex; flex-direction: column; gap: 12px; max-height: 250px; overflow-y: auto; }
+        .comment { display: flex; align-items: flex-start; gap: 10px; position: relative; }
+        .comment.reply { padding-left: 44px; border-left: 2px solid rgba(0,0,0,0.05); }
+        .comment-profile-pic-container { width: 34px; height: 34px; border-radius: 50%; overflow: hidden; background: #e0e0e0; flex-shrink: 0; }
+        .comment-user { font-size: 13px; font-weight: 700; margin: 0 0 3px 0; cursor: pointer; }
+        .comment-text { font-size: 14px; margin: 0; line-height: 1.4; }
+        .comment-actions { display: flex; gap: 15px; margin-top: 8px; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 6px; align-items: center; }
+        .comment-meta { font-size: 11px; color: #8e8e93; margin: 0; }
+        .reply-btn { background: none; border: none; color: #65676b; cursor: pointer; font-weight: 600; font-size: 11px; }
+        .comment-delete { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: none; color: #ff3b30; border: none; cursor: pointer; opacity: 0.6; }
+        .reply-indicator { background-color: #e3f2fd; color: #1976d2; padding: 5px 10px; font-size: 12px; border-radius: 10px 10px 0 0; justify-content: space-between; align-items: center; border: 1px solid #bbdefb; margin-bottom: -1px; z-index: 1; }
+        .reply-indicator button { background: none; border: none; color: #1976d2; font-weight: bold; font-size: 14px; cursor: pointer; }
+        .load-more-comments { font-size: 14px; color: #1976d2; cursor: pointer; text-align: center; margin-top: 10px; }
 
-        .delete-review-button:hover { background-color: #d32f2f; }
+        /* Visor Multimedia */
+        #media-viewer { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
+        #media-viewer.active { display: flex; }
+        #media-viewer-content { max-width: 90%; max-height: 80%; object-fit: contain; transition: transform 0.3s ease; }
+        .viewer-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 15px; z-index: 10000; }
+        .viewer-btn { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255,255,255,0.5); color: white; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
 
-        .reviews { display: flex; flex-direction: column; gap: 15px; }
-        .reviews h3 {
-            font-size: 20px;
-            margin: 0 0 15px;
-            color: #000;
-            text-align: center;
-            transition: color 0.3s ease;
-        }
-
-        .review {
-            background-color: #f2f2f2;
-            padding: 15px;
-            border-radius: 8px;
-            transition: background-color 0.3s ease;
-            position: relative;
-        }
-
-        .review p { margin: 0; font-size: 14px; color: #333; transition: color 0.3s ease; }
-        .review .review-author { font-weight: bold; margin-bottom: 5px; }
-        .review .review-text { margin-bottom: 5px; }
-        .review .review-rating { color: #ffd700; margin-bottom: 5px; }
-        .review .review-date { font-size: 12px; color: #666; }
-
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background-color: #4caf50;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            display: none;
-            align-items: center;
-            gap: 10px;
-            font-size: 16px;
-            animation: slideIn 0.3s ease-in-out;
-        }
-
+        .notification { position: fixed; top: 20px; right: 20px; background-color: #4caf50; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); z-index: 10000; display: none; align-items: center; gap: 10px; font-size: 16px; animation: slideIn 0.3s ease-in-out; }
         .notification.error { background-color: #f44336; }
-        .notification i { font-size: 18px; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(100%); }
-            to { opacity: 1; transform: translateX(0); }
-        }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 6000; animation: fadeIn 0.2s ease-in-out; }
+        .modal-content { background: #fff; padding: 20px; border-radius: 10px; text-align: center; max-width: 400px; width: 90%; }
+        .modal-content button { padding: 10px 20px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin: 0 10px; }
+        
+        .reviews { display: flex; flex-direction: column; gap: 15px; }
+        .review { background-color: #f2f2f2; padding: 15px; border-radius: 8px; position: relative; }
+        .review-rating { color: #ffd700; }
+        .delete-review-button { position: absolute; top: 10px; right: 10px; background-color: #f44336; color: #fff; border: none; border-radius: 5px; padding: 5px; cursor: pointer; }
+        .message-btn, .review-btn { background-color: #2196f3; color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 5px; margin: 20px auto 0; }
+        .review-btn { background-color: #ff9800; margin: 10px 0; }
+        .action-buttons { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+        .report-btn, .block-btn { color: white; border: none; border-radius: 8px; width: 44px; height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center;}
+        .report-btn { background-color: #78909c; }
+        .block-btn { background-color: #d32f2f; }
 
-        @keyframes slideOut {
-            from { opacity: 1; transform: translateX(0); }
-            to { opacity: 0; transform: translateX(100%); }
-        }
-
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-            animation: fadeIn 0.2s ease-in-out;
-        }
-
-        .modal-content {
-            background: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            max-width: 400px;
-            width: 90%;
-            color: #000;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
-        .modal-content h3 { margin: 0 0 20px; font-size: 20px; color: #000; transition: color 0.3s ease; }
-        .modal-content p { margin: 0 0 20px; font-size: 16px; }
-
-        .star-rating {
-            display: flex;
-            gap: 8px;
-            font-size: 28px;
-            color: #ccc;
-            cursor: pointer;
-            justify-content: center;
-            margin-bottom: 15px;
-        }
-
-        .star-rating .star { transition: color 0.2s ease; }
+        .star-rating { display: flex; gap: 8px; font-size: 28px; color: #ccc; cursor: pointer; justify-content: center; margin-bottom: 15px; }
         .star-rating .star:hover, .star-rating .star.active { color: #ffd700; }
-
-        body.dark-mode .star-rating .star { color: #555; }
-        body.dark-mode .star-rating .star:hover, body.dark-mode .star-rating .star.active { color: #ffeb3b; }
-
-        .modal-content textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 16px;
-            resize: vertical;
-            min-height: 100px;
-            background-color: #fff;
-            color: #000;
-            transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
-            outline: none;
-            box-sizing: border-box;
-        }
-
-        .modal-content textarea:focus { border-color: #4caf50; box-shadow: 0 0 5px rgba(76, 175, 80, 0.3); }
-
-        body.dark-mode .modal-content textarea {
-            background-color: #333;
-            color: #fff;
-            border-color: #555;
-        }
-
-        body.dark-mode .modal-content textarea:focus { border-color: #66bb6a; box-shadow: 0 0 5px rgba(102, 187, 106, 0.3); }
-
-        .modal-content button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            margin: 0 10px;
-            transition: background-color 0.3s ease;
-        }
-
-        #confirm-btn { background: #f44336; color: white; }
-        #confirm-btn:hover { background: #d32f2f; }
-        #cancel-btn { background: #ccc; color: black; }
-        #cancel-btn:hover { background: #bbb; }
-
-        .media-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2500;
-            animation: fadeIn 0.2s ease-in-out;
-        }
-
-        .media-modal-content {
-            position: relative;
-            max-width: 90%;
-            max-height: 90%;
-            background: transparent;
-            text-align: center;
-        }
-
-        .media-modal-content img {
-            max-width: 100%;
-            max-height: 80vh;
-            object-fit: contain;
-            transform-origin: center;
-            transition: transform 0.2s ease;
-            cursor: grab;
-            z-index: 1;
-        }
-
-        .media-modal-content video {
-            max-width: 100%;
-            max-height: 80vh;
-            object-fit: contain;
-            z-index: 1;
-        }
-
-        .media-controls {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 8px;
-            z-index: 3;
-        }
-
-        .media-controls button {
-            background: #fff;
-            border: none;
-            border-radius: 5px;
-            padding: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .media-controls button:hover { background: #e0e0e0; }
-
-        .close-media-btn {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(244, 67, 54, 0.9);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            padding: 12px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            z-index: 2600;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .close-media-btn:hover {
-            background: rgba(211, 47, 47, 1);
-            transform: scale(1.1);
-        }
-
-        /* --- BLOQUE RECUPERADO DEL MODO OSCURO --- */
+        
+        /* Dark Mode Global */
         body.dark-mode { background-color: #000; color: #fff; }
-        body.dark-mode .stars { display: block; }
         body.dark-mode header { background-color: #000000; }
-        body.dark-mode .boton { background-color: #000; color: #fff; }
-        body.dark-mode .boton:hover { background-color: #222; }
-        body.dark-mode #theme-toggle { background-color: #000; color: #fff; }
-        body.dark-mode #theme-toggle:hover { background-color: #222; }
-        body.dark-mode .column-left, body.dark-mode .column-center, body.dark-mode .column-right {
-            background-color: #000;
-            border: 1px solid #333;
-            box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
-        }
-        body.dark-mode .profile-data h2,
-        body.dark-mode .campo label,
-        body.dark-mode .post-user-info .company-name,
-        body.dark-mode .post-content p,
-        body.dark-mode .reviews h3 { color: #fff; }
-        body.dark-mode .campo p { background-color: #222; color: #fff; }
-        body.dark-mode .google-maps-link { color: #fff; }
+        body.dark-mode .settings-dropdown, body.dark-mode .post-dropdown-menu { background-color: #2a2a2a; border-color: #444; }
+        body.dark-mode .dropdown-item, body.dark-mode .settings-dropdown button { color: #fff; }
+        body.dark-mode .dropdown-item:hover, body.dark-mode .settings-dropdown button:hover { background-color: #333; }
+        body.dark-mode .column-left, body.dark-mode .column-center, body.dark-mode .column-right, body.dark-mode .post { background-color: #121212; border: 1px solid rgba(255,255,255,0.05); }
+        body.dark-mode .profile-data h2, body.dark-mode .campo label, body.dark-mode .company-name, body.dark-mode .post-content p { color: #fff; }
+        body.dark-mode .campo p, body.dark-mode .campo input, body.dark-mode .campo textarea { background-color: #222; color: #fff; border-color: #333; }
+        body.dark-mode .google-maps-link { color: #90caf9; }
         body.dark-mode .google-maps-link:hover { color: #bbb; }
-        body.dark-mode .campo input, body.dark-mode .campo textarea { background-color: #222; color: #fff; border-color: #333; }
-        body.dark-mode .post { background-color: #000; border: 1px solid #333; box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1); }
-        body.dark-mode .post-meta p { color: #bbb; }
-        body.dark-mode .post-meta p:last-child, body.dark-mode .review .review-date { color: #888; }
-        body.dark-mode .review { background-color: #222; color: #fff; }
+        body.dark-mode .modal-content, body.dark-mode .review { background-color: #222; color: #fff; }
         body.dark-mode .review p { color: #fff; }
-        body.dark-mode .notification { box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2); }
-        body.dark-mode .modal-content { background: #222; color: #fff; }
-        body.dark-mode .modal-content h3 { color: #fff; }
-        body.dark-mode .media-modal-content { background: transparent; }
-        body.dark-mode .media-controls button { background: #333; color: #fff; }
-        body.dark-mode .media-controls button:hover { background: #555; }
-        body.dark-mode .close-media-btn { background: rgba(211, 47, 47, 0.9); }
-        body.dark-mode .close-media-btn:hover { background: rgba(183, 28, 28, 1); }
         body.dark-mode .action-icon-btn { color: #fff; }
-        body.dark-mode .post-dropdown-menu { background-color: #2a2a2a; border-color: #444; }
-        body.dark-mode .dropdown-item { color: #e0e0e0; }
-        body.dark-mode .dropdown-item:hover { background-color: #3a3a3a; }
-        /* ------------------------------------------ */
-
-        .message-btn {
-            background-color: #2196f3; color: white; border: none; border-radius: 8px; padding: 10px 20px;
-            font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 5px; margin: 20px auto 0; transition: background-color 0.3s ease;
-        }
-        .message-btn:hover { background-color: #1976d2; }
-
-        .review-btn {
-            background-color: #ff9800; color: white; border: none; border-radius: 8px; padding: 10px 20px;
-            font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 5px; margin: 10px 0; transition: background-color 0.3s ease;
-        }
-        .review-btn:hover { background-color: #f57c00; }
-
-        body.dark-mode .message-btn { background-color: #42a5f5; }
-        body.dark-mode .message-btn:hover { background-color: #2196f3; }
-        body.dark-mode .review-btn { background-color: #ffb300; }
-        body.dark-mode .review-btn:hover { background-color: #ff9800; }
-
-        /* --- ESTILOS BOTONES DE ACCIÓN Y SEGURIDAD --- */
-        .action-buttons { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; }
-        .report-btn { background-color: #78909c; color: white; border: none; border-radius: 8px; padding: 0; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; transition: background-color 0.3s ease; }
-        .report-btn:hover { background-color: #546e7a; }
-        .block-btn { background-color: #d32f2f; color: white; border: none; border-radius: 8px; padding: 0; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; transition: background-color 0.3s ease; }
-        .block-btn:hover { background-color: #b71c1c; }
-        .message-btn { margin: 0; height: 44px; } 
-
-        body.dark-mode .report-btn { background-color: #546e7a; }
-        body.dark-mode .report-btn:hover { background-color: #455a64; }
-        body.dark-mode .block-btn { background-color: #c62828; }
-        body.dark-mode .block-btn:hover { background-color: #b71c1c; }
-
-        /* Contenedor relativo para el video */
-        .video-thumbnail-container {
-            position: relative;
-            display: flex; 
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            background-color: transparent; 
-            cursor: pointer;
-            margin-top: 10px;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .video-thumbnail-container video { width: 100%; height: auto; max-height: 500px; display: block; object-fit: contain; }
-
-        .play-icon-overlay {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%); 
-            width: 70px; height: 70px;
-            background-color: rgba(0, 0, 0, 0.6);
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            border: 3px solid #fff;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            transition: all 0.3s ease;
-            z-index: 10;
-            pointer-events: none;
-        }
-
-        .video-thumbnail-container:hover .play-icon-overlay {
-            background-color: rgba(255, 0, 0, 0.8);
-            transform: translate(-50%, -50%) scale(1.1);
-            border-color: #fff;
-        }
-
+        body.dark-mode .comment-input { background-color: #242526; color: #fff; border: 1px solid rgba(255,255,255,0.05); }
+        body.dark-mode .comment-user, body.dark-mode .comment-text { color: #e0e0e0; }
+        body.dark-mode .comment.reply { border-left: 2px solid #333; }
+        body.dark-mode .reply-indicator { background-color: #1e1e1e; color: #90caf9; border-color: #333; }
+        body.dark-mode .boton, body.dark-mode #theme-toggle { background-color: #000; color: #fff; }
+        body.dark-mode .boton:hover, body.dark-mode #theme-toggle:hover { background-color: #222; }
+        body.dark-mode .stars { display: block; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.2); border-radius: 10px; }
+        body.dark-mode ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); }
     </style>
 </head>
 <body>
@@ -758,7 +359,7 @@
     <header>
         <h1>Perfil</h1>
         <div class="botones">
-            <button class="boton" onclick="irAInicio()" title="Inicio">
+            <button class="boton" onclick="window.location.href='/inicio.html'" title="Inicio">
                 <i class="fas fa-home"></i>
             </button>
             
@@ -767,12 +368,8 @@
                     <i class="fas fa-cog"></i>
                 </button>
                 <div class="settings-dropdown" id="settings-dropdown">
-                    <button onclick="activarEdicion()">
-                        <i class="fas fa-pen"></i> Editar Perfil
-                    </button>
-                    <button class="danger-option" onclick="openDeleteAccountModal()">
-                        <i class="fas fa-trash-alt"></i> Eliminar Cuenta
-                    </button>
+                    <button onclick="activarEdicion()"><i class="fas fa-pen"></i> Editar Perfil</button>
+                    <button class="danger-option" onclick="openDeleteAccountModal()"><i class="fas fa-trash-alt"></i> Eliminar Cuenta</button>
                 </div>
             </div>
 
@@ -793,14 +390,11 @@
 
         <div class="column-left">
             <div class="profile-data" id="profile-view">
-                <!-- 🔥 FIX: LA FOTO CARGA DIRECTO DEL SERVIDOR SIN BASE64 🔥 -->
+                <!-- FOTO DIRECTA Y SEGURA -->
                 <img src="/static/default_profile.png" alt="Foto de perfil" class="profile-pic" id="profile-pic" onerror="this.src='/static/default_profile.png'">
                 <h2 id="profile-name">Usuario</h2>
                 <div class="campo"><label>Dirección:</label><p id="profile-direccion">Sin dirección</p></div>
-                <div class="campo">
-                    <label>Ubicación en Google Maps:</label>
-                    <p id="profile-ubicacion">Sin ubicación</p>
-                </div>
+                <div class="campo"><label>Ubicación en Google Maps:</label><p id="profile-ubicacion">Sin ubicación</p></div>
                 <div class="campo"><label>Teléfono:</label><p id="profile-telefono">Sin teléfono</p></div>
                 <div class="campo"><label>Horario:</label><p id="profile-horario">Sin horario</p></div>
                 <div class="campo"><label>Categoría:</label><p id="profile-categoria">Sin categoría</p></div>
@@ -809,15 +403,9 @@
                 <div class="campo"><label>Sitio web:</label><p id="profile-sitio-web">Sin sitio web</p></div>
                 
                 <div class="action-buttons" id="visitor-actions" style="display: none;">
-                    <button class="message-btn" id="message-btn">
-                        <i class="fas fa-envelope"></i> Mensaje
-                    </button>
-                    <button class="report-btn" onclick="openUserReportModal()" title="Reportar usuario">
-                        <i class="fas fa-flag"></i>
-                    </button>
-                    <button class="block-btn" onclick="openUserBlockModal()" title="Bloquear usuario">
-                        <i class="fas fa-ban"></i>
-                    </button>
+                    <button class="message-btn" id="message-btn"><i class="fas fa-envelope"></i> Mensaje</button>
+                    <button class="report-btn" onclick="openUserReportModal()" title="Reportar usuario"><i class="fas fa-flag"></i></button>
+                    <button class="block-btn" onclick="openUserBlockModal()" title="Bloquear usuario"><i class="fas fa-ban"></i></button>
                 </div>
             </div>
             
@@ -825,44 +413,17 @@
                 <div class="campo">
                     <label>Foto de perfil:</label>
                     <input type="file" id="foto_perfil" name="foto_perfil" accept="image/*">
-                    <img id="preview-foto" class="profile-pic" src="/static/default_profile.png" alt="Vista previa">
+                    <img id="preview-foto" class="profile-pic" src="/static/default_profile.png" alt="Vista previa" onerror="this.src='/static/default_profile.png'">
                 </div>
-                <div class="campo">
-                    <label>Nombre Empresa:</label>
-                    <input type="text" id="nombre_empresa" name="nombre_empresa" required>
-                </div>
-                <div class="campo">
-                    <label>Dirección:</label>
-                    <input type="text" id="direccion" name="direccion">
-                </div>
-                <div class="campo">
-                    <label>Ubicación en Google Maps:</label>
-                    <input type="text" id="ubicacion_google_maps" name="ubicacion_google_maps">
-                </div>
-                <div class="campo">
-                    <label>Teléfono:</label>
-                    <input type="text" id="telefono" name="telefono">
-                </div>
-                <div class="campo">
-                    <label>Horario:</label>
-                    <input type="text" id="horario" name="horario">
-                </div>
-                <div class="campo">
-                    <label>Categoría:</label>
-                    <input type="text" id="categoria" name="categoria">
-                </div>
-                <div class="campo">
-                    <label>Otra categoría:</label>
-                    <input type="text" id="otra_categoria" name="otra_categoria">
-                </div>
-                <div class="campo">
-                    <label>Servicios:</label>
-                    <textarea id="servicios" name="servicios"></textarea>
-                </div>
-                <div class="campo">
-                    <label>Sitio web:</label>
-                    <input type="text" id="sitio_web" name="sitio_web">
-                </div>
+                <div class="campo"><label>Nombre Empresa:</label><input type="text" id="nombre_empresa" name="nombre_empresa" required></div>
+                <div class="campo"><label>Dirección:</label><input type="text" id="direccion" name="direccion"></div>
+                <div class="campo"><label>Ubicación en Google Maps:</label><input type="text" id="ubicacion_google_maps" name="ubicacion_google_maps"></div>
+                <div class="campo"><label>Teléfono:</label><input type="text" id="telefono" name="telefono"></div>
+                <div class="campo"><label>Horario:</label><input type="text" id="horario" name="horario"></div>
+                <div class="campo"><label>Categoría:</label><input type="text" id="categoria" name="categoria"></div>
+                <div class="campo"><label>Otra categoría:</label><input type="text" id="otra_categoria" name="otra_categoria"></div>
+                <div class="campo"><label>Servicios:</label><textarea id="servicios" name="servicios"></textarea></div>
+                <div class="campo"><label>Sitio web:</label><input type="text" id="sitio_web" name="sitio_web"></div>
                 <div class="edit-buttons">
                     <button type="submit" class="save-btn">Guardar</button>
                     <button type="button" class="cancel-btn" onclick="cancelarEdicion()">Cancelar</button>
@@ -878,15 +439,14 @@
 
         <div class="column-right">
             <h3>Reseñas</h3>
-            <button class="review-btn" id="review-btn" style="display: none;">
-                <i class="fas fa-star"></i> Dejar una reseña
-            </button>
+            <button class="review-btn" id="review-btn" style="display: none;"><i class="fas fa-star"></i> Dejar una reseña</button>
             <div class="reviews" id="reviews-container">
                 <p id="reviews-message" style="display: none; text-align: center; color: #666;">No hay reseñas disponibles.</p>
             </div>
         </div>
     </div>
 
+    <!-- MODALES -->
     <div id="delete-account-modal" class="modal">
         <div class="modal-content" style="border: 2px solid #d32f2f;">
             <h3 style="color: #d32f2f;">¿Eliminar cuenta permanentemente?</h3>
@@ -900,7 +460,7 @@
 
     <div id="confirm-modal" class="modal">
         <div class="modal-content">
-            <p id="confirm-message">¿Estás seguro de que quieres eliminar esta publicación?</p>
+            <p id="confirm-message">¿Estás seguro de que quieres eliminar esto?</p>
             <div class="edit-buttons">
                 <button id="confirm-btn" class="save-btn">Eliminar</button>
                 <button id="cancel-btn" class="cancel-btn">Cancelar</button>
@@ -935,22 +495,9 @@
         </div>
     </div>
 
-    <div class="media-modal" id="media-modal">
-        <div class="media-modal-content" id="media-modal-content">
-            <button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>
-            <div class="media-controls" id="media-controls" style="display: none;">
-                <button id="zoom-in-btn"><i class="fas fa-search-plus"></i></button>
-                <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
-                <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
-                <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
-            </div>
-        </div>
-    </div>
-
     <div id="user-report-modal" class="modal">
         <div class="modal-content">
             <h3>Reportar Usuario</h3>
-            <p>Selecciona un motivo:</p>
             <div class="report-options" style="text-align: left; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
                 <label><input type="radio" name="user-report-reason" value="Perfil falso"> Perfil falso o suplantación</label>
                 <label><input type="radio" name="user-report-reason" value="Acoso o intimidación"> Acoso o intimidación</label>
@@ -975,11 +522,19 @@
         </div>
     </div>
 
+    <div id="media-viewer">
+        <div class="viewer-controls">
+            <button class="viewer-btn" onclick="zoomMedia(0.2)" title="Zoom In"><i class="fas fa-search-plus"></i></button>
+            <button class="viewer-btn" onclick="zoomMedia(-0.2)" title="Zoom Out"><i class="fas fa-search-minus"></i></button>
+            <button class="viewer-btn" onclick="closeMediaViewer()" title="Cerrar"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="media-container" style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;"></div>
+    </div>
+
     <script>
-        // Estrellas para modo oscuro
+        // --- INICIALIZACIÓN MODO OSCURO Y ESTRELLAS ---
         const starsContainer = document.querySelector('.stars');
-        const numStars = 100;
-        for (let i = 0; i < numStars; i++) {
+        for (let i = 0; i < 100; i++) {
             const star = document.createElement('div');
             star.classList.add('background-star');
             star.style.left = `${Math.random() * 100}vw`;
@@ -989,64 +544,35 @@
             starsContainer.appendChild(star);
         }
 
-        // Modo oscuro
         let savedTheme = localStorage.getItem('theme') || 'light';
         if (savedTheme === 'dark') {
             document.body.classList.add('dark-mode');
             document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-sun"></i>';
-            document.getElementById('theme-toggle').setAttribute('title', 'Modo Claro');
-        } else {
-            document.body.classList.remove('dark-mode');
-            document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-moon"></i>';
-            document.getElementById('theme-toggle').setAttribute('title', 'Modo Nocturno');
         }
-
         document.getElementById('theme-toggle').addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
-            if (document.body.classList.contains('dark-mode')) {
-                localStorage.setItem('theme', 'dark');
-                document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-sun"></i>';
-                document.getElementById('theme-toggle').setAttribute('title', 'Modo Claro');
-            } else {
-                localStorage.setItem('theme', 'light');
-                document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-moon"></i>';
-                document.getElementById('theme-toggle').setAttribute('title', 'Modo Nocturno');
-            }
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            document.getElementById('theme-toggle').innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
         });
 
-        // Notificaciones
         function showNotification(message, isError = false) {
-            const notification = document.getElementById('notification');
-            const messageElement = document.getElementById('notification-message');
-            messageElement.textContent = message;
-            notification.classList.remove('error');
-            if (isError) {
-                notification.classList.add('error');
-                notification.querySelector('i').className = 'fas fa-exclamation-circle';
-            } else {
-                notification.querySelector('i').className = 'fas fa-check-circle';
-            }
-            notification.style.display = 'flex';
+            const notif = document.getElementById('notification');
+            document.getElementById('notification-message').textContent = message;
+            notif.classList.toggle('error', isError);
+            notif.querySelector('i').className = isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
+            notif.style.display = 'flex';
             setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease-in-out';
-                setTimeout(() => {
-                    notification.style.display = 'none';
-                    notification.style.animation = 'slideIn 0.3s ease-in-out';
-                }, 300);
+                notif.style.animation = 'slideOut 0.3s ease-in-out';
+                setTimeout(() => { notif.style.display = 'none'; notif.style.animation = 'slideIn 0.3s ease-in-out'; }, 300);
             }, 3000);
         }
 
-        // --- LÓGICA DE MENÚ DE CONFIGURACIÓN ---
         function toggleSettingsMenu() {
             const menu = document.getElementById('settings-dropdown');
             menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
         }
-        
-        window.addEventListener('click', (e) => {
-            if (!e.target.closest('#settings-container')) {
-                document.getElementById('settings-dropdown').style.display = 'none';
-            }
-        });
+        window.addEventListener('click', (e) => { if (!e.target.closest('#settings-container')) document.getElementById('settings-dropdown').style.display = 'none'; });
 
         function activarEdicion() {
             document.getElementById('profile-view').style.display = 'none';
@@ -1061,7 +587,6 @@
             loadUserData();
         }
 
-        // --- LÓGICA ELIMINAR CUENTA ---
         function openDeleteAccountModal() {
             document.getElementById('delete-account-modal').style.display = 'flex';
             document.getElementById('settings-dropdown').style.display = 'none'; 
@@ -1084,149 +609,116 @@
                     document.getElementById('delete-account-modal').style.display = 'none';
                 }
             } catch (error) {
-                console.error("Error:", error);
                 showNotification("Error de conexión", true);
             }
         }
 
-        // Modal para eliminar publicación
         function showConfirmModal(onConfirm, type = 'publicación') {
             const modal = document.getElementById('confirm-modal');
-            const messageElement = document.getElementById('confirm-message');
-            messageElement.textContent = `¿Estás seguro de que quieres eliminar esta ${type}?`;
+            document.getElementById('confirm-message').textContent = `¿Estás seguro de que quieres eliminar esta ${type}?`;
             modal.style.display = 'flex';
-            const confirmBtn = document.getElementById('confirm-btn');
-            const cancelBtn = document.getElementById('cancel-btn');
-            confirmBtn.onclick = () => {
-                onConfirm();
-                modal.style.display = 'none';
-            };
-            cancelBtn.onclick = () => {
-                modal.style.display = 'none';
-                console.log(`Eliminación de ${type} cancelada por el usuario`);
-            };
+            document.getElementById('confirm-btn').onclick = () => { onConfirm(); modal.style.display = 'none'; };
+            document.getElementById('cancel-btn').onclick = () => { modal.style.display = 'none'; };
+        }
+
+        // --- MANEJO DE FECHAS NATIVO (SIN LUXON) ---
+        function formatearFecha(fechaStr) {
+            if (!fechaStr) return 'Sin fecha';
+            try {
+                let isoString = fechaStr.replace(' ', 'T');
+                if (!isoString.endsWith('Z')) isoString += 'Z';
+                const dateObj = new Date(isoString);
+                if (isNaN(dateObj)) return fechaStr.split(' ')[0];
+                return new Intl.DateTimeFormat('es-MX', {
+                    timeZone: 'America/Mexico_City',
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                }).format(dateObj);
+            } catch (e) {
+                return fechaStr.split(' ')[0];
+            }
         }
 
         // Variables globales
         let currentUserId = null;
-        let viewedUserId = null;
-        const urlParams = new URLSearchParams(window.location.search);
-        viewedUserId = Number(urlParams.get('user_id'));
-        let offset = 0;
-        const limit = 10;
-        let isLoading = false;
-        let hasMore = true;
-        let loadedPostIds = new Set();
-        let currentScale = 1;
-        let isDragging = false;
-        let startX, startY, translateX = 0, translateY = 0;
+        let viewedUserId = Number(new URLSearchParams(window.location.search).get('user_id')) || null;
+        let offset = 0; const limit = 10; let isLoading = false; let hasMore = true;
+        let loadedPostIds = new Set(); let replyState = {};
 
-        // Obtener ID del usuario autenticado
         async function fetchCurrentUserId() {
             try {
-                const response = await fetch('/current_user', { credentials: 'include' });
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        showNotification('Sesión expirada, por favor inicia sesión', true);
-                        setTimeout(() => { window.location.href = '/login'; }, 2000);
-                        return;
-                    }
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                const data = await response.json();
-                console.log('Respuesta de /current_user:', data);
-                if (data.user_id !== null && data.user_id !== undefined) {
-                    currentUserId = Number(data.user_id);
-                    console.log('Current User ID:', currentUserId, 'Type:', typeof currentUserId);
-                } else {
-                    console.error('No se pudo obtener el ID del usuario desde /current_user. Respuesta:', data);
-                    showNotification('No se pudo identificar al usuario', true);
-                    setTimeout(() => { window.location.href = '/login'; }, 2000);
-                }
-            } catch (error) {
-                console.error('Error al obtener el ID del usuario desde /current_user:', error);
-                showNotification('Error al obtener datos del usuario', true);
-                setTimeout(() => { window.location.href = '/login'; }, 2000);
-            }
+                const res = await fetch('/current_user', { credentials: 'include' });
+                if (res.ok) { const data = await res.json(); currentUserId = Number(data.user_id); }
+                else if (res.status === 401) { window.location.href = '/login'; }
+            } catch (e) { console.error(e); }
         }
 
-        // Cargar datos del usuario
         async function loadUserData() {
             const userId = viewedUserId || currentUserId;
-            if (!userId) {
-                showNotification('No se pudo cargar el perfil.', true);
-                return;
-            }
+            if (!userId) return;
             try {
-                const response = await fetch(`/user/${userId}`, { credentials: 'include' });
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                const data = await response.json();
-                console.log('Datos del usuario cargados:', data);
+                // Obtenemos los datos desde el endpoint seguro
+                let res = await fetch(`/api/perfil/${userId}`, { credentials: 'include' });
+                if (!res.ok) {
+                    res = await fetch(`/user/${userId}`, { credentials: 'include' });
+                }
+                if (!res.ok) throw new Error('Error al cargar');
+                
+                const rawData = await res.json();
+                const data = rawData.user || rawData; // Evitamos nulos
 
                 // 🔥 LA FOTO YA NO LEE EL BASE64 SINO DIRECTO DEL DISCO 🔥
                 const cacheBuster = new Date().getTime();
                 document.getElementById('profile-pic').src = `/foto_perfil/${userId}?t=${cacheBuster}`;
                 document.getElementById('preview-foto').src = `/foto_perfil/${userId}?t=${cacheBuster}`;
 
-                document.getElementById('profile-name').textContent = data.nombre_empresa || 'Usuario';
+                // 🔥 BLINDAJE ANTI-NULOS 🔥
+                document.getElementById('profile-name').textContent = data.nombre_empresa || data.nombre || 'Usuario';
                 document.getElementById('profile-direccion').textContent = data.direccion || 'Sin dirección';
-                document.getElementById('profile-ubicacion').innerHTML = data.ubicacion_google_maps
-                    ? `<a href="${data.ubicacion_google_maps}" target="_blank" class="google-maps-link">${data.ubicacion_google_maps}</a>`
-                    : 'Sin ubicación';
+                
+                if (data.ubicacion_google_maps && String(data.ubicacion_google_maps).trim() !== '') {
+                     document.getElementById('profile-ubicacion').innerHTML = `<a href="${data.ubicacion_google_maps}" target="_blank" class="google-maps-link">${data.ubicacion_google_maps}</a>`;
+                } else {
+                     document.getElementById('profile-ubicacion').textContent = 'Sin ubicación';
+                }
+
                 document.getElementById('profile-telefono').textContent = data.telefono || 'Sin teléfono';
                 document.getElementById('profile-horario').textContent = data.horario || 'Sin horario';
                 document.getElementById('profile-categoria').textContent = data.categoria || 'Sin categoría';
                 document.getElementById('profile-otra-categoria').textContent = data.otra_categoria || 'Ninguna';
-                document.getElementById('profile-servicios').textContent = data.servicios || 'Sin servicios';
+                document.getElementById('profile-servicios').textContent = data.servicios || data.descripcion || 'Sin servicios';
                 
+                const sitioWeb = data.sitio_web ? String(data.sitio_web).trim() : '';
                 const sitioWebElement = document.getElementById('profile-sitio-web');
-                if (data.sitio_web && data.sitio_web.trim() !== '') {
-                    let url = data.sitio_web;
-                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                        url = 'https://' + url;
-                    }
-                    sitioWebElement.innerHTML = `<a href="${url}" target="_blank" class="google-maps-link">${data.sitio_web}</a>`;
+                if (sitioWeb !== '') {
+                    let url = sitioWeb.startsWith('http') ? sitioWeb : 'https://' + sitioWeb;
+                    sitioWebElement.innerHTML = `<a href="${url}" target="_blank" class="google-maps-link">${sitioWeb}</a>`;
                 } else {
                     sitioWebElement.textContent = 'Sin sitio web';
                 }
 
-                // --- CONTROL DE VISTAS (Dueño vs Visitante) ---
-                const settingsContainer = document.getElementById('settings-container'); 
-                const actionBtns = document.getElementById('visitor-actions'); 
-                const reviewBtnRight = document.getElementById('review-btn'); 
+                // Llenar form de edicion
+                document.getElementById('nombre_empresa').value = data.nombre_empresa || '';
+                document.getElementById('direccion').value = data.direccion || '';
+                document.getElementById('ubicacion_google_maps').value = data.ubicacion_google_maps || '';
+                document.getElementById('telefono').value = data.telefono || '';
+                document.getElementById('horario').value = data.horario || '';
+                document.getElementById('categoria').value = data.categoria || '';
+                document.getElementById('otra_categoria').value = data.otra_categoria || '';
+                document.getElementById('servicios').value = data.servicios || data.descripcion || '';
+                document.getElementById('sitio_web').value = data.sitio_web || '';
 
                 if (!viewedUserId || viewedUserId === currentUserId) {
-                    if (settingsContainer) settingsContainer.style.display = 'block'; 
-                    if (actionBtns) actionBtns.style.display = 'none'; 
-                    if (reviewBtnRight) reviewBtnRight.style.display = 'none';
-
-                    document.getElementById('nombre_empresa').value = data.nombre_empresa || '';
-                    document.getElementById('direccion').value = data.direccion || '';
-                    document.getElementById('ubicacion_google_maps').value = data.ubicacion_google_maps || '';
-                    document.getElementById('telefono').value = data.telefono || '';
-                    document.getElementById('horario').value = data.horario || '';
-                    document.getElementById('categoria').value = data.categoria || '';
-                    document.getElementById('otra_categoria').value = data.otra_categoria || '';
-                    document.getElementById('servicios').value = data.servicios || '';
-                    document.getElementById('sitio_web').value = data.sitio_web || '';
+                    document.getElementById('settings-container').style.display = 'block';
+                    document.getElementById('visitor-actions').style.display = 'none';
+                    document.getElementById('review-btn').style.display = 'none';
                 } else {
-                    if (settingsContainer) settingsContainer.style.display = 'none'; 
-                    
-                    if (actionBtns) actionBtns.style.display = 'flex'; 
-                    if (reviewBtnRight) reviewBtnRight.style.display = 'block'; 
-
-                    const msgBtn = document.getElementById('message-btn');
-                    if(msgBtn) {
-                        msgBtn.onclick = () => {
-                            window.location.href = `/chats.html?to_user_id=${userId}`;
-                        };
-                    }
+                    document.getElementById('settings-container').style.display = 'none';
+                    document.getElementById('visitor-actions').style.display = 'flex';
+                    document.getElementById('review-btn').style.display = 'block';
+                    document.getElementById('message-btn').onclick = () => window.location.href = `/chats.html?to_user_id=${userId}`;
                 }
-
-            } catch (error) {
-                console.error('Error al cargar datos del usuario:', error);
-                showNotification('Error al cargar datos del perfil', true);
-            }
+            } catch (e) { console.error('Error al cargar datos del usuario:', e); }
         }
 
         function togglePostMenu(postId, event) {
@@ -1242,7 +734,7 @@
             document.querySelectorAll('.post-dropdown-menu').forEach(m => m.classList.remove('show'));
         });
 
-        // 🔥 NUEVA FUNCIÓN PARA GENERAR LOS POSTS CON DISEÑO PREMIUM 🔥
+        // 🔥 FEED PREMIUM ESTILO INSTAGRAM 🔥
         function generatePostHTML(pub) {
             let menuOpciones = '';
             if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
@@ -1254,15 +746,6 @@
                     <video src="${pub.video_url}#t=0.1" preload="metadata"></video>
                     <div class="play-icon-overlay"><i class="fas fa-play" style="color: white; font-size: 24px;"></i></div>
                 </div>` : '';
-
-            // Usamos Luxon para formatear la fecha correctamente a la de CDMX
-            let fechaLimpia = "Sin fecha";
-            if (pub.fecha_creacion) {
-                let isoString = pub.fecha_creacion.replace(' ', 'T');
-                if (!isoString.endsWith('Z')) isoString += 'Z';
-                const dateObj = luxon.DateTime.fromISO(isoString, { zone: 'utc' }).setZone('America/Mexico_City');
-                fechaLimpia = dateObj.isValid ? dateObj.toLocaleString(luxon.DateTime.DATETIME_SHORT) : pub.fecha_creacion;
-            }
 
             return `
                 <div class="post-header">
@@ -1282,7 +765,7 @@
                 </div>
                 <div class="post-meta">
                     <p>Etiquetas: ${pub.etiquetas || 'Ninguna'}</p>
-                    <p>${fechaLimpia}</p>
+                    <p>${formatearFecha(pub.fecha_creacion)}</p>
                     
                     <!-- 🔥 ICONOS PREMIUM ESTILO INSTAGRAM 🔥 -->
                     <div class="premium-actions">
@@ -1323,11 +806,15 @@
 
         async function sharePost(postId) {
             const postUrl = `${window.location.origin}/post/${postId}`;
-            if (navigator.share) {
-                await navigator.share({ title: 'PrendiaX', text: '¡Mira esto en PrendiaX!', url: postUrl }).catch(console.error);
-            } else {
-                await navigator.clipboard.writeText(postUrl);
-                showNotification("Enlace copiado al portapapeles");
+            try {
+                if (navigator.share) {
+                    await navigator.share({ title: 'PrendiaX', text: '¡Mira esto en PrendiaX!', url: postUrl }).catch(console.error);
+                } else {
+                    await navigator.clipboard.writeText(postUrl);
+                    showNotification("Enlace copiado al portapapeles");
+                }
+            } catch (error) {
+                console.log("Error al compartir", error);
             }
         }
 
@@ -1342,21 +829,15 @@
 
             try {
                 const res = await fetch(`/user/${userId}/publicaciones?limit=${limit}&offset=${offset}`, { credentials: 'include' });
-                console.log('Estado de la respuesta /user/{userId}/publicaciones:', res.status);
                 if (!res.ok) {
                     if (res.status === 401) {
-                        showNotification('Sesión expirada, por favor inicia sesión', true);
+                        showNotification('Sesión expirada', true);
                         setTimeout(() => { window.location.href = '/login'; }, 2000);
                         return;
                     }
-                    throw new Error(`HTTP error! Status: ${res.status}`);
+                    throw new Error(`Error: ${res.status}`);
                 }
                 const publicaciones = await res.json();
-                console.log('Publicaciones cargadas:', publicaciones);
-
-                if (!Array.isArray(publicaciones)) {
-                    throw new Error('La respuesta de /user/{userId}/publicaciones no es un arreglo');
-                }
 
                 if (publicaciones.length === 0 && offset === 0) {
                     feedMessage.textContent = 'No hay publicaciones para mostrar';
@@ -1378,10 +859,7 @@
 
                 offset += limit;
             } catch (err) {
-                console.error('Error al cargar publicaciones:', err);
-                feedMessage.textContent = 'No se pudieron cargar las publicaciones';
-                feedMessage.style.display = 'block';
-                showNotification(`Error al cargar publicaciones: ${err.message}`, true);
+                console.error(err);
             } finally {
                 isLoading = false;
             }
@@ -1393,12 +871,8 @@
                 const response = await fetch(`/user/${userId}`, { credentials: 'include' });
                 if (!response.ok) throw new Error('Usuario no encontrado');
                 const data = await response.json();
-                const profileUrl = data.tipo === 'emprendedor' ? `/perfil.html?user_id=${userId}` : `/perfil-especifico.html?user_id=${userId}`;
-                window.location.href = profileUrl;
-            } catch (error) {
-                console.error('Error al obtener tipo de usuario:', error);
-                showNotification('Error al cargar perfil', true);
-            }
+                window.location.href = data.tipo === 'emprendedor' ? `/perfil.html?user_id=${userId}` : `/perfil-especifico.html?user_id=${userId}`;
+            } catch (error) { showNotification('Error al cargar perfil', true); }
         }
 
         // Eliminar publicación
@@ -1419,13 +893,9 @@
                         }, 300);
                         showNotification('Publicación eliminada correctamente');
                     } else {
-                        const data = await response.json();
-                        showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
+                        showNotification(`Error al eliminar`, true);
                     }
-                } catch (error) {
-                    console.error('Error al eliminar publicación:', error);
-                    showNotification('Ocurrió un error al eliminar la publicación', true);
-                }
+                } catch (error) { showNotification('Ocurrió un error al eliminar', true); }
             }, 'publicación');
         }
 
@@ -1447,55 +917,24 @@
                             cargarResenas();
                         }, 300);
                     } else {
-                        const data = await response.json();
-                        showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
+                        showNotification(`Error al eliminar reseña`, true);
                     }
-                } catch (error) {
-                    console.error('Error al eliminar reseña:', error);
-                    showNotification('Ocurrió un error al eliminar la reseña', true);
-                }
+                } catch (error) { showNotification('Ocurrió un error', true); }
             }, 'reseña');
         }
 
         // Cargar reseñas
         async function cargarResenas() {
             const userId = viewedUserId || currentUserId;
-            if (!userId) {
-                showNotification('No se puede cargar reseñas sin identificar al usuario', true);
-                return;
-            }
+            if (!userId) return;
 
             let reviewsContainer = document.getElementById('reviews-container');
             let reviewsMessage = document.getElementById('reviews-message');
 
-            if (!reviewsContainer) {
-                 const columnRight = document.querySelector('.column-right');
-                 if(columnRight) {
-                     reviewsContainer = document.createElement('div');
-                     reviewsContainer.id = 'reviews-container';
-                     reviewsContainer.className = 'reviews';
-                     columnRight.appendChild(reviewsContainer);
-                 } else return;
-            }
-
-            if (!reviewsMessage) {
-                reviewsMessage = document.createElement('p');
-                reviewsMessage.id = 'reviews-message';
-                reviewsMessage.style.display = 'none';
-                reviewsMessage.style.textAlign = 'center';
-                reviewsMessage.style.color = '#666';
-                reviewsMessage.textContent = 'No hay reseñas disponibles.';
-                reviewsContainer.appendChild(reviewsMessage);
-            }
-
             try {
                 const response = await fetch(`/api/perfil/${userId}/resenas`, { credentials: 'include' });
-                if (!response.ok) {
-                    if (response.status === 401) return;
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
+                if (!response.ok) return;
                 const resenas = await response.json();
-                console.log('Reseñas cargadas:', resenas);
 
                 reviewsContainer.innerHTML = '';
                 reviewsContainer.appendChild(reviewsMessage);
@@ -1514,7 +953,7 @@
                         <p class="review-author">${resena.nombre_empresa || 'Anónimo'}</p>
                         <p class="review-text">${resena.texto}</p>
                         <p class="review-rating">${'★'.repeat(resena.calificacion)}</p>
-                        <p class="review-date">${new Date(resena.fecha_creacion).toLocaleDateString('es-MX')}</p>
+                        <p class="review-date">${formatearFecha(resena.fecha_creacion)}</p>
                     `;
                     if (currentUserId && resena.user_id && Number(resena.user_id) === Number(currentUserId)) {
                         reviewContent += `
@@ -1527,7 +966,7 @@
                     reviewsContainer.appendChild(div);
                 });
             } catch (error) {
-                console.error('Error al cargar reseñas:', error);
+                console.error(error);
                 reviewsMessage.textContent = 'No se pudieron cargar las reseñas';
                 reviewsMessage.style.display = 'block';
             }
@@ -1540,67 +979,31 @@
                 setTimeout(() => { window.location.href = '/login.html'; }, 2000);
                 return;
             }
-            const modal = document.getElementById('review-modal');
-            modal.style.display = 'flex';
+            document.getElementById('review-modal').style.display = 'flex';
             document.getElementById('review-text').value = '';
             document.getElementById('review-rating').value = '0';
-            const stars = document.querySelectorAll('#star-rating .star');
-            stars.forEach(star => star.classList.remove('active'));
+            document.querySelectorAll('#star-rating .star').forEach(star => star.classList.remove('active'));
         });
 
-        // Manejo de estrellas interactivas
         const stars = document.querySelectorAll('#star-rating .star');
         stars.forEach(star => {
-            star.addEventListener('mouseover', () => {
-                const value = parseInt(star.dataset.value);
-                stars.forEach(s => {
-                    s.classList.remove('active');
-                    if (parseInt(s.dataset.value) <= value) {
-                        s.classList.add('active');
-                    }
-                });
-            });
-
             star.addEventListener('click', () => {
                 const value = parseInt(star.dataset.value);
                 document.getElementById('review-rating').value = value;
-                stars.forEach(s => {
-                    if (parseInt(s.dataset.value) <= value) {
-                        s.classList.add('active');
-                    } else {
-                        s.classList.remove('active');
-                    }
-                });
-            });
-        });
-
-        document.getElementById('star-rating').addEventListener('mouseleave', () => {
-            const currentValue = parseInt(document.getElementById('review-rating').value) || 0;
-            stars.forEach(s => {
-                s.classList.remove('active');
-                if (parseInt(s.dataset.value) <= currentValue) {
-                    s.classList.add('active');
-                }
+                stars.forEach(s => s.classList.toggle('active', parseInt(s.dataset.value) <= value));
             });
         });
 
         document.getElementById('review-form').addEventListener('submit', async (event) => {
             event.preventDefault();
             const userId = viewedUserId || currentUserId;
-            if (!userId) {
-                showNotification('No se pudo enviar la reseña: usuario no identificado', true);
-                return;
-            }
+            if (!userId) return;
 
             const texto = document.getElementById('review-text').value.trim();
             const calificacion = parseInt(document.getElementById('review-rating').value);
 
-            if (!texto) {
-                showNotification('El comentario no puede estar vacío', true);
-                return;
-            }
-            if (calificacion === 0) {
-                showNotification('Por favor selecciona una calificación', true);
+            if (!texto || calificacion === 0) {
+                showNotification('Llena todos los campos', true);
                 return;
             }
 
@@ -1615,18 +1018,11 @@
                 if (response.ok) {
                     showNotification('Reseña enviada correctamente');
                     document.getElementById('review-modal').style.display = 'none';
-                    document.getElementById('review-form').reset();
-                    document.getElementById('review-rating').value = '0';
-                    const stars = document.querySelectorAll('#star-rating .star');
-                    stars.forEach(star => star.classList.remove('active'));
                     setTimeout(() => cargarResenas(), 100);
                 } else {
-                    const error = await response.json().catch(() => ({}));
-                    showNotification(`Error: ${error.detail || 'No se pudo enviar la reseña'}`, true);
+                    showNotification(`Error al enviar reseña`, true);
                 }
-            } catch (error) {
-                showNotification(`Error al conectar con el servidor: ${error.message}`, true);
-            }
+            } catch (error) { showNotification(`Error de conexión`, true); }
         });
 
         // Vista previa de la foto de perfil
@@ -1634,165 +1030,55 @@
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.getElementById('preview-foto').src = e.target.result;
-                };
+                reader.onload = (e) => { document.getElementById('preview-foto').src = e.target.result; };
                 reader.readAsDataURL(file);
             }
         });
 
-        // Guardar cambios
+        // Guardar cambios del perfil
         document.getElementById('profile-edit-form').addEventListener('submit', async (event) => {
             event.preventDefault();
             const formData = new FormData();
             const foto = document.getElementById('foto_perfil').files[0];
-            if (foto) {
-                formData.append('foto', foto);
-            }
+            if (foto) formData.append('foto', foto);
 
-            const fields = [
-                { id: 'nombre_empresa', key: 'nombre_empresa' },
-                { id: 'direccion', key: 'direccion' },
-                { id: 'ubicacion_google_maps', key: 'ubicacion_google_maps' },
-                { id: 'telefono', key: 'telefono' },
-                { id: 'horario', key: 'horario' },
-                { id: 'categoria', key: 'categoria' },
-                { id: 'otra_categoria', key: 'otra_categoria' },
-                { id: 'servicios', key: 'servicios' },
-                { id: 'sitio_web', key: 'sitio_web' }
-            ];
-
-            for (const field of fields) {
-                const element = document.getElementById(field.id);
-                if (element) {
-                    formData.append(field.key, element.value || '');
-                }
-            }
+            const fields = ['nombre_empresa', 'direccion', 'ubicacion_google_maps', 'telefono', 'horario', 'categoria', 'otra_categoria', 'servicios', 'sitio_web'];
+            fields.forEach(f => {
+                const el = document.getElementById(f);
+                if (el) formData.append(f, el.value || '');
+            });
 
             try {
-                const response = await fetch('/perfil/actualizar', {
-                    method: 'PUT',
-                    body: formData,
-                    credentials: 'include'
-                });
-
+                const response = await fetch('/perfil/actualizar', { method: 'PUT', body: formData, credentials: 'include' });
                 if (response.ok) {
-                    document.getElementById('profile-edit-form').style.display = 'none';
-                    document.getElementById('profile-view').style.display = 'block';
-                    document.getElementById('profile-edit-form').reset();
+                    cancelarEdicion();
                     showNotification('Perfil actualizado correctamente');
-                    loadUserData();
-                } else {
-                    const error = await response.json();
-                    showNotification(`Error: ${error.detail || 'No se pudo actualizar el perfil'}`, true);
-                }
-            } catch (error) {
-                showNotification('Ocurrió un error al conectar con el servidor', true);
-            }
+                } else { showNotification(`Error al actualizar`, true); }
+            } catch (error) { showNotification('Error de conexión', true); }
         });
-
-        // Funciones de los botones
-        function irAInicio() {
-            window.location.href = "/inicio.html";
-        }
-
-        function cerrarSesion() {
-            fetch('/salir', {
-                method: 'POST',
-                credentials: 'include'
-            }).finally(() => {
-                localStorage.removeItem('user');
-                window.location.href = '/login.html';
-            });
-        }
 
         // Funcionalidad para el modal de multimedia
         function openMediaModal(type, src) {
             const modal = document.getElementById('media-modal');
             const content = document.getElementById('media-modal-content');
-            const controls = document.getElementById('media-controls');
-            const newZoomInBtn = document.getElementById('zoom-in-btn');
-            const newZoomOutBtn = document.getElementById('zoom-out-btn');
-            const newVolumeUpBtn = document.getElementById('volume-up-btn');
-            const newVolumeDownBtn = document.getElementById('volume-down-btn');
-
-            content.innerHTML = `
-                <button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>
-                <div class="media-controls" id="media-controls" style="display: none;">
-                    <button id="zoom-in-btn"><i class="fas fa-search-plus"></i></button>
-                    <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
-                    <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
-                    <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
-                </div>
-            `;
+            content.innerHTML = `<button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>`;
             document.getElementById('close-media-btn').onclick = closeMediaModal;
 
             if (type === 'image') {
-                const img = document.createElement('img');
-                img.src = src;
-                img.alt = 'Imagen ampliada';
-                content.insertBefore(img, document.getElementById('media-controls'));
+                const img = document.createElement('img'); img.src = src; content.appendChild(img);
             } else if (type === 'video') {
-                const video = document.createElement('video');
-                video.src = src;
-                video.controls = true;
-                content.insertBefore(video, document.getElementById('media-controls'));
+                const video = document.createElement('video'); video.src = src; video.controls = true; content.appendChild(video);
             }
             modal.style.display = 'flex';
         }
 
-        function closeMediaModal() {
-            document.getElementById('media-modal').style.display = 'none';
-        }
-
+        function closeMediaModal() { document.getElementById('media-modal').style.display = 'none'; }
         document.getElementById('feed').addEventListener('click', (event) => {
             const target = event.target;
-            if (target.classList.contains('media-item')) {
-                openMediaModal(target.dataset.type, target.dataset.src);
-            }
+            if (target.classList.contains('media-item')) openMediaModal(target.dataset.type, target.dataset.src);
         });
 
-        // Inicialización
-        let hasLoaded = false;
-        window.addEventListener('load', async () => {
-            viewedUserId = Number(new URLSearchParams(window.location.search).get('user_id')) || null;
-            await fetchCurrentUserId();
-
-            if (!viewedUserId && currentUserId) {
-                viewedUserId = currentUserId;
-                window.history.replaceState(null, '', `/perfil.html?user_id=${currentUserId}`);
-            }
-
-            if (!hasLoaded && (viewedUserId || currentUserId)) {
-                hasLoaded = true;
-                await loadUserData();
-                await cargarFeed();
-                await cargarResenas();
-            } else {
-                const feedMessage = document.getElementById('feed-message');
-                if(feedMessage) {
-                    feedMessage.textContent = 'Por favor, inicia sesión para ver el perfil';
-                    feedMessage.style.display = 'block';
-                }
-                showNotification('No se puede cargar el perfil sin un usuario válido', true);
-                setTimeout(() => { window.location.href = '/login'; }, 2000);
-            }
-        });
-
-        // Scroll infinito
-        let isScrolling = false;
-        window.addEventListener('scroll', () => {
-            if (isScrolling) return;
-            isScrolling = true;
-            setTimeout(() => {
-                if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100 && !isLoading && hasMore) {
-                    cargarFeed();
-                }
-                isScrolling = false;
-            }, 100);
-        });
-
-        // Funciones de Reportar/Bloquear
+        // Reportar y Bloquear
         function openUserReportModal() { document.getElementById('user-report-modal').style.display = 'flex'; }
         function openUserBlockModal() { document.getElementById('user-block-modal').style.display = 'flex'; }
 
@@ -1800,38 +1086,40 @@
             const selected = document.querySelector('input[name="user-report-reason"]:checked');
             if (!selected) { showNotification("Selecciona un motivo", true); return; }
             try {
-                const response = await fetch('/api/reportar/usuario', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usuario_reportado_id: viewedUserId, motivo: selected.value })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    showNotification("Usuario reportado. Gracias.");
-                    document.getElementById('user-report-modal').style.display = 'none';
-                } else {
-                    showNotification(data.message || "Error al reportar", true);
-                }
-            } catch (e) { showNotification("Error de conexión", true); }
+                await fetch('/api/reportar/usuario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario_reportado_id: viewedUserId, motivo: selected.value }) });
+                showNotification("Usuario reportado. Gracias.");
+                document.getElementById('user-report-modal').style.display = 'none';
+            } catch (e) {}
         }
 
         async function submitUserBlock() {
             try {
-                const response = await fetch('/api/bloquear/usuario', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ bloqueado_id: viewedUserId })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    showNotification("Usuario bloqueado.");
-                    document.getElementById('user-block-modal').style.display = 'none';
-                    setTimeout(() => { window.location.href = '/inicio.html'; }, 1500);
-                } else {
-                    showNotification(data.message || "Error al bloquear", true);
-                }
-            } catch (e) { showNotification("Error de conexión", true); }
+                await fetch('/api/bloquear/usuario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bloqueado_id: viewedUserId }) });
+                showNotification("Usuario bloqueado.");
+                document.getElementById('user-block-modal').style.display = 'none';
+                setTimeout(() => { window.location.href = '/inicio.html'; }, 1500);
+            } catch (e) {}
         }
+
+        function irAInicio() { window.location.href = "/inicio.html"; }
+        function cerrarSesion() { fetch('/salir', { method: 'POST' }).finally(() => { localStorage.removeItem('user'); window.location.href = '/login.html'; }); }
+
+        // Inicialización y Scroll
+        window.addEventListener('load', async () => {
+            await fetchCurrentUserId();
+            if (!viewedUserId && currentUserId) { viewedUserId = currentUserId; window.history.replaceState(null, '', `/perfil.html?user_id=${currentUserId}`); }
+            if (viewedUserId) { await loadUserData(); await cargarFeed(); await cargarResenas(); }
+        });
+
+        let isScrolling = false;
+        window.addEventListener('scroll', () => {
+            if (isScrolling) return;
+            isScrolling = true;
+            setTimeout(() => {
+                if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100 && !isLoading && hasMore) cargarFeed();
+                isScrolling = false;
+            }, 100);
+        });
     </script>
 </body>
 </html>
