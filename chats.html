@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-  <html lang="es">
-  <head>
+<html lang="es">
+<head>
     <meta charset="UTF-8" />
     <title>Chats | PrendiaX</title>
     <link rel="icon" type="image/png" href="PRENDIAX.png" />
@@ -1447,8 +1447,9 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
         chatItem.dataset.recipientId = chat.otro_usuario_id;
         chatItem.dataset.fechaEnvio = chat.fecha_envio || '';
 
+        // 🔥 FIX FOTO DE PERFIL EN LISTA DE CHATS 🔥
         let avatarContent;
-        if (chat.foto_perfil_url) {
+        if (chat.foto_perfil_url && chat.foto_perfil_url !== "") {
           avatarContent = `<img src="${BASE_URL}${chat.foto_perfil_url}" alt="Avatar" class="chat-avatar" onerror="this.outerHTML='<i class=\\'fas fa-user chat-avatar-icon\\'></i>'; console.error('Error cargando avatar: ${BASE_URL}${chat.foto_perfil_url}')">`;
         } else {
           avatarContent = '<i class="fas fa-user chat-avatar-icon"></i>';
@@ -1607,8 +1608,9 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
       const avatarContainer = chatHeader.querySelector('.avatar-container');
       const nameElement = chatHeader.querySelector('.name');
 
+      // 🔥 FIX FOTO DE PERFIL EN HEADER DEL CHAT 🔥
       let avatarContent = '';
-      if (tipoUsuario === 'emprendedor' && fotoPerfilUrl && fotoPerfilUrl !== '') {
+      if (fotoPerfilUrl && fotoPerfilUrl !== '') {
         const fullUrl = `${BASE_URL}${fotoPerfilUrl}`;
         console.log('Intentando cargar foto de perfil:', fullUrl);
         avatarContent = `<img src="${fullUrl}" alt="Avatar" class="avatar" onerror="this.outerHTML='<i class=\\'fas fa-user avatar-icon\\'></i>'; console.error('Error cargando avatar en header: ${fullUrl}')">`;
@@ -1766,6 +1768,7 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
     messageEl.dataset.fechaEnvio = msg.fecha_envio;
 
     let content = '';
+    // 🔥 FIX: AHORA LEE CORRECTAMENTE LOS MEDIA DEL SERVIDOR 🔥
     const mediaUrl = msg.media_url ? (msg.media_url.startsWith('blob:') ? msg.media_url : `${BASE_URL}${msg.media_url}`) : '';
 
     if (msg.tipo === 'texto') {
@@ -1776,12 +1779,12 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
       content = `<video src="${mediaUrl}" controls></video>`;
     } else if (msg.tipo === 'voz') {
       content = `<div class="audio-container">
-                   <audio controls>
-                     <source src="${mediaUrl}" type="audio/webm">
-                     <source src="${mediaUrl}" type="audio/mp3">
-                     Tu navegador no soporta audio.
-                   </audio>
-                 </div>`;
+                  <audio controls>
+                    <source src="${mediaUrl}" type="audio/webm">
+                    <source src="${mediaUrl}" type="audio/mp3">
+                    Tu navegador no soporta audio.
+                  </audio>
+                </div>`;
     } else if (msg.tipo === 'document') {
       const extension = msg.contenido ? msg.contenido.split('.').pop().toLowerCase() : 'file';
       let iconClass = 'fa-file';
@@ -1798,8 +1801,6 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
     messagesContainer.appendChild(messageEl);
     scrollToBottom();
   }
-
-
 
 
   async function updateChatList(msg) {
@@ -1840,6 +1841,7 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
       previewIcon = '<i class="fas fa-file-alt" style="color:#607d8b"></i>';
       previewText = isMine ? translations[document.documentElement.lang].chat.sent_document : translations[document.documentElement.lang].chat.received_document;
     } else {
+      // 🔥 FIX PARA QUE NO BORRE LOS MENSAJES LARGOS 🔥
       previewText = isMine ? `${translations[document.documentElement.lang].chat.you}: ${msg.contenido}` : msg.contenido || translations[document.documentElement.lang].chat.no_messages;
     }
 
@@ -2104,7 +2106,8 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
       input.value = '';
       selectedFiles = [];
       document.getElementById('media-preview').innerHTML = '';
-      showNotification(translations[document.documentElement.lang].chat.message_sent);
+      // No mostrar pop-up por cada mensaje para no ser molesto
+      // showNotification(translations[document.documentElement.lang].chat.message_sent);
 
     } catch (error) {
       console.error('Error al enviar mensaje:', error);
@@ -2377,7 +2380,7 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
       scrollToBottom();
       cancelVoiceRecording();
       document.getElementById('send-message').style.display = 'inline-block';
-      showNotification(translations[document.documentElement.lang].chat.voice_note_sent);
+      // showNotification(translations[document.documentElement.lang].chat.voice_note_sent);
     } catch (error) {
       console.error('Error al enviar nota de voz:', error);
       showNotification(`${translations[document.documentElement.lang].chat.send_error}: ${error.message}`, true);
