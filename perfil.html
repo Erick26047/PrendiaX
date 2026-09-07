@@ -363,6 +363,21 @@
         .dropdown-item.danger { color: #d32f2f; }
         .dropdown-item.danger:hover { background-color: #ffebee; }
 
+        /* --- ESTILOS MODAL REPORTE (NUEVO) --- */
+        #report-modal .modal-content { text-align: left; padding: 20px; }
+        .report-options { display: flex; flex-direction: column; gap: 10px; margin: 15px 0; }
+        .report-option { 
+            display: flex; align-items: center; gap: 10px; padding: 10px; 
+            border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer; background: #fff; 
+        }
+        .report-option:hover { background-color: #f9f9f9; border-color: #999; }
+        .report-option span { color: #333; font-weight: 500; }
+
+        body.dark-mode .report-option { background-color: #2a2a2a; border-color: #444; }
+        body.dark-mode .report-option:hover { background-color: #333; }
+        body.dark-mode .report-option span { color: #fff; }
+        /* --- FIN ESTILOS REPORTE --- */
+
         .post-content { max-height: 4.5em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; text-overflow: ellipsis; margin-bottom: 10px;}
         .post-content.expanded { max-height: none; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; }
         .post-content p { margin: 0 0 10px; font-size: 16px; color: #333; line-height: 1.5; transition: color 0.3s ease; }
@@ -1099,6 +1114,24 @@
         </div>
     </div>
 
+    <!-- Modal Reporte de Publicación -->
+    <div id="report-modal" class="modal">
+      <div class="modal-content">
+        <h3>Reportar publicación</h3>
+        <p>Selecciona un motivo:</p>
+        <div class="report-options">
+          <label class="report-option"><input type="radio" name="report-reason" value="Spam o fraude"> <span>Es spam o fraude</span></label>
+          <label class="report-option"><input type="radio" name="report-reason" value="Contenido ofensivo"> <span>Contenido ofensivo</span></label>
+          <label class="report-option"><input type="radio" name="report-reason" value="Información falsa"> <span>Información falsa</span></label>
+          <label class="report-option"><input type="radio" name="report-reason" value="Venta ilegal"> <span>Venta ilegal</span></label>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+          <button id="cancel-report-btn" class="cancel-btn">Cancelar</button>
+          <button id="submit-report-btn" class="save-btn" style="background-color: #f44336;">Enviar</button>
+        </div>
+      </div>
+    </div>
+
     <div id="delete-account-modal" class="modal">
         <div class="modal-content" style="border: 2px solid #d32f2f;">
             <h3 style="color: #d32f2f;">¿Eliminar cuenta permanentemente?</h3>
@@ -1266,6 +1299,10 @@
             if (!e.target.closest('#settings-container')) {
                 document.getElementById('settings-dropdown').style.display = 'none';
             }
+            // Cerrar menús de posts
+            if (!e.target.closest('.post-options')) {
+                document.querySelectorAll('.post-dropdown-menu').forEach(m => m.classList.remove('show'));
+            }
         });
 
         function activarEdicion() {
@@ -1326,6 +1363,50 @@
                 console.log(`Eliminación de ${type} cancelada por el usuario`);
             };
         }
+
+        // --- LÓGICA REPORTAR PUBLICACIÓN (NUEVO) ---
+        let currentReportPostId = null;
+
+        function togglePostMenu(postId, event) {
+            event.stopPropagation();
+            document.querySelectorAll('.post-dropdown-menu').forEach(m => {
+                if(m.id !== `menu-post-${postId}`) m.classList.remove('show');
+            });
+            const menu = document.getElementById(`menu-post-${postId}`);
+            if(menu) menu.classList.toggle('show');
+        }
+
+        function openReportModal(postId) {
+            currentReportPostId = postId;
+            document.querySelectorAll('input[name="report-reason"]').forEach(i => i.checked = false);
+            document.getElementById('report-modal').style.display = 'flex';
+            const menu = document.getElementById(`menu-post-${postId}`);
+            if(menu) menu.classList.remove('show');
+        }
+
+        document.getElementById('cancel-report-btn').onclick = () => {
+            document.getElementById('report-modal').style.display = 'none';
+        };
+
+        document.getElementById('submit-report-btn').onclick = async () => {
+            if (!currentReportPostId) return;
+            const selected = document.querySelector('input[name="report-reason"]:checked');
+            if (!selected) return showNotification("Elige un motivo", true);
+
+            try {
+                const res = await fetch('/api/reportar/publicacion', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ publicacion_id: currentReportPostId, motivo: selected.value })
+                });
+                if (res.ok) {
+                    showNotification("Reporte enviado. Gracias.");
+                    document.getElementById('report-modal').style.display = 'none';
+                    const post = document.querySelector(`.post[data-post-id="${currentReportPostId}"]`);
+                    if(post) post.remove();
+                }
+            } catch (e) { showNotification("Error de conexión", true); }
+        };
 
         // --- MANEJO DE FECHAS (NATIVO, SIN LUXON) ---
         function formatearFecha(fechaStr) {
@@ -1472,19 +1553,6 @@
             }
         }
 
-        function togglePostMenu(postId, event) {
-            event.stopPropagation();
-            document.querySelectorAll('.post-dropdown-menu').forEach(m => {
-                if(m.id !== `menu-post-${postId}`) m.classList.remove('show');
-            });
-            const menu = document.getElementById(`menu-post-${postId}`);
-            if(menu) menu.classList.toggle('show');
-        }
-
-        window.addEventListener('click', () => {
-            document.querySelectorAll('.post-dropdown-menu').forEach(m => m.classList.remove('show'));
-        });
-
         // 🔥 ALMACÉN DE MEDIOS POR PUBLICACIÓN (para el Visor Multimedia) 🔥
         let postMediaMap = {};
 
@@ -1493,6 +1561,8 @@
             let menuOpciones = '';
             if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
                 menuOpciones = `<button class="dropdown-item danger" onclick="borrarPublicacion(${pub.id}, this.closest('.post'))"><i class="fas fa-trash-alt"></i> Eliminar</button>`;
+            } else {
+                menuOpciones = `<button class="dropdown-item danger" onclick="openReportModal(${pub.id})"><i class="fas fa-flag"></i> Reportar</button>`;
             }
 
             // Construir la lista unificada de medios (imágenes + video) para el visor
@@ -1544,7 +1614,7 @@
                     <span class="company-name" onclick="window.location.href='/perfil-especifico.html?user_id=${pub.user_id}'">${pub.nombre_empresa || 'Usuario'}</span>
                   </div>
                   <div class="post-options">
-                    ${menuOpciones ? `<button class="options-btn" onclick="togglePostMenu(${pub.id}, event)"><i class="fas fa-ellipsis-v"></i></button>` : ''}
+                    <button class="options-btn" onclick="togglePostMenu(${pub.id}, event)"><i class="fas fa-ellipsis-v"></i></button>
                     <div class="post-dropdown-menu" id="menu-post-${pub.id}">${menuOpciones}</div>
                   </div>
                 </div>
@@ -1755,20 +1825,6 @@
                 showNotification(`Error al cargar publicaciones: ${err.message}`, true);
             } finally {
                 isLoading = false;
-            }
-        }
-
-        // Función para redirigir al perfil
-        async function redirectToProfile(userId) {
-            try {
-                const response = await fetch(`/user/${userId}`, { credentials: 'include' });
-                if (!response.ok) throw new Error('Usuario no encontrado');
-                const data = await response.json();
-                const profileUrl = data.tipo === 'emprendedor' ? `/perfil.html?user_id=${userId}` : `/perfil-especifico.html?user_id=${userId}`;
-                window.location.href = profileUrl;
-            } catch (error) {
-                console.error('Error al obtener tipo de usuario:', error);
-                showNotification('Error al cargar perfil', true);
             }
         }
 
@@ -2079,9 +2135,6 @@
 
         // ==========================================
         // 🔥 VISOR MULTIMEDIA MODERNO 🔥
-        // Múltiples imágenes con flechas + contador,
-        // zoom, video con controles nativos y fondo
-        // desenfocado.
         // ==========================================
         let currentViewerPostId = null;
         let currentViewerIndex = 0;
@@ -2112,14 +2165,12 @@
                 container.innerHTML = `<video id="media-viewer-video" src="${item.src}" controls autoplay playsinline></video>`;
             }
 
-            // El zoom solo aplica a imágenes; el video ya trae sus propios controles nativos
             const zoomInBtn = document.getElementById('zoom-in-btn-viewer');
             const zoomOutBtn = document.getElementById('zoom-out-btn-viewer');
             const showZoom = item.type === 'image';
             if (zoomInBtn) zoomInBtn.style.display = showZoom ? 'flex' : 'none';
             if (zoomOutBtn) zoomOutBtn.style.display = showZoom ? 'flex' : 'none';
 
-            // Flechas y contador solo si hay más de un elemento
             const prevBtn = document.getElementById('viewer-prev-btn');
             const nextBtn = document.getElementById('viewer-next-btn');
             const counter = document.getElementById('viewer-counter');
@@ -2165,21 +2216,18 @@
             currentZoomLevel = 1;
         }
 
-        // Clic en el fondo (fuera de la imagen/video) cierra el visor
         document.getElementById('media-viewer').addEventListener('click', (e) => {
             if (e.target.id === 'media-viewer' || e.target.id === 'media-container') {
                 closeMediaViewer();
             }
         });
 
-        // Doble clic sobre la imagen alterna el zoom
         document.getElementById('media-container').addEventListener('dblclick', (e) => {
             if (e.target.id === 'media-viewer-image') {
                 zoomMedia(currentZoomLevel > MEDIA_ZOOM_MIN ? (MEDIA_ZOOM_MIN - currentZoomLevel) : 1);
             }
         });
 
-        // Navegación y cierre con teclado
         document.addEventListener('keydown', (e) => {
             if (!document.getElementById('media-viewer').classList.contains('active')) return;
             if (e.key === 'ArrowLeft') navigateMedia(-1);
@@ -2228,7 +2276,7 @@
             }, 100);
         });
 
-        // Funciones de Reportar/Bloquear (NUEVAS)
+        // Funciones de Reportar/Bloquear Usuarios
         function openUserReportModal() { document.getElementById('user-report-modal').style.display = 'flex'; }
         function openUserBlockModal() { document.getElementById('user-block-modal').style.display = 'flex'; }
 
