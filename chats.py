@@ -180,7 +180,8 @@ async def get_user_info(user_id: int, requesting_user_id: int = Depends(get_sess
             "nombre": user[1],
             "nombre_empresa": user[2],
             "categoria": user[3] if user[3] else "",
-            "foto_perfil_url": f"/foto_perfil/{user_id}" # 🔥 DIRECCIÓN DIRECTA
+            # 🔥 FIX: Solo mandar ruta si has_foto es True 🔥
+            "foto_perfil_url": f"/foto_perfil/{user_id}" if user[4] else "" 
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -194,9 +195,6 @@ async def get_chats_page(request: Request, user_id: int = Depends(get_session)):
              raise HTTPException(status_code=401, detail="No autorizado")
         return RedirectResponse(url="/login", status_code=302)
 
-# =========================================================================
-# 🔥 MODIFICACIÓN: LECTURA DIRECTA DEL DISCO
-# =========================================================================
 def send_bytes_range_requests(request: Request, file_path: str, content_type: str, filename: str):
     file_size = os.path.getsize(file_path)
     range_header = request.headers.get("range")
@@ -258,7 +256,6 @@ async def get_media_chat(request: Request, mensaje_id: int, user_id: int = Depen
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 🔥 Ahora leemos 'contenido' que es donde guardaremos la URL del archivo
         cur.execute("""
             SELECT m.contenido, m.tipo
             FROM mensajes_chat m
@@ -274,7 +271,6 @@ async def get_media_chat(request: Request, mensaje_id: int, user_id: int = Depen
 
         file_path, tipo = result
         
-        # Validación de que el archivo exista en disco
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail="El archivo fue eliminado del servidor")
 
@@ -322,7 +318,8 @@ async def list_chats(user_id: int = Depends(get_session), limit: int = 10, offse
         chats_list = [
             {
                 "chat_id": row[0], "otro_usuario_id": int(row[1]), "display_name": row[2], "tipo_usuario": row[3],
-                "foto_perfil_url": f"/foto_perfil/{row[1]}", # 🔥 DIRECCIÓN DIRECTA
+                # 🔥 FIX: Solo mandar ruta si row[8] (has_foto) es True 🔥
+                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[8] else "",
                 "ultimo_mensaje": row[4] if row[6] == 'texto' else (f"[{row[6].upper()}]" if row[6] else ""), 
                 "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
                 "tipo_ultimo_mensaje": row[6] if row[6] else "texto",
@@ -379,7 +376,8 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
             "chat_id": chat_id,
             "otro_usuario": {
                 "id": otro_usuario_id, "display_name": otro_usuario[0], "tipo_usuario": otro_usuario[1],
-                "foto_perfil_url": f"/foto_perfil/{otro_usuario_id}" # 🔥 DIRECCIÓN DIRECTA
+                # 🔥 FIX: Solo mandar ruta si otro_usuario[2] (has_foto) es True 🔥
+                "foto_perfil_url": f"/foto_perfil/{otro_usuario_id}" if otro_usuario[2] else ""
             },
             "mensajes": mensajes_list
         }
@@ -440,9 +438,6 @@ async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = 
         if 'conn' in locals() and conn: conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-# =========================================================================
-# 🔥 MODIFICACIÓN: GUARDAR ARCHIVOS AL DISCO (FOTOS Y VIDEOS)
-# =========================================================================
 @router.post("/{chat_id}/media")
 async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = Depends(get_session)):
     try:
@@ -476,19 +471,14 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
             emisor_nombre = row[0] if row and row[0] else "Usuario"
             fcm_token = row[1] if row and row[1] else None
 
-            # 1. Crear la carpeta si no existe
             chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
             os.makedirs(chat_folder, exist_ok=True)
-
-            # 2. Generar nombre único y ruta
             unique_filename = f"{uuid.uuid4().hex}_{sanitize_filename(filename)}"
             file_path = os.path.join(chat_folder, unique_filename)
 
-            # 3. Guardar el archivo en el disco duro de Ubuntu
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
-            # 4. Guardar SOLO LA RUTA en la BD (En la columna contenido o creamos lógica para meterla ahí)
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, contenido, fecha_envio)
                 VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
@@ -524,9 +514,6 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
             conn.close()
     except HTTPException as he: raise he
 
-# =========================================================================
-# 🔥 MODIFICACIÓN: GUARDAR ARCHIVOS AL DISCO (AUDIOS Y NOTAS DE VOZ)
-# =========================================================================
 @router.post("/{chat_id}/voz")
 async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: int = Depends(get_session)):
     try:
@@ -600,9 +587,6 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
             conn.close()
     except HTTPException as he: raise he
 
-# =========================================================================
-# 🔥 MODIFICACIÓN: GUARDAR ARCHIVOS AL DISCO (DOCUMENTOS Y PDF)
-# =========================================================================
 @router.post("/{chat_id}/document")
 async def send_document(chat_id: int, file: UploadFile = File(...), contenido: str = Form(None), user_id: int = Depends(get_session)):
     try:
@@ -644,7 +628,6 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
-            # 🔥 Aquí guardamos 'doc_name|file_path' en la BD para no perder el nombre real
             valor_bd = f"{doc_name}|{file_path}"
 
             cur.execute("""
@@ -715,7 +698,8 @@ async def search_chats(query: str, user_id: int = Depends(get_session), limit: i
         chats_list = [
             {
                 "chat_id": row[0], "otro_usuario_id": int(row[1]), "display_name": row[2], "tipo_usuario": row[3],
-                "foto_perfil_url": f"/foto_perfil/{row[1]}", # 🔥 DIRECCIÓN DIRECTA
+                # 🔥 FIX: Solo mandar ruta si row[8] (has_foto) es True 🔥
+                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[8] else "", 
                 "ultimo_mensaje": row[4] if row[6] == 'texto' else (f"[{row[6].upper()}]" if row[6] else ""), 
                 "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
                 "tipo_ultimo_mensaje": row[6] if row[6] else "texto", "unread_count": int(row[7])
@@ -778,7 +762,6 @@ async def delete_chat(chat_id: int, user_id: int = Depends(get_session)):
 
         receptor_id = chat[2] if chat[1] == user_id else chat[1]
         
-        # 🔥 ELIMINAR ARCHIVOS DEL DISCO ANTES DE BORRAR LA BD 🔥
         chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
         if os.path.exists(chat_folder):
             try:
