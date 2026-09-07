@@ -368,7 +368,7 @@
         }
 
         .post-header {
-            display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
+            display: flex; align-items: center; gap: 10px; margin-bottom: 15px; position: relative;
         }
 
         .post-profile-pic {
@@ -380,15 +380,26 @@
 
         .post-user-info .company-name {
             font-size: 16px; font-weight: bold; color: #000; margin: 0;
-            transition: color 0.3s ease;
+            transition: color 0.3s ease; cursor: pointer;
         }
+        .post-user-info .company-name:hover { text-decoration: underline; }
 
-        .post-content { margin-bottom: 10px; }
+        .post-options { margin-left: auto; position: relative; }
+        .options-btn { background: transparent; border: none; font-size: 18px; cursor: pointer; padding: 8px; color: #666; border-radius: 50%; }
+        .options-btn:hover { background-color: #e0e0e0; color: #000; }
+        .post-dropdown-menu { display: none; position: absolute; right: 0; top: 40px; background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100; width: 180px; overflow: hidden; }
+        .post-dropdown-menu.show { display: block; animation: slideDown 0.2s ease; }
+        .dropdown-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 15px; border: none; background: none; text-align: left; cursor: pointer; font-size: 14px; color: #333; }
+        .dropdown-item:hover { background-color: #f5f5f5; color: #1976d2; }
+        .dropdown-item.danger { color: #d32f2f; }
+        .dropdown-item.danger:hover { background-color: #ffebee; }
 
-        .post-content p {
-            margin: 0 0 10px; font-size: 16px; color: #000;
-            line-height: 1.5; transition: color 0.3s ease;
-        }
+        .post-content { max-height: 4.5em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; text-overflow: ellipsis; margin-bottom: 10px;}
+        .post-content.expanded { max-height: none; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; }
+        .post-content p { margin: 0 0 10px; font-size: 16px; color: #333; line-height: 1.5; transition: color 0.3s ease; }
+        
+        .read-more { display: none; color: #1976d2; font-size: 14px; cursor: pointer; margin-top: 5px; font-weight: bold; }
+        .read-more.visible { display: inline-block; }
 
         .post-media { margin-top: 10px; }
 
@@ -399,94 +410,28 @@
 
         /* --- Miniaturas de video y Carrusel (para múltiples imágenes) --- */
         .post-media .video-thumbnail-container {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 25%;
-            margin-top: 10px;
-            cursor: pointer;
-            border-radius: 8px;
-            overflow: hidden;
-            background-color: transparent;
+            position: relative; display: flex; justify-content: center; align-items: center; width: 25%; margin-top: 10px; cursor: pointer; border-radius: 8px; overflow: hidden; background-color: transparent;
         }
-        .post-media .video-thumbnail-container video {
-            width: 100%;
-            height: auto;
-            display: block;
-            object-fit: contain;
-        }
+        .post-media .video-thumbnail-container video { width: 100%; height: auto; display: block; object-fit: contain; }
         .post-media .play-icon-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 50px;
-            height: 50px;
-            background-color: rgba(0, 0, 0, 0.6);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid #fff;
-            z-index: 10;
-            pointer-events: none;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background-color: rgba(0, 0, 0, 0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; z-index: 10; pointer-events: none;
         }
         .post-media .play-icon-overlay i { font-size: 18px; }
 
         .post-media .carousel-container {
-            display: flex;
-            overflow-x: auto;
-            gap: 10px;
-            padding-bottom: 6px;
-            scroll-snap-type: x mandatory;
-            margin-top: 10px;
-            width: 100%;
-            scrollbar-width: thin;
-            scrollbar-color: transparent transparent;
-            transition: scrollbar-color 0.3s ease;
+            display: flex; overflow-x: auto; gap: 10px; padding-bottom: 6px; scroll-snap-type: x mandatory; margin-top: 10px; width: 100%; scrollbar-width: thin; scrollbar-color: transparent transparent; transition: scrollbar-color 0.3s ease;
         }
-        .post-media .carousel-container:hover {
-            scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
-        }
-        .post-media .carousel-container::-webkit-scrollbar {
-            height: 5px;
-        }
-        .post-media .carousel-container::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .post-media .carousel-container::-webkit-scrollbar-thumb {
-            background: transparent;
-            border-radius: 10px;
-            transition: background-color 0.3s ease;
-        }
-        .post-media .carousel-container:hover::-webkit-scrollbar-thumb {
-            background-color: rgba(0, 0, 0, 0.25);
-        }
-        body.dark-mode .post-media .carousel-container:hover {
-            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-        }
-        body.dark-mode .post-media .carousel-container:hover::-webkit-scrollbar-thumb {
-            background-color: rgba(255, 255, 255, 0.3);
-        }
+        .post-media .carousel-container:hover { scrollbar-color: rgba(0, 0, 0, 0.25) transparent; }
+        .post-media .carousel-container::-webkit-scrollbar { height: 5px; }
+        .post-media .carousel-container::-webkit-scrollbar-track { background: transparent; }
+        .post-media .carousel-container::-webkit-scrollbar-thumb { background: transparent; border-radius: 10px; transition: background-color 0.3s ease; }
+        .post-media .carousel-container:hover::-webkit-scrollbar-thumb { background-color: rgba(0, 0, 0, 0.25); }
+        body.dark-mode .post-media .carousel-container:hover { scrollbar-color: rgba(255, 255, 255, 0.3) transparent; }
+        body.dark-mode .post-media .carousel-container:hover::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.3); }
 
-        .post-media .carousel-container .carousel-item {
-            flex-shrink: 0;
-            width: 100%;
-            max-width: 100%;
-            max-height: 500px;
-            scroll-snap-align: center;
-            cursor: pointer;
-            border-radius: 8px;
-        }
-        .post-media .carousel-container .video-thumbnail-container {
-            width: 100%;
-            margin-top: 0;
-        }
-        .post-media .carousel-container .play-icon-overlay {
-            width: 70px;
-            height: 70px;
-        }
+        .post-media .carousel-container .carousel-item { flex-shrink: 0; width: 100%; max-width: 100%; max-height: 500px; scroll-snap-align: center; cursor: pointer; border-radius: 8px; }
+        .post-media .carousel-container .video-thumbnail-container { width: 100%; margin-top: 0; }
+        .post-media .carousel-container .play-icon-overlay { width: 70px; height: 70px; }
         .post-media .carousel-container .play-icon-overlay i { font-size: 24px; }
         /* --- Fin Miniaturas de video y Carrusel --- */
 
@@ -506,6 +451,35 @@
             width: 30px; height: 30px;
         }
         .delete-button:hover { background-color: #d32f2f; }
+
+        /* 🔥 BOTONES PREMIUM ESTILO INSTAGRAM 🔥 */
+        .premium-actions { display: flex; align-items: center; gap: 20px; margin-top: 15px; }
+        .action-icon-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 0; color: #000; transition: transform 0.2s; }
+        .action-icon-btn i { font-size: 24px; }
+        .action-icon-btn .count { font-size: 16px; font-weight: bold; }
+        .action-icon-btn.active i { color: #ff9800; }
+        .action-icon-btn:hover { transform: scale(1.1); }
+
+        .comments-section { margin-top: 15px; border-top: 1px solid #e0e0e0; padding-top: 10px; }
+        .comment-form { display: flex; flex-direction: column; margin-bottom: 10px; }
+        .comment-input-wrapper { display: flex; gap: 10px; width: 100%; }
+        .comment-input { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.05); background-color: #f0f2f5; outline: none; box-sizing: border-box;}
+        .comment-submit { background-color: #000; color: #fff; border: none; border-radius: 15px; padding: 8px 15px; cursor: pointer; }
+        
+        .comments-list { display: flex; flex-direction: column; gap: 12px; max-height: 250px; overflow-y: auto; }
+        .comment { display: flex; align-items: flex-start; gap: 10px; position: relative; }
+        .comment.reply { padding-left: 44px; border-left: 2px solid rgba(0,0,0,0.05); }
+        .comment-profile-pic-container { width: 34px; height: 34px; border-radius: 50%; overflow: hidden; background: #e0e0e0; flex-shrink: 0; display:flex; align-items:center; justify-content:center;}
+        .comment-profile-pic { width: 100%; height: 100%; object-fit: cover; }
+        .comment-user { font-size: 13px; font-weight: 700; margin: 0 0 3px 0; cursor: pointer; color: #1a1a1a;}
+        .comment-text { font-size: 14px; margin: 0; line-height: 1.4; color: #1a1a1a;}
+        .comment-actions { display: flex; gap: 15px; margin-top: 8px; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 6px; align-items: center; }
+        .comment-meta { font-size: 11px; color: #8e8e93; margin: 0; }
+        .reply-btn { background: none; border: none; color: #65676b; cursor: pointer; font-weight: 600; font-size: 11px; }
+        .comment-delete { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: none; color: #ff3b30; border: none; cursor: pointer; opacity: 0.6; border-radius: 50%; padding: 6px;}
+        .reply-indicator { background-color: #e3f2fd; color: #1976d2; padding: 5px 10px; font-size: 12px; border-radius: 10px 10px 0 0; justify-content: space-between; align-items: center; border: 1px solid #bbdefb; margin-bottom: -1px; z-index: 1; display: none; }
+        .reply-indicator button { background: none; border: none; color: #1976d2; font-weight: bold; font-size: 14px; cursor: pointer; }
+        .load-more-comments { font-size: 14px; color: #1976d2; cursor: pointer; text-align: center; margin-top: 10px; }
 
         .notification {
             position: fixed; top: 20px; right: 20px;
@@ -736,10 +710,34 @@
         }
         .block-btn:hover { background-color: #b71c1c; }
 
+        /* --- ESTILOS MODAL REPORTE (NUEVO) --- */
+        #report-modal .modal-content { text-align: left; padding: 20px; }
+        .report-options { display: flex; flex-direction: column; gap: 10px; margin: 15px 0; }
+        .report-option { 
+            display: flex; align-items: center; gap: 10px; padding: 10px; 
+            border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer; background: #fff; 
+        }
+        .report-option:hover { background-color: #f9f9f9; border-color: #999; }
+        .report-option span { color: #333; font-weight: 500; }
+
+        body.dark-mode .report-option { background-color: #2a2a2a; border-color: #444; }
+        body.dark-mode .report-option:hover { background-color: #333; }
+        body.dark-mode .report-option span { color: #fff; }
+
         body.dark-mode .report-btn { background-color: #546e7a; }
         body.dark-mode .report-btn:hover { background-color: #455a64; }
         body.dark-mode .block-btn { background-color: #c62828; }
         body.dark-mode .block-btn:hover { background-color: #b71c1c; }
+        
+        /* Fix mode oscuro nuevos botones premium */
+        body.dark-mode .post-dropdown-menu { background-color: #2a2a2a; border-color: #444; }
+        body.dark-mode .dropdown-item { color: #e0e0e0; }
+        body.dark-mode .dropdown-item:hover { background-color: #3a3a3a; }
+        body.dark-mode .action-icon-btn { color: #fff; }
+        body.dark-mode .comment-input { background-color: #242526; color: #fff; border: 1px solid rgba(255,255,255,0.05); }
+        body.dark-mode .comment-user, body.dark-mode .comment-text { color: #e0e0e0; }
+        body.dark-mode .comment.reply { border-left: 2px solid #333; }
+        body.dark-mode .reply-indicator { background-color: #1e1e1e; color: #90caf9; border-color: #333; }
 
     </style>
 </head>
@@ -870,6 +868,24 @@
             </div>
         </div>
     </div>
+    
+    <!-- Modal Reporte de Publicación (NUEVO) -->
+    <div id="report-modal" class="modal">
+      <div class="modal-content">
+        <h3>Reportar publicación</h3>
+        <p>Selecciona un motivo:</p>
+        <div class="report-options">
+          <label class="report-option"><input type="radio" name="report-reason" value="Spam o fraude"> <span>Es spam o fraude</span></label>
+          <label class="report-option"><input type="radio" name="report-reason" value="Contenido ofensivo"> <span>Contenido ofensivo</span></label>
+          <label class="report-option"><input type="radio" name="report-reason" value="Información falsa"> <span>Información falsa</span></label>
+          <label class="report-option"><input type="radio" name="report-reason" value="Venta ilegal"> <span>Venta ilegal</span></label>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+          <button id="cancel-report-btn" class="cancel-btn">Cancelar</button>
+          <button id="submit-report-btn" class="save-btn" style="background-color: #f44336;">Enviar</button>
+        </div>
+      </div>
+    </div>
 
     <div id="user-report-modal" class="modal">
         <div class="modal-content">
@@ -990,6 +1006,9 @@
             if (!e.target.closest('#settings-container')) {
                 document.getElementById('settings-dropdown').style.display = 'none';
             }
+            if (!e.target.closest('.post-options')) {
+                document.querySelectorAll('.post-dropdown-menu').forEach(m => m.classList.remove('show'));
+            }
         });
 
         // --- LÓGICA ELIMINAR CUENTA ---
@@ -1038,6 +1057,52 @@
             };
         }
 
+        // --- LÓGICA DE REPORTE PUBLICACIONES ---
+        let currentReportPostId = null;
+
+        function togglePostMenu(postId, event) {
+            event.stopPropagation();
+            document.querySelectorAll('.post-dropdown-menu').forEach(m => {
+                if(m.id !== `menu-post-${postId}`) m.classList.remove('show');
+            });
+            const menu = document.getElementById(`menu-post-${postId}`);
+            if(menu) menu.classList.toggle('show');
+        }
+
+        function openReportModal(postId) {
+            currentReportPostId = postId;
+            document.querySelectorAll('input[name="report-reason"]').forEach(i => i.checked = false);
+            document.getElementById('report-modal').style.display = 'flex';
+            const menu = document.getElementById(`menu-post-${postId}`);
+            if(menu) menu.classList.remove('show');
+        }
+
+        document.getElementById('cancel-report-btn').onclick = () => {
+            document.getElementById('report-modal').style.display = 'none';
+        };
+
+        document.getElementById('submit-report-btn').onclick = async () => {
+            if (!currentReportPostId) return;
+            const selected = document.querySelector('input[name="report-reason"]:checked');
+            if (!selected) return showNotification("Elige un motivo", true);
+
+            try {
+                const res = await fetch('/api/reportar/publicacion', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ publicacion_id: currentReportPostId, motivo: selected.value })
+                });
+                if (res.ok) {
+                    showNotification("Reporte enviado. Gracias.");
+                    document.getElementById('report-modal').style.display = 'none';
+                    const post = document.querySelector(`.post[data-post-id="${currentReportPostId}"]`);
+                    if(post) post.remove();
+                } else {
+                    showNotification("Error al reportar", true);
+                }
+            } catch (e) { showNotification("Error de conexión", true); }
+        };
+
         // Variables globales
         let offset = 0;
         const limit = 10;
@@ -1046,6 +1111,7 @@
         let loadedPostIds = new Set();
         let currentUserId = null;
         let viewedUserId = null;
+        let replyState = {};
 
         // 🔥 ALMACÉN DE MEDIOS POR PUBLICACIÓN (para el Visor Multimedia) 🔥
         let postMediaMap = {};
@@ -1087,7 +1153,25 @@
             }
         }
 
-        // --- FUNCIÓN CORREGIDA ---
+        // --- MANEJO DE FECHAS ---
+        function formatearFecha(fechaStr) {
+            if (!fechaStr) return 'Sin fecha';
+            try {
+                let isoString = fechaStr.replace(' ', 'T');
+                if (!isoString.endsWith('Z')) isoString += 'Z';
+                const dateObj = new Date(isoString);
+                if (isNaN(dateObj)) return fechaStr.split(' ')[0];
+                
+                return new Intl.DateTimeFormat('es-MX', {
+                    timeZone: 'America/Mexico_City',
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                }).format(dateObj);
+            } catch (e) {
+                return fechaStr.split(' ')[0];
+            }
+        }
+
         async function cargarDatosUsuario() {
             const userId = viewedUserId || currentUserId;
             if (!userId) {
@@ -1098,9 +1182,8 @@
                 const response = await fetch(`/user/${userId}`, { credentials: 'include' });
                 if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
                 const data = await response.json();
-                console.log('Datos del usuario:', data);
 
-                document.getElementById('nombre').textContent = data.nombre_empresa || 'Sin nombre';
+                document.getElementById('nombre').textContent = data.nombre_empresa || data.nombre || 'Sin nombre';
                 document.getElementById('email').textContent = data.email || 'Sin email';
 
                 // --- LÓGICA DE VISIBILIDAD DE BOTONES ---
@@ -1188,7 +1271,7 @@
                 const publicaciones = await res.json();
 
                 if (!Array.isArray(publicaciones)) {
-                    throw new Error('La respuesta de /user/{user_id}/publicaciones no es un arreglo');
+                    throw new Error('La respuesta no es un arreglo');
                 }
 
                 if (publicaciones.length === 0 && offset === 0) {
@@ -1205,22 +1288,30 @@
 
                     const div = document.createElement('div');
                     div.classList.add('post');
+                    div.setAttribute('data-post-id', pub.id);
+
+                    // Menú dinámico de eliminar o reportar
+                    let menuOpciones = '';
+                    if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
+                        menuOpciones = `<button class="dropdown-item danger" onclick="borrarPublicacion(${pub.id}, this.closest('.post'))"><i class="fas fa-trash-alt"></i> Eliminar</button>`;
+                    } else {
+                        menuOpciones = `<button class="dropdown-item danger" onclick="openReportModal(${pub.id})"><i class="fas fa-flag"></i> Reportar</button>`;
+                    }
 
                     let postContent = `
                         <div class="post-header">
+                            <div class="post-profile-pic-container" style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 1px solid #ccc; flex-shrink: 0; display:flex; justify-content:center; align-items:center; background-color:#e0e0e0;">
+                                <img src="/foto_perfil/${pub.user_id}" class="post-profile-pic" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.outerHTML='<i class=\\'fas fa-user\\' style=\\'font-size: 24px; color: #666;\\'></i>'">
+                            </div>
                             <div class="post-user-info">
-                                <span class="company-name">${pub.nombre_empresa || 'Usuario'}</span>
+                                <span class="company-name">${pub.nombre_empresa || pub.nombre || 'Usuario'}</span>
+                            </div>
+                            <div class="post-options">
+                                <button class="options-btn" onclick="togglePostMenu(${pub.id}, event)"><i class="fas fa-ellipsis-v"></i></button>
+                                <div class="post-dropdown-menu" id="menu-post-${pub.id}">${menuOpciones}</div>
                             </div>
                         </div>
                     `;
-                    
-                    if (currentUserId && pub.user_id && Number(pub.user_id) === Number(currentUserId)) {
-                        postContent += `
-                            <button class="delete-button" onclick="borrarPublicacion(${pub.id}, this.parentElement)" title="Eliminar publicación">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        `;
-                    }
 
                     postContent += '<div class="post-content">';
                     if (pub.contenido && pub.contenido.trim() !== '') {
@@ -1232,13 +1323,62 @@
 
                     postContent += '<div class="post-meta">';
                     postContent += `
-                        <p>Etiquetas: ${pub.etiquetas && pub.etiquetas.length ? pub.etiquetas.join(', ') : 'Ninguna'}</p>
-                        <p>${pub.fecha_creacion || 'Sin fecha'}</p>
+                        <p>Etiquetas: ${pub.etiquetas && pub.etiquetas.length ? (Array.isArray(pub.etiquetas) ? pub.etiquetas.join(', ') : pub.etiquetas) : 'Ninguna'}</p>
+                        <p>${formatearFecha(pub.fecha_creacion)}</p>
+                    `;
+                    
+                    // 🔥 BOTONES PREMIUM (ESTRELLAS, COMENTAR, COMPARTIR) 🔥
+                    postContent += `
+                        <div class="premium-actions">
+                            <button class="action-icon-btn ${pub.interesado ? 'active' : ''}" onclick="toggleInterest(${pub.id}, this)">
+                                <i class="${pub.interesado ? 'fas' : 'far'} fa-star"></i>
+                                <span class="count">${pub.interesados_count > 0 ? pub.interesados_count : ''}</span>
+                            </button>
+                            <button class="action-icon-btn" onclick="focusComment(${pub.id})">
+                                <i class="far fa-comment"></i>
+                                <span class="count">${pub.comentarios_count > 0 ? pub.comentarios_count : ''}</span>
+                            </button>
+                            <button class="action-icon-btn" onclick="sharePost(${pub.id})" title="Compartir">
+                                <i class="far fa-paper-plane"></i>
+                            </button>
+                        </div>
                     `;
                     postContent += '</div>';
 
+                    // 🔥 SECCIÓN DE COMENTARIOS 🔥
+                    postContent += `
+                        <div class="comments-section" id="comments-section-${pub.id}">
+                          <div class="comment-form">
+                             <div class="reply-indicator" style="display:none"><span>...</span><button onclick="cancelReply(${pub.id})">×</button></div>
+                             <div class="comment-input-wrapper">
+                                <input type="text" class="comment-input" placeholder="Escribe un comentario...">
+                                <button class="comment-submit" onclick="submitComment(${pub.id}, this.previousElementSibling, this.parentElement.parentElement.nextElementSibling)">Enviar</button>
+                             </div>
+                          </div>
+                          <div class="comments-list" id="comments-${pub.id}"></div>
+                          <div class="load-more-comments" style="display: none;" onclick="cargarComentarios(${pub.id}, document.getElementById('comments-${pub.id}'), this)">Ver más comentarios</div>
+                        </div>
+                    `;
+
                     div.innerHTML = postContent;
                     feedDiv.appendChild(div);
+
+                    const postContentElement = div.querySelector('.post-content');
+                    setTimeout(() => {
+                        if (postContentElement && postContentElement.scrollHeight > postContentElement.clientHeight) {
+                            const readMoreButton = document.createElement('span');
+                            readMoreButton.classList.add('read-more', 'visible'); 
+                            readMoreButton.textContent = "Ver más"; 
+                            readMoreButton.onclick = () => {
+                                postContentElement.classList.toggle('expanded');
+                                readMoreButton.textContent = postContentElement.classList.contains('expanded') ? "Ver menos" : "Ver más";
+                            };
+                            postContentElement.parentNode.insertBefore(readMoreButton, postContentElement.nextSibling);
+                        }
+                    }, 50);
+
+                    // Cargar comentarios del post inmediatamente
+                    cargarComentarios(pub.id, document.getElementById(`comments-${pub.id}`), div.querySelector('.load-more-comments'));
                 });
 
                 offset += limit;
@@ -1254,10 +1394,7 @@
 
         // Cargar reseñas
         async function cargarResenas() {
-            if (!viewedUserId) {
-                showNotification('No se puede cargar reseñas sin identificar al usuario', true);
-                return;
-            }
+            if (!viewedUserId) return;
 
             let reviewsContainer = document.getElementById('reviews-container');
             let reviewsMessage = document.getElementById('reviews-message');
@@ -1306,7 +1443,7 @@
                         <p class="review-author">${resena.nombre_empresa || 'Anónimo'}</p>
                         <p class="review-text">${resena.texto}</p>
                         <p class="review-rating">${'★'.repeat(resena.calificacion)}</p>
-                        <p class="review-date">${new Date(resena.fecha_creacion).toLocaleDateString('es-MX')}</p>
+                        <p class="review-date">${formatearFecha(resena.fecha_creacion)}</p>
                     `;
                     if (currentUserId && resena.user_id && Number(resena.user_id) === Number(currentUserId)) {
                         reviewContent += `
@@ -1319,137 +1456,115 @@
                     reviewsContainer.appendChild(div);
                 });
             } catch (error) {
-                console.error('Error al cargar reseñas:', error);
                 reviewsMessage.textContent = 'No se pudieron cargar las reseñas';
                 reviewsMessage.style.display = 'block';
             }
         }
 
-        // Enviar mensaje
-        function openChat() {
-            if (!viewedUserId) {
-                showNotification('No se puede iniciar un chat sin un usuario objetivo', true);
-                return;
-            }
-            window.location.href = `/chats.html?recipient_id=${viewedUserId}`;
-        }
-
-        // Modal para reseñas
-        function openReviewModal() {
-            if (!currentUserId) {
-                showNotification('Debes iniciar sesión para dejar una reseña', true);
-                setTimeout(() => { window.location.href = '/login.html'; }, 2000);
-                return;
-            }
-            const modal = document.getElementById('review-modal');
-            modal.style.display = 'flex';
-            document.getElementById('review-text').value = '';
-            document.getElementById('review-rating').value = '0';
-            const stars = document.querySelectorAll('#star-rating .star');
-            stars.forEach(star => star.classList.remove('active'));
-        }
-
-        // Manejo de estrellas interactivas
-        const stars = document.querySelectorAll('#star-rating .star');
-        stars.forEach(star => {
-            star.addEventListener('mouseover', () => {
-                const value = parseInt(star.dataset.value);
-                stars.forEach(s => {
-                    s.classList.remove('active');
-                    if (parseInt(s.dataset.value) <= value) {
-                        s.classList.add('active');
-                    }
-                });
-            });
-
-            star.addEventListener('click', () => {
-                const value = parseInt(star.dataset.value);
-                document.getElementById('review-rating').value = value;
-                stars.forEach(s => {
-                    if (parseInt(s.dataset.value) <= value) {
-                        s.classList.add('active');
-                    } else {
-                        s.classList.remove('active');
-                    }
-                });
-            });
-        });
-
-        document.getElementById('star-rating').addEventListener('mouseleave', () => {
-            const currentValue = parseInt(document.getElementById('review-rating').value) || 0;
-            stars.forEach(s => {
-                s.classList.remove('active');
-                if (parseInt(s.dataset.value) <= currentValue) {
-                    s.classList.add('active');
-                }
-            });
-        });
-
-        // Enviar reseña
-        document.getElementById('review-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const texto = document.getElementById('review-text').value.trim();
-            const calificacion = parseInt(document.getElementById('review-rating').value);
-
-            if (!texto) {
-                showNotification('El comentario no puede estar vacío', true);
-                return;
-            }
-            if (calificacion === 0) {
-                showNotification('Por favor selecciona una calificación', true);
-                return;
-            }
-
+        // --- FUNCIONES INTERACCIÓN PUBLICACIONES (Premium) ---
+        async function toggleInterest(postId, button) {
+            if (!currentUserId) return showNotification("Inicia sesión para interactuar", true);
             try {
-                const response = await fetch(`/api/perfil/${viewedUserId}/resenas`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ texto, calificacion })
+                const res = await fetch(`/publicacion/${postId}/interesar`, { 
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', 
+                    body: JSON.stringify({ user_id: currentUserId }) 
                 });
-
-                if (response.ok) {
-                    showNotification('Reseña enviada correctamente');
-                    document.getElementById('review-modal').style.display = 'none';
-                    document.getElementById('review-form').reset();
-                    document.getElementById('review-rating').value = '0';
-                    const stars = document.querySelectorAll('#star-rating .star');
-                    stars.forEach(star => star.classList.remove('active'));
-                    setTimeout(() => cargarResenas(), 100);
-                } else {
-                    const errorData = await response.json().catch(() => ({}));
-                    showNotification(`Error: ${errorData.detail || 'No se pudo enviar la reseña'}`, true);
+                if (res.ok) {
+                    const data = await res.json();
+                    button.classList.toggle('active');
+                    const icon = button.querySelector('i');
+                    icon.className = button.classList.contains('active') ? 'fas fa-star' : 'far fa-star';
+                    button.querySelector('.count').textContent = data.interesados_count > 0 ? data.interesados_count : '';
                 }
-            } catch (error) {
-                showNotification(`Error al conectar con el servidor: ${error.message}`, true);
+            } catch (e) { showNotification("Error al procesar", true); }
+        }
+
+        async function sharePost(postId) {
+            const postUrl = `${window.location.origin}/post/${postId}`;
+            if (navigator.share) {
+                await navigator.share({ title: 'PrendiaX', text: '¡Mira esto en PrendiaX!', url: postUrl }).catch(console.error);
+            } else {
+                await navigator.clipboard.writeText(postUrl);
+                showNotification("Enlace copiado al portapapeles");
             }
-        });
+        }
 
-        // Borrar reseña
-        async function borrarResena(reviewId, reviewElement) {
-            showConfirmModal(async () => {
-                try {
-                    const response = await fetch(`/api/perfil/${viewedUserId}/resenas/${reviewId}`, {
-                        method: 'DELETE',
-                        credentials: 'include'
+        function focusComment(postId) {
+            const input = document.querySelector(`#comments-section-${postId} .comment-input`);
+            if(input) input.focus();
+        }
+
+        async function cargarComentarios(postId, container, btn, off = 0) {
+            if(!container) return;
+            try {
+                const res = await fetch(`/publicacion/${postId}/comentarios?limit=5&offset=${off}`, {credentials:'include'});
+                if(res.ok) {
+                    const data = await res.json();
+                    data.comentarios.forEach(c => {
+                        const div = document.createElement('div');
+                        div.className = `comment ${c.parent_id ? 'reply' : ''}`;
+                        div.innerHTML = `
+                            <div class="comment-profile-pic-container">
+                                <img src="/foto_perfil/${c.user_id}" class="comment-profile-pic" onerror="this.outerHTML='<i class=\\'fas fa-user\\' style=\\'font-size:18px; color:#666;\\'></i>'">
+                            </div>
+                            <div class="comment-content">
+                                <p class="comment-user" style="cursor: pointer;" onclick="window.location.href='/perfil-especifico.html?user_id=${c.user_id}'">${c.nombre_empresa || c.nombre || 'Usuario'}</p>
+                                <p class="comment-text">${c.contenido}</p>
+                                <div class="comment-actions">
+                                    <span class="comment-meta">${formatearFecha(c.fecha_creacion)}</span>
+                                    <button class="reply-btn" onclick="prepareReply(${c.publicacion_id}, ${c.parent_id || c.id}, ${c.user_id}, '${c.nombre_empresa || c.nombre || 'Usuario'}')">Responder</button>
+                                </div>
+                            </div>
+                            ${(currentUserId && c.user_id === currentUserId) ? `<button class="comment-delete" onclick="borrarComentario(${c.id}, this.parentElement)"><i class="fas fa-trash"></i></button>` : ''}
+                        `;
+                        container.appendChild(div);
                     });
-
-                    if (response.ok) {
-                        reviewElement.style.transition = 'opacity 0.3s';
-                        reviewElement.style.opacity = '0';
-                        setTimeout(() => {
-                            reviewElement.remove();
-                            showNotification('Reseña eliminada correctamente');
-                            cargarResenas();
-                        }, 300);
-                    } else {
-                        const data = await response.json();
-                        showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
+                    if(btn) { 
+                        btn.style.display = (container.children.length < data.total) ? 'block' : 'none'; 
+                        btn.onclick = () => cargarComentarios(postId, container, btn, off + 5); 
                     }
-                } catch (error) {
-                    showNotification('Ocurrió un error al eliminar la reseña', true);
                 }
-            }, 'reseña');
+            } catch(e){}
+        }
+
+        async function submitComment(postId, input, container) {
+            const val = input.value.trim(); if(!val) return;
+            if(!currentUserId) { showNotification("Debes iniciar sesión para comentar", true); return; }
+
+            const reply = replyState[postId] || {};
+            try {
+                const res = await fetch(`/publicacion/${postId}/comentar`, { method: 'POST', headers: {'Content-Type': 'application/json'}, credentials:'include', body: JSON.stringify({contenido: val, parent_id: reply.parent_id || null, reply_to_user_id: reply.reply_to_user_id || null})});
+                if(res.ok) { 
+                    input.value = ''; 
+                    cancelReply(postId); 
+                    showNotification("Comentario publicado"); 
+                    container.innerHTML=''; 
+                    cargarComentarios(postId, container, document.querySelector(`#comments-section-${postId} .load-more-comments`)); 
+                }
+            } catch(e){}
+        }
+
+        function borrarComentario(cid, el) { 
+            showConfirmModal(() => { 
+                fetch(`/borrar_comentario/${cid}`, {method:'DELETE', credentials:'include'}).then(r => { if(r.ok) el.remove(); }); 
+            }, 'comentario'); 
+        }
+
+        function prepareReply(pid, cid, uid, uname) { 
+            replyState[pid] = {parent_id: cid, reply_to_user_id: uid}; 
+            const w = document.querySelector(`#comments-section-${pid}`); 
+            w.querySelector('.reply-indicator').style.display='flex'; 
+            w.querySelector('.reply-indicator span').textContent = `Respondiendo a @${uname}`; 
+            const i = w.querySelector('.comment-input'); 
+            i.value=`@${uname} `; 
+            i.focus(); 
+        }
+
+        function cancelReply(pid) { 
+            delete replyState[pid]; 
+            const w = document.querySelector(`#comments-section-${pid}`); 
+            w.querySelector('.reply-indicator').style.display='none'; 
+            w.querySelector('.comment-input').value=''; 
         }
 
         // Borrar publicación
@@ -1474,16 +1589,161 @@
                         showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
                     }
                 } catch (error) {
+                    console.error('Error al eliminar publicación:', error);
                     showNotification('Ocurrió un error al eliminar la publicación', true);
                 }
             }, 'publicación');
         }
 
+        // Enviar reseña
+        document.getElementById('review-btn').addEventListener('click', () => {
+            if (!currentUserId) {
+                showNotification('Debes iniciar sesión para dejar una reseña', true);
+                setTimeout(() => { window.location.href = '/login.html'; }, 2000);
+                return;
+            }
+            const modal = document.getElementById('review-modal');
+            modal.style.display = 'flex';
+            document.getElementById('review-text').value = '';
+            document.getElementById('review-rating').value = '0';
+            const stars = document.querySelectorAll('#star-rating .star');
+            stars.forEach(star => star.classList.remove('active'));
+        });
+
+        // Manejo de estrellas interactivas
+        const starsReview = document.querySelectorAll('#star-rating .star');
+        starsReview.forEach(star => {
+            star.addEventListener('mouseover', () => {
+                const value = parseInt(star.dataset.value);
+                starsReview.forEach(s => {
+                    s.classList.remove('active');
+                    if (parseInt(s.dataset.value) <= value) {
+                        s.classList.add('active');
+                    }
+                });
+            });
+
+            star.addEventListener('click', () => {
+                const value = parseInt(star.dataset.value);
+                document.getElementById('review-rating').value = value;
+                starsReview.forEach(s => {
+                    if (parseInt(s.dataset.value) <= value) {
+                        s.classList.add('active');
+                    } else {
+                        s.classList.remove('active');
+                    }
+                });
+            });
+        });
+
+        document.getElementById('star-rating').addEventListener('mouseleave', () => {
+            const currentValue = parseInt(document.getElementById('review-rating').value) || 0;
+            starsReview.forEach(s => {
+                s.classList.remove('active');
+                if (parseInt(s.dataset.value) <= currentValue) {
+                    s.classList.add('active');
+                }
+            });
+        });
+
+        document.getElementById('review-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const userId = viewedUserId || currentUserId;
+            if (!userId) {
+                showNotification('No se pudo enviar la reseña: usuario no identificado', true);
+                return;
+            }
+
+            const texto = document.getElementById('review-text').value.trim();
+            const calificacion = parseInt(document.getElementById('review-rating').value);
+
+            if (!texto) {
+                showNotification('El comentario no puede estar vacío', true);
+                return;
+            }
+            if (calificacion === 0) {
+                showNotification('Por favor selecciona una calificación', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/perfil/${userId}/resenas`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ texto, calificacion }),
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    showNotification('Reseña enviada correctamente');
+                    document.getElementById('review-modal').style.display = 'none';
+                    document.getElementById('review-form').reset();
+                    document.getElementById('review-rating').value = '0';
+                    const stars = document.querySelectorAll('#star-rating .star');
+                    stars.forEach(star => star.classList.remove('active'));
+                    setTimeout(() => cargarResenas(), 100);
+                } else {
+                    const error = await response.json().catch(() => ({}));
+                    showNotification(`Error: ${error.detail || 'No se pudo enviar la reseña'}`, true);
+                }
+            } catch (error) {
+                showNotification(`Error al conectar con el servidor: ${error.message}`, true);
+            }
+        });
+
+        // Borrar reseña
+        async function borrarResena(reviewId, reviewElement) {
+            showConfirmModal(async () => {
+                try {
+                    const response = await fetch(`/api/perfil/${viewedUserId || currentUserId}/resenas/${reviewId}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        reviewElement.style.transition = 'opacity 0.3s';
+                        reviewElement.style.opacity = '0';
+                        setTimeout(() => {
+                            reviewElement.remove();
+                            showNotification('Reseña eliminada correctamente');
+                            cargarResenas();
+                        }, 300);
+                    } else {
+                        const data = await response.json();
+                        showNotification(`Error al eliminar: ${data.detail || 'Error desconocido'}`, true);
+                    }
+                } catch (error) {
+                    console.error('Error al eliminar reseña:', error);
+                    showNotification('Ocurrió un error al eliminar la reseña', true);
+                }
+            }, 'reseña');
+        }
+
+        // Funciones de los botones
+        function irAInicio() {
+            window.location.href = "/inicio.html";
+        }
+
+        function cerrarSesion() {
+            fetch('/salir', {
+                method: 'POST',
+                credentials: 'include'
+            }).finally(() => {
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
+            });
+        }
+
+        function openChat() {
+            if (!viewedUserId) {
+                showNotification('No se puede iniciar un chat sin un usuario objetivo', true);
+                return;
+            }
+            window.location.href = `/chats.html?recipient_id=${viewedUserId}`;
+        }
+
         // ==========================================
         // 🔥 VISOR MULTIMEDIA MODERNO 🔥
-        // Múltiples imágenes con flechas + contador,
-        // zoom, video con controles nativos y fondo
-        // desenfocado.
         // ==========================================
         let currentViewerPostId = null;
         let currentViewerIndex = 0;
@@ -1514,14 +1774,12 @@
                 container.innerHTML = `<video id="media-viewer-video" src="${item.src}" controls autoplay playsinline></video>`;
             }
 
-            // El zoom solo aplica a imágenes; el video ya trae sus propios controles nativos
             const zoomInBtn = document.getElementById('zoom-in-btn-viewer');
             const zoomOutBtn = document.getElementById('zoom-out-btn-viewer');
             const showZoom = item.type === 'image';
             if (zoomInBtn) zoomInBtn.style.display = showZoom ? 'flex' : 'none';
             if (zoomOutBtn) zoomOutBtn.style.display = showZoom ? 'flex' : 'none';
 
-            // Flechas y contador solo si hay más de un elemento
             const prevBtn = document.getElementById('viewer-prev-btn');
             const nextBtn = document.getElementById('viewer-next-btn');
             const counter = document.getElementById('viewer-counter');
@@ -1567,21 +1825,18 @@
             currentZoomLevel = 1;
         }
 
-        // Clic en el fondo (fuera de la imagen/video) cierra el visor
         document.getElementById('media-viewer').addEventListener('click', (e) => {
             if (e.target.id === 'media-viewer' || e.target.id === 'media-container') {
                 closeMediaViewer();
             }
         });
 
-        // Doble clic sobre la imagen alterna el zoom
         document.getElementById('media-container').addEventListener('dblclick', (e) => {
             if (e.target.id === 'media-viewer-image') {
                 zoomMedia(currentZoomLevel > MEDIA_ZOOM_MIN ? (MEDIA_ZOOM_MIN - currentZoomLevel) : 1);
             }
         });
 
-        // Navegación y cierre con teclado
         document.addEventListener('keydown', (e) => {
             if (!document.getElementById('media-viewer').classList.contains('active')) return;
             if (e.key === 'ArrowLeft') navigateMedia(-1);
@@ -1589,21 +1844,6 @@
             if (e.key === 'Escape') closeMediaViewer();
         });
         // --- Fin Visor Multimedia Moderno ---
-
-        // Funciones de los botones
-        function irAInicio() {
-            window.location.href = '/inicio.html';
-        }
-
-        function cerrarSesion() {
-            fetch('/salir', {
-                method: 'POST',
-                credentials: 'include'
-            }).finally(() => {
-                localStorage.removeItem('user');
-                window.location.href = '/login.html';
-            });
-        }
 
         // Inicialización
         let hasLoaded = false;
@@ -1642,7 +1882,7 @@
             }, 100);
         });
 
-        // --- FUNCIONES DE SEGURIDAD (REPORTAR Y BLOQUEAR) ---
+        // Funciones de Reportar/Bloquear Usuarios
         function openUserReportModal() { document.getElementById('user-report-modal').style.display = 'flex'; }
         function openUserBlockModal() { document.getElementById('user-block-modal').style.display = 'flex'; }
 
