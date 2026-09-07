@@ -11,9 +11,8 @@ def get_db_connection():
     )
 
 def migrar_chats():
-    print("🚀 ¡Arre! Iniciando migración de Archivos de Chat...")
+    print("🚀 Iniciando migración blindada de Archivos de Chat...")
     
-    # Aseguramos que la carpeta exista
     os.makedirs(os.path.join("media", "chats"), exist_ok=True)
     
     conn = get_db_connection()
@@ -23,7 +22,7 @@ def migrar_chats():
     cur.execute("ALTER TABLE mensajes_chat ADD COLUMN IF NOT EXISTS ruta_media TEXT;")
     conn.commit()
 
-    print("2️⃣ Extrayendo archivos pesados (fotos, videos, audios, docs)...")
+    print("2️⃣ Extrayendo y convirtiendo archivos...")
     cur.execute("SELECT id, chat_id, tipo, media_content, contenido FROM mensajes_chat WHERE media_content IS NOT NULL")
     mensajes = cur.fetchall()
     
@@ -33,10 +32,20 @@ def migrar_chats():
     for msg in mensajes:
         msg_id, chat_id, tipo, media_content, contenido = msg
         
-        # Obtener los bytes reales
-        file_bytes = media_content.tobytes() if hasattr(media_content, 'tobytes') else bytes(media_content)
+        # Manejo seguro de tipos (texto, bytes o memoryview)
+        if isinstance(media_content, str):
+            file_bytes = media_content.encode('utf-8')
+        elif isinstance(media_content, bytes):
+            file_bytes = media_content
+        elif hasattr(media_content, 'tobytes'):
+            file_bytes = media_content.tobytes()
+        else:
+            try:
+                file_bytes = bytes(media_content)
+            except Exception:
+                file_bytes = str(media_content).encode('utf-8')
         
-        # Filtro inteligente: Si el tamaño es muy pequeño y empieza con "media/", es una ruta disfrazada de nuestros experimentos previos
+        # Si ya es una ruta guardada previamente
         try:
             decoded_path = file_bytes.decode('utf-8')
             if decoded_path.startswith("media/chats/"):
@@ -44,7 +53,7 @@ def migrar_chats():
                 conn.commit()
                 continue
         except:
-            pass # Son bytes de un archivo real
+            pass
         
         chat_folder = os.path.join("media", "chats", str(chat_id))
         os.makedirs(chat_folder, exist_ok=True)
@@ -54,40 +63,37 @@ def migrar_chats():
         elif tipo == "video": ext = "mp4"
         elif tipo == "voz": ext = "m4a"
         elif tipo == "document": 
-            if contenido and "." in contenido:
-                ext = contenido.split(".")[-1]
-            else:
-                ext = "pdf"
+            ext = contenido.split(".")[-1] if contenido and "." in contenido else "pdf"
 
         filename = f"migrated_{uuid.uuid4().hex}.{ext}"
         filepath = os.path.join(chat_folder, filename)
         
-        # 1. Guardar en el disco duro del servidor
+        # Guardar en disco duro
         with open(filepath, "wb") as f:
             f.write(file_bytes)
         
-        # 2. Guardar la ruta y VACIAR la columna de bytea
+        # Guardar la ruta y limpiar el campo antiguo
         cur.execute("""
             UPDATE mensajes_chat 
             SET ruta_media = %s, media_content = NULL 
             WHERE id = %s
         """, (filepath, msg_id))
         conn.commit()
-        print(f"✅ Archivo del mensaje {msg_id} salvado en disco.")
+        print(f"✅ Archivo del mensaje {msg_id} migrado correctamente.")
 
-    print("3️⃣ Limpiando la base de datos (Eliminando la columna bytea para siempre)...")
+    print("3️⃣ Limpiando estructura de la base de datos...")
     try:
         cur.execute("ALTER TABLE mensajes_chat DROP COLUMN media_content;")
-        cur.execute("ALTER TABLE mensajes_chat RENAME COLUMN ruta_media TO media_content;")
+        cur.execute("ALTER TABLE mensajes_chat RENAME COLUMN media_ruta TO media_content;")
         conn.commit()
-        print("✅ ¡Columna bytea eliminada con éxito!")
+        print("✅ ¡Columna bytea eliminada para siempre!")
     except Exception as e:
-        print(f"⚠️ Nota: {e}")
+        print(f"⚠️ Nota de limpieza: {e}")
         conn.rollback()
 
     cur.close()
     conn.close()
-    print("🎉 ¡Migración de chats completada! Tu Base de Datos ahora es de alta velocidad.")
+    print("🎉 ¡Migración finalizada con éxito absoluto!")
 
 if __name__ == "__main__":
     migrar_chats()
