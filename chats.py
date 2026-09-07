@@ -180,8 +180,7 @@ async def get_user_info(user_id: int, requesting_user_id: int = Depends(get_sess
             "nombre": user[1],
             "nombre_empresa": user[2],
             "categoria": user[3] if user[3] else "",
-            # 🔥 FIX: Solo mandar ruta si has_foto es True 🔥
-            "foto_perfil_url": f"/foto_perfil/{user_id}" if user[4] else "" 
+            "foto_perfil_url": f"/foto_perfil/{user_id}"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -318,8 +317,7 @@ async def list_chats(user_id: int = Depends(get_session), limit: int = 10, offse
         chats_list = [
             {
                 "chat_id": row[0], "otro_usuario_id": int(row[1]), "display_name": row[2], "tipo_usuario": row[3],
-                # 🔥 FIX: Solo mandar ruta si row[8] (has_foto) es True 🔥
-                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[8] else "",
+                "foto_perfil_url": f"/foto_perfil/{row[1]}",
                 "ultimo_mensaje": row[4] if row[6] == 'texto' else (f"[{row[6].upper()}]" if row[6] else ""), 
                 "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
                 "tipo_ultimo_mensaje": row[6] if row[6] else "texto",
@@ -376,8 +374,7 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
             "chat_id": chat_id,
             "otro_usuario": {
                 "id": otro_usuario_id, "display_name": otro_usuario[0], "tipo_usuario": otro_usuario[1],
-                # 🔥 FIX: Solo mandar ruta si otro_usuario[2] (has_foto) es True 🔥
-                "foto_perfil_url": f"/foto_perfil/{otro_usuario_id}" if otro_usuario[2] else ""
+                "foto_perfil_url": f"/foto_perfil/{otro_usuario_id}"
             },
             "mensajes": mensajes_list
         }
@@ -698,8 +695,7 @@ async def search_chats(query: str, user_id: int = Depends(get_session), limit: i
         chats_list = [
             {
                 "chat_id": row[0], "otro_usuario_id": int(row[1]), "display_name": row[2], "tipo_usuario": row[3],
-                # 🔥 FIX: Solo mandar ruta si row[8] (has_foto) es True 🔥
-                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[8] else "", 
+                "foto_perfil_url": f"/foto_perfil/{row[1]}", 
                 "ultimo_mensaje": row[4] if row[6] == 'texto' else (f"[{row[6].upper()}]" if row[6] else ""), 
                 "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
                 "tipo_ultimo_mensaje": row[6] if row[6] else "texto", "unread_count": int(row[7])
