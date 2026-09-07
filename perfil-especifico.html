@@ -397,6 +397,99 @@
             border-radius: 8px; display: block; cursor: pointer;
         }
 
+        /* --- Miniaturas de video y Carrusel (para múltiples imágenes) --- */
+        .post-media .video-thumbnail-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 25%;
+            margin-top: 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: transparent;
+        }
+        .post-media .video-thumbnail-container video {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: contain;
+        }
+        .post-media .play-icon-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .post-media .play-icon-overlay i { font-size: 18px; }
+
+        .post-media .carousel-container {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding-bottom: 6px;
+            scroll-snap-type: x mandatory;
+            margin-top: 10px;
+            width: 100%;
+            scrollbar-width: thin;
+            scrollbar-color: transparent transparent;
+            transition: scrollbar-color 0.3s ease;
+        }
+        .post-media .carousel-container:hover {
+            scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+        }
+        .post-media .carousel-container::-webkit-scrollbar {
+            height: 5px;
+        }
+        .post-media .carousel-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .post-media .carousel-container::-webkit-scrollbar-thumb {
+            background: transparent;
+            border-radius: 10px;
+            transition: background-color 0.3s ease;
+        }
+        .post-media .carousel-container:hover::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.25);
+        }
+        body.dark-mode .post-media .carousel-container:hover {
+            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+        }
+        body.dark-mode .post-media .carousel-container:hover::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .post-media .carousel-container .carousel-item {
+            flex-shrink: 0;
+            width: 100%;
+            max-width: 100%;
+            max-height: 500px;
+            scroll-snap-align: center;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+        .post-media .carousel-container .video-thumbnail-container {
+            width: 100%;
+            margin-top: 0;
+        }
+        .post-media .carousel-container .play-icon-overlay {
+            width: 70px;
+            height: 70px;
+        }
+        .post-media .carousel-container .play-icon-overlay i { font-size: 24px; }
+        /* --- Fin Miniaturas de video y Carrusel --- */
+
         .post-meta p {
             margin: 10px 0 0; font-size: 14px; color: #666; transition: color 0.3s ease;
         }
@@ -491,56 +584,107 @@
             display: flex; justify-content: center; gap: 10px; margin-top: 20px;
         }
 
-        .media-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.8); display: none;
-            align-items: center; justify-content: center; z-index: 2500;
-            animation: fadeIn 0.2s ease-in-out;
+        /* --- Visor Multimedia Moderno --- */
+        #media-viewer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        #media-viewer.active { display: flex; }
+
+        #media-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
         }
 
-        .media-modal-content {
-            position: relative; max-width: 90%; max-height: 90%;
-            background: transparent; text-align: center;
+        #media-container img#media-viewer-image {
+            max-width: 90%;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 10px;
+            cursor: zoom-in;
+            user-select: none;
+            -webkit-user-drag: none;
+            transition: transform 0.25s ease;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         }
 
-        .media-modal-content img {
-            max-width: 100%; max-height: 80vh; object-fit: contain;
-            transform-origin: center; transition: transform 0.2s ease;
-            cursor: grab;
+        #media-container video#media-viewer-video {
+            max-width: 90%;
+            max-height: 85vh;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         }
 
-        .media-modal-content video {
-            max-width: 100%; max-height: 80vh; object-fit: contain;
+        .viewer-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 15px; z-index: 10000; }
+        .viewer-btn { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255,255,255,0.5); color: white; border-radius: 50%; width: 44px; height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; backdrop-filter: blur(6px); transition: background-color 0.2s ease, transform 0.2s ease; }
+        .viewer-btn:hover { background-color: rgba(255, 255, 255, 0.3); transform: scale(1.08); }
+
+        .viewer-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: #fff;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(6px);
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        .viewer-nav-btn:hover { background-color: rgba(255, 255, 255, 0.3); transform: translateY(-50%) scale(1.08); }
+        .viewer-nav-prev { left: 20px; }
+        .viewer-nav-next { right: 20px; }
+
+        .viewer-counter {
+            display: none;
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: #fff;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            backdrop-filter: blur(6px);
+            z-index: 10000;
         }
 
-        .media-controls {
-            position: absolute; bottom: 10px; left: 50%;
-            transform: translateX(-50%); display: flex; gap: 10px;
-            background: rgba(0, 0, 0, 0.7); padding: 10px; border-radius: 8px;
+        @media (max-width: 768px) {
+            .viewer-nav-btn { width: 40px; height: 40px; font-size: 16px; }
+            .viewer-nav-prev { left: 10px; }
+            .viewer-nav-next { right: 10px; }
+            .viewer-btn { width: 38px; height: 38px; font-size: 16px; }
+            .viewer-controls { top: 12px; right: 12px; gap: 10px; }
         }
-
-        .media-controls button {
-            background: #fff; border: none; border-radius: 5px;
-            padding: 8px; font-size: 16px; cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .media-controls button:hover { background: #e0e0e0; }
-
-        .close-media-btn {
-            position: fixed; top: 10px; right: 10px;
-            background: rgba(244, 67, 54, 0.9); color: white;
-            border: none; border-radius: 50%; padding: 12px;
-            font-size: 18px; cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            z-index: 2600; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-            width: 40px; height: 40px; display: flex;
-            align-items: center; justify-content: center;
-        }
-
-        .close-media-btn:hover {
-            background: rgba(211, 47, 47, 1); transform: scale(1.1);
-        }
+        /* --- Fin Visor Multimedia Moderno --- */
 
         body.dark-mode { background-color: #000; color: #fff; }
         body.dark-mode .stars { display: block; }
@@ -576,10 +720,6 @@
         body.dark-mode .notification { box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2); }
         body.dark-mode .modal-content { background: #222; color: #fff; }
         body.dark-mode .modal-content h3 { color: #fff; }
-        body.dark-mode .media-modal-content { background: transparent; }
-
-        body.dark-mode .media-controls button { background: #333; color: #fff; }
-        body.dark-mode .media-controls button:hover { background: #555; }
 
         /* BOTONES DE REPORTE Y BLOQUEO */
         .report-btn {
@@ -759,16 +899,23 @@
         </div>
     </div>
 
-    <div class="media-modal" id="media-modal">
-        <div class="media-modal-content" id="media-modal-content">
-            <button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>
-            <div class="media-controls" id="media-controls" style="display: none;">
-                <button id="zoom-in-btn"><i class="fas fa-search-plus"></i></button>
-                <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
-                <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
-                <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
-            </div>
+    <div id="media-viewer">
+        <div class="viewer-controls">
+            <button class="viewer-btn" id="zoom-in-btn-viewer" onclick="zoomMedia(0.3)" title="Acercar"><i class="fas fa-search-plus"></i></button>
+            <button class="viewer-btn" id="zoom-out-btn-viewer" onclick="zoomMedia(-0.3)" title="Alejar"><i class="fas fa-search-minus"></i></button>
+            <button class="viewer-btn" onclick="closeMediaViewer()" title="Cerrar"><i class="fas fa-times"></i></button>
         </div>
+
+        <button class="viewer-nav-btn viewer-nav-prev" id="viewer-prev-btn" onclick="navigateMedia(-1)" title="Anterior">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="viewer-nav-btn viewer-nav-next" id="viewer-next-btn" onclick="navigateMedia(1)" title="Siguiente">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+
+        <div id="media-container"></div>
+
+        <div class="viewer-counter" id="viewer-counter"></div>
     </div>
 
     <script>
@@ -899,9 +1046,9 @@
         let loadedPostIds = new Set();
         let currentUserId = null;
         let viewedUserId = null;
-        let currentScale = 1;
-        let isDragging = false;
-        let startX, startY, translateX = 0, translateY = 0;
+
+        // 🔥 ALMACÉN DE MEDIOS POR PUBLICACIÓN (para el Visor Multimedia) 🔥
+        let postMediaMap = {};
 
         // Obtener viewed_user_id de la URL
         function getViewedUserId() {
@@ -977,6 +1124,49 @@
             }
         }
 
+        // 🔥 Construye la lista unificada de medios (imágenes + video) para el Visor 🔥
+        function construirMediaHtml(pub) {
+            let mediaItems = [];
+            if (pub.imagenes && pub.imagenes.length > 0) {
+                pub.imagenes.forEach(img => mediaItems.push({ type: 'image', src: img }));
+            } else if (pub.imagen_url && pub.imagen_url.trim() !== '') {
+                mediaItems.push({ type: 'image', src: pub.imagen_url });
+            }
+            if (pub.video_url && pub.video_url.trim() !== '') {
+                mediaItems.push({ type: 'video', src: pub.video_url });
+            }
+            postMediaMap[pub.id] = mediaItems;
+
+            if (mediaItems.length === 0) return '';
+
+            if (mediaItems.length === 1) {
+                const item = mediaItems[0];
+                if (item.type === 'image') {
+                    return `<img src="${item.src}" alt="Imagen" onclick="openMediaViewer(${pub.id}, 0)">`;
+                }
+                return `
+                  <div class="video-thumbnail-container" onclick="openMediaViewer(${pub.id}, 0)">
+                      <video src="${item.src}#t=0.1" preload="metadata"></video>
+                      <div class="play-icon-overlay"><i class="fas fa-play" style="color: white;"></i></div>
+                  </div>`;
+            }
+
+            let html = `<div class="carousel-container">`;
+            mediaItems.forEach((item, idx) => {
+                if (item.type === 'image') {
+                    html += `<img src="${item.src}" class="carousel-item" onclick="openMediaViewer(${pub.id}, ${idx})">`;
+                } else {
+                    html += `
+                      <div class="carousel-item video-thumbnail-container" onclick="openMediaViewer(${pub.id}, ${idx})">
+                          <video src="${item.src}#t=0.1" preload="metadata"></video>
+                          <div class="play-icon-overlay"><i class="fas fa-play" style="color: white;"></i></div>
+                      </div>`;
+                }
+            });
+            html += `</div>`;
+            return html;
+        }
+
         // Cargar feed de publicaciones
         async function cargarFeed() {
             if (isLoading || !hasMore || !viewedUserId) return;
@@ -1038,14 +1228,7 @@
                     }
                     postContent += '</div>';
 
-                    postContent += '<div class="post-media">';
-                    if (pub.imagen_url && pub.imagen_url.trim() !== '') {
-                        postContent += `<img src="${pub.imagen_url}" alt="Imagen" class="media-item" data-type="image" data-src="${pub.imagen_url}">`;
-                    }
-                    if (pub.video_url && pub.video_url.trim() !== '') {
-                        postContent += `<video controls src="${pub.video_url}" class="media-item" data-type="video" data-src="${pub.video_url}"></video>`;
-                    }
-                    postContent += '</div>';
+                    postContent += `<div class="post-media">${construirMediaHtml(pub)}</div>`;
 
                     postContent += '<div class="post-meta">';
                     postContent += `
@@ -1296,35 +1479,116 @@
             }, 'publicación');
         }
 
-        // Funcionalidad para el modal de multimedia
-        function openMediaModal(type, src) {
-            const modal = document.getElementById('media-modal');
-            const content = document.getElementById('media-modal-content');
-            
-            // Recrear contenido multimedia
-            const controls = document.getElementById('media-controls');
-            content.innerHTML = `<button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>`;
-             if (type === 'image') {
-                const img = document.createElement('img'); img.src = src; 
-                content.appendChild(img);
-            } else if (type === 'video') {
-                const video = document.createElement('video'); video.src = src; video.controls = true;
-                content.appendChild(video);
+        // ==========================================
+        // 🔥 VISOR MULTIMEDIA MODERNO 🔥
+        // Múltiples imágenes con flechas + contador,
+        // zoom, video con controles nativos y fondo
+        // desenfocado.
+        // ==========================================
+        let currentViewerPostId = null;
+        let currentViewerIndex = 0;
+        let currentZoomLevel = 1;
+        const MEDIA_ZOOM_MIN = 1;
+        const MEDIA_ZOOM_MAX = 4;
+
+        function openMediaViewer(postId, index) {
+            const items = postMediaMap[postId];
+            if (!items || !items.length) return;
+            currentViewerPostId = postId;
+            currentViewerIndex = index;
+            document.getElementById('media-viewer').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            renderViewerItem();
+        }
+
+        function renderViewerItem() {
+            const items = postMediaMap[currentViewerPostId];
+            if (!items || !items.length) return;
+            const item = items[currentViewerIndex];
+            const container = document.getElementById('media-container');
+            currentZoomLevel = 1;
+
+            if (item.type === 'image') {
+                container.innerHTML = `<img id="media-viewer-image" src="${item.src}" alt="Imagen" draggable="false">`;
+            } else {
+                container.innerHTML = `<video id="media-viewer-video" src="${item.src}" controls autoplay playsinline></video>`;
             }
-            document.getElementById('close-media-btn').onclick = closeMediaModal;
-            modal.style.display = 'flex';
+
+            // El zoom solo aplica a imágenes; el video ya trae sus propios controles nativos
+            const zoomInBtn = document.getElementById('zoom-in-btn-viewer');
+            const zoomOutBtn = document.getElementById('zoom-out-btn-viewer');
+            const showZoom = item.type === 'image';
+            if (zoomInBtn) zoomInBtn.style.display = showZoom ? 'flex' : 'none';
+            if (zoomOutBtn) zoomOutBtn.style.display = showZoom ? 'flex' : 'none';
+
+            // Flechas y contador solo si hay más de un elemento
+            const prevBtn = document.getElementById('viewer-prev-btn');
+            const nextBtn = document.getElementById('viewer-next-btn');
+            const counter = document.getElementById('viewer-counter');
+
+            if (items.length > 1) {
+                prevBtn.style.display = 'flex';
+                nextBtn.style.display = 'flex';
+                counter.style.display = 'block';
+                counter.textContent = `${currentViewerIndex + 1} / ${items.length}`;
+            } else {
+                prevBtn.style.display = 'none';
+                nextBtn.style.display = 'none';
+                counter.style.display = 'none';
+            }
         }
 
-        function closeMediaModal() {
-            document.getElementById('media-modal').style.display = 'none';
+        function navigateMedia(direction) {
+            const items = postMediaMap[currentViewerPostId];
+            if (!items || items.length <= 1) return;
+            currentViewerIndex = (currentViewerIndex + direction + items.length) % items.length;
+            renderViewerItem();
         }
 
-        document.getElementById('feed').addEventListener('click', (event) => {
-            const target = event.target;
-            if (target.classList.contains('media-item')) {
-                openMediaModal(target.dataset.type, target.dataset.src);
+        function zoomMedia(delta) {
+            const img = document.getElementById('media-viewer-image');
+            if (!img) return; // El zoom solo aplica a imágenes
+            currentZoomLevel = Math.min(MEDIA_ZOOM_MAX, Math.max(MEDIA_ZOOM_MIN, currentZoomLevel + delta));
+            img.style.transform = `scale(${currentZoomLevel})`;
+            img.style.cursor = currentZoomLevel > MEDIA_ZOOM_MIN ? 'zoom-out' : 'zoom-in';
+        }
+
+        function closeMediaViewer() {
+            const viewer = document.getElementById('media-viewer');
+            viewer.classList.remove('active');
+            document.body.style.overflow = '';
+
+            const video = document.getElementById('media-viewer-video');
+            if (video) video.pause();
+
+            document.getElementById('media-container').innerHTML = '';
+            currentViewerPostId = null;
+            currentViewerIndex = 0;
+            currentZoomLevel = 1;
+        }
+
+        // Clic en el fondo (fuera de la imagen/video) cierra el visor
+        document.getElementById('media-viewer').addEventListener('click', (e) => {
+            if (e.target.id === 'media-viewer' || e.target.id === 'media-container') {
+                closeMediaViewer();
             }
         });
+
+        // Doble clic sobre la imagen alterna el zoom
+        document.getElementById('media-container').addEventListener('dblclick', (e) => {
+            if (e.target.id === 'media-viewer-image') {
+                zoomMedia(currentZoomLevel > MEDIA_ZOOM_MIN ? (MEDIA_ZOOM_MIN - currentZoomLevel) : 1);
+            }
+        });
+
+        // Navegación y cierre con teclado
+        document.addEventListener('keydown', (e) => {
+            if (!document.getElementById('media-viewer').classList.contains('active')) return;
+            if (e.key === 'ArrowLeft') navigateMedia(-1);
+            if (e.key === 'ArrowRight') navigateMedia(1);
+            if (e.key === 'Escape') closeMediaViewer();
+        });
+        // --- Fin Visor Multimedia Moderno ---
 
         // Funciones de los botones
         function irAInicio() {
