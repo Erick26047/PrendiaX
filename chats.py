@@ -12,8 +12,9 @@ import json
 import uuid
 import shutil
 from pydantic import BaseModel
-import jwt 
-from firebase_admin import messaging
+import jwt # <--- NECESARIO PARA LEER EL TOKEN
+from firebase_admin import messaging # 🔥 Añadir a tus imports
+
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
@@ -30,7 +31,7 @@ logging.basicConfig(
     ]
 )
 
-# 🔥 CLAVE MAESTRA
+# 🔥 CLAVE MAESTRA (IGUAL A LA DE APPLE_AUTH.PY)
 SECRET_KEY_JWT = "Elbicho7"
 
 # 🔥 DIRECTORIO BASE PARA ARCHIVOS MULTIMEDIA 🔥
@@ -47,6 +48,7 @@ class NotificationManager:
         if user_id not in self.active_connections:
             self.active_connections[user_id] = []
         self.active_connections[user_id].append(websocket)
+        logging.debug(f"Usuario {user_id} conectado a WS Notificaciones")
 
     def disconnect(self, websocket: WebSocket, user_id: int):
         if user_id in self.active_connections:
@@ -54,6 +56,7 @@ class NotificationManager:
                 self.active_connections[user_id].remove(websocket)
             if not self.active_connections[user_id]:
                 del self.active_connections[user_id]
+        logging.debug(f"Usuario {user_id} desconectado de WS Notificaciones")
 
     async def send_personal_message(self, message: dict, user_id: int):
         if user_id in self.active_connections:
@@ -75,29 +78,36 @@ def get_db_connection():
         )
         return conn
     except Exception as e:
-        logging.error(f"Error BD: {e}")
-        raise HTTPException(status_code=500, detail="Error BD")
+        logging.error(f"Error al conectar a la base de datos: {e}")
+        raise HTTPException(status_code=500, detail="Error de conexión a la base de datos")
 
 MAX_FILE_SIZE = 100 * 1024 * 1024 
 
+# Modelos Pydantic
 class InterestRequest(BaseModel):
     user_id: int
+
 class CommentRequest(BaseModel):
     contenido: str
     parent_id: int | None = None
     reply_to_user_id: int | None = None
+
 class ReporteUsuarioRequest(BaseModel):
     usuario_reportado_id: int
     motivo: str
+
 class BloqueoRequest(BaseModel):
     bloqueado_id: int
+
 class ReviewRequest(BaseModel):
     texto: str
     calificacion: int
+
 class ReportePublicacionRequest(BaseModel):
     publicacion_id: int
     motivo: str
 
+# Diccionario para WebSockets de Chat
 websocket_connections: Dict[int, WebSocket] = {}
 
 def sanitize_filename(filename: str) -> str:
@@ -111,89 +121,14 @@ def verificar_bloqueo(cur, user_a: int, user_b: int):
         WHERE (bloqueador_id = %s AND bloqueado_id = %s) 
            OR (bloqueador_id = %s AND bloqueado_id = %s)
     """, (user_a, user_b, user_b, user_a))
-    if cur.fetchone():
-        raise HTTPException(status_code=403, detail="Bloqueo activo")
-
-# =========================================================================
-# LECTURA DE TOKEN (JWT)
-# =========================================================================
-def get_user_id_hybrid(request: Request):
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
-        try:
-            payload = jwt.decode(token, SECRET_KEY_JWT, algorithms=["HS256"])
-            user_id = payload.get("user_id") or payload.get("sub")
-            if user_id: return int(user_id)
-        except Exception:
-            if "jwt_app_" in token:
-                 try: return int(token.split("jwt_app_")[1])
-                 except: pass
-
-    if 'user' in request.session and 'id' in request.session['user']:
-        return int(request.session['user']['id'])
-    return None
-
-async def get_session(request: Request):
-    if 'user' in request.session and 'id' in request.session['user']:
-        return request.session['user']['id']
     
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
-        try:
-            payload = jwt.decode(token, SECRET_KEY_JWT, algorithms=["HS256"])
-            user_id = payload.get("user_id") or payload.get("sub")
-            if user_id: return int(user_id)
-        except Exception:
-            if "jwt_app_" in token:
-                try: return int(token.split("jwt_app_")[1])
-                except: pass
+    if cur.fetchone():
+        raise HTTPException(
+            status_code=403, 
+            detail="No puedes interactuar con este usuario (Bloqueo activo)"
+        )
 
-    raise HTTPException(status_code=401, detail="No autorizado")
-
-@router.get("/current_user")
-async def get_current_user_endpoint(user_id: int = Depends(get_session)):
-    return {"user_id": user_id}
-
-@router.get("/user/{user_id}")
-async def get_user_info(user_id: int, requesting_user_id: int = Depends(get_session)):
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT u.id, u.nombre, COALESCE(du.nombre_empresa, '') AS nombre_empresa,
-                   du.categoria, du.foto IS NOT NULL AS has_foto
-            FROM usuarios u
-            LEFT JOIN datos_usuario du ON u.id = du.user_id
-            WHERE u.id = %s
-        """, (user_id,))
-        user = cur.fetchone()
-        cur.close()
-        conn.close()
-
-        if not user:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
-
-        return {
-            "id": user[0],
-            "nombre": user[1],
-            "nombre_empresa": user[2],
-            "categoria": user[3] if user[3] else "",
-            "foto_perfil_url": f"/foto_perfil/{user_id}"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/", response_class=HTMLResponse)
-async def get_chats_page(request: Request, user_id: int = Depends(get_session)):
-    try:
-        return templates.TemplateResponse("chats.html", {"request": request, "user_id": user_id})
-    except Exception:
-        if "application/json" in request.headers.get("accept", ""):
-             raise HTTPException(status_code=401, detail="No autorizado")
-        return RedirectResponse(url="/login", status_code=302)
-
+# 🔥 MODIFICACIÓN: LECTURA DIRECTA DEL DISCO PARA LA APP 🔥
 def send_bytes_range_requests(request: Request, file_path: str, content_type: str, filename: str):
     file_size = os.path.getsize(file_path)
     range_header = request.headers.get("range")
@@ -249,12 +184,116 @@ def send_bytes_range_requests(request: Request, file_path: str, content_type: st
             headers={"Content-Disposition": f"inline; filename={filename}"}
         )
 
+# =========================================================================
+# 🔥 CORRECCIÓN CRÍTICA 1: LECTURA DE TOKEN REAL (JWT)
+# =========================================================================
+def get_user_id_hybrid(request: Request):
+    # 1. Intentar Token de App Móvil (JWT REAL)
+    auth_header = request.headers.get("Authorization")
+    
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            # Intentamos desencriptar con la clave "Elbicho7"
+            payload = jwt.decode(token, SECRET_KEY_JWT, algorithms=["HS256"])
+            user_id = payload.get("user_id") or payload.get("sub")
+            if user_id:
+                return int(user_id)
+        except Exception as e:
+            logging.error(f"Error JWT Hybrid: {e}")
+            # Si falla, intentamos el token viejo por compatibilidad
+            if "jwt_app_" in token:
+                 try: return int(token.split("jwt_app_")[1])
+                 except: pass
+
+    # 2. Intentar Sesión Web (Cookie)
+    if 'user' in request.session and 'id' in request.session['user']:
+        return int(request.session['user']['id'])
+        
+    return None
+
+# =========================================================================
+# 🔥 CORRECCIÓN CRÍTICA 2: SESSION DE CHATS (JWT REAL)
+# =========================================================================
+async def get_session(request: Request):
+    # 1. Web
+    if 'user' in request.session and 'id' in request.session['user']:
+        return request.session['user']['id']
+    
+    # 2. App (JWT)
+    auth_header = request.headers.get("Authorization")
+    
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            # Decodificar JWT Real
+            payload = jwt.decode(token, SECRET_KEY_JWT, algorithms=["HS256"])
+            user_id = payload.get("user_id") or payload.get("sub")
+            if user_id:
+                return int(user_id)
+        except Exception as e:
+            logging.error(f"Error get_session JWT: {e}")
+            # Fallback legacy
+            if "jwt_app_" in token:
+                try: return int(token.split("jwt_app_")[1])
+                except: pass
+
+    raise HTTPException(status_code=401, detail="No autorizado. Inicia sesión.")
+
+# --- EL RESTO DEL CÓDIGO SIGUE IGUAL ---
+
+@router.get("/current_user")
+async def get_current_user_endpoint(user_id: int = Depends(get_session)):
+    return {"user_id": user_id}
+
+@router.get("/user/{user_id}")
+async def get_user_info(user_id: int, requesting_user_id: int = Depends(get_session)):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT u.id, u.nombre, COALESCE(du.nombre_empresa, '') AS nombre_empresa,
+                   du.categoria, du.foto IS NOT NULL AS has_foto
+            FROM usuarios u
+            LEFT JOIN datos_usuario du ON u.id = du.user_id
+            WHERE u.id = %s
+        """, (user_id,))
+        user = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        return {
+            "id": user[0],
+            "nombre": user[1],
+            "nombre_empresa": user[2],
+            "categoria": user[3] if user[3] else "",
+            # 🔥 FIX DE FOTO DE PERFIL 🔥
+            "foto_perfil_url": f"/foto_perfil/{user_id}" if user[4] else ""
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/", response_class=HTMLResponse)
+async def get_chats_page(request: Request, user_id: int = Depends(get_session)):
+    try:
+        return templates.TemplateResponse("chats.html", {
+            "request": request,
+            "user_id": user_id
+        })
+    except Exception as e:
+        if "application/json" in request.headers.get("accept", ""):
+             raise HTTPException(status_code=401, detail="No autorizado")
+        return RedirectResponse(url="/login", status_code=302)
+
 @router.get("/media/{mensaje_id}")
 async def get_media_chat(request: Request, mensaje_id: int, user_id: int = Depends(get_session)):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
+        # 🔥 AHORA LEEMOS LA COLUMNA CONTENIDO PARA OBTENER LA RUTA DEL ARCHIVO 🔥
         cur.execute("""
             SELECT m.contenido, m.tipo
             FROM mensajes_chat m
@@ -266,12 +305,13 @@ async def get_media_chat(request: Request, mensaje_id: int, user_id: int = Depen
         conn.close()
 
         if not result or not result[0]:
-            raise HTTPException(status_code=404, detail="Archivo no encontrado en BD")
+            raise HTTPException(status_code=404, detail="Archivo no encontrado")
 
         file_path, tipo = result
         
+        # Validar si el documento existe físicamente
         if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="El archivo fue eliminado del servidor")
+            raise HTTPException(status_code=404, detail="El archivo físico fue eliminado")
 
         content_type = {
             'imagen': 'image/jpeg',
@@ -295,14 +335,27 @@ async def list_chats(user_id: int = Depends(get_session), limit: int = 10, offse
         cur = conn.cursor()
         cur.execute("""
             SELECT c.id, 
-                   CASE WHEN c.usuario1_id = %s THEN c.usuario2_id ELSE c.usuario1_id END AS otro_usuario_id,
+                   CASE 
+                       WHEN c.usuario1_id = %s THEN c.usuario2_id 
+                       ELSE c.usuario1_id 
+                   END AS otro_usuario_id,
                    COALESCE(du.nombre_empresa, u.nombre) AS display_name,
-                   CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END AS tipo_usuario,
-                   m.contenido AS ultimo_mensaje, m.fecha_envio, m.tipo AS tipo_ultimo_mensaje,
+                   CASE 
+                       WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor'
+                       ELSE 'explorador'
+                   END AS tipo_usuario,
+                   m.contenido AS ultimo_mensaje,
+                   m.fecha_envio,
+                   m.tipo AS tipo_ultimo_mensaje,
                    SUM(CASE WHEN m.leido = FALSE AND m.receptor_id = %s THEN 1 ELSE 0 END) AS unread_count,
-                   du.foto IS NOT NULL AS has_foto, m.emisor_id = %s AS es_mio, c.creado_en
+                   du.foto IS NOT NULL AS has_foto,
+                   m.emisor_id = %s AS es_mio,
+                   c.creado_en
             FROM chats c
-            JOIN usuarios u ON (CASE WHEN c.usuario1_id = %s THEN c.usuario2_id ELSE c.usuario1_id END) = u.id
+            JOIN usuarios u ON (CASE 
+                                   WHEN c.usuario1_id = %s THEN c.usuario2_id 
+                                   ELSE c.usuario1_id 
+                               END) = u.id
             LEFT JOIN datos_usuario du ON u.id = du.user_id
             LEFT JOIN mensajes_chat m ON c.ultimo_mensaje_id = m.id
             WHERE c.usuario1_id = %s OR c.usuario2_id = %s
@@ -316,12 +369,17 @@ async def list_chats(user_id: int = Depends(get_session), limit: int = 10, offse
 
         chats_list = [
             {
-                "chat_id": row[0], "otro_usuario_id": int(row[1]), "display_name": row[2], "tipo_usuario": row[3],
-                "foto_perfil_url": f"/foto_perfil/{row[1]}",
-                "ultimo_mensaje": row[4] if row[6] == 'texto' else (f"[{row[6].upper()}]" if row[6] else ""), 
+                "chat_id": row[0],
+                "otro_usuario_id": int(row[1]),
+                "display_name": row[2],
+                "tipo_usuario": row[3],
+                # 🔥 FIX DE FOTO DE PERFIL 🔥
+                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[8] else "",
+                "ultimo_mensaje": row[4] if row[6] == 'texto' else (f"[{row[6].upper()}]" if row[6] else ""),
                 "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
                 "tipo_ultimo_mensaje": row[6] if row[6] else "texto",
-                "unread_count": int(row[7]), "es_mio": row[9]
+                "unread_count": int(row[7]),
+                "es_mio": row[9]
             }
             for row in chats
         ]
@@ -334,38 +392,60 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT id, usuario1_id, usuario2_id FROM chats WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)", (chat_id, user_id, user_id))
+        cur.execute("""
+            SELECT id, usuario1_id, usuario2_id 
+            FROM chats 
+            WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)
+        """, (chat_id, user_id, user_id))
         chat = cur.fetchone()
-        if not chat: raise HTTPException(status_code=404, detail="Chat no encontrado")
+        if not chat:
+            raise HTTPException(status_code=404, detail="Chat no encontrado")
 
         otro_usuario_id = chat[2] if chat[1] == user_id else chat[1]
         cur.execute("""
             SELECT COALESCE(du.nombre_empresa, u.nombre) AS display_name,
-                   CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END AS tipo_usuario,
+                   CASE 
+                       WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor'
+                       ELSE 'explorador'
+                   END AS tipo_usuario,
                    du.foto IS NOT NULL AS has_foto
-            FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s
+            FROM usuarios u
+            LEFT JOIN datos_usuario du ON u.id = du.user_id
+            WHERE u.id = %s
         """, (otro_usuario_id,))
         otro_usuario = cur.fetchone()
 
         cur.execute("""
             SELECT m.id, m.emisor_id, m.receptor_id, m.contenido, m.tipo, m.fecha_envio, m.leido
-            FROM mensajes_chat m WHERE m.chat_id = %s ORDER BY m.fecha_envio ASC LIMIT %s OFFSET %s
+            FROM mensajes_chat m
+            WHERE m.chat_id = %s
+            ORDER BY m.fecha_envio ASC
+            LIMIT %s OFFSET %s
         """, (chat_id, limit, offset))
         mensajes = cur.fetchall()
 
-        cur.execute("UPDATE mensajes_chat SET leido = TRUE WHERE chat_id = %s AND receptor_id = %s AND leido = FALSE", (chat_id, user_id))
+        # Marcar como leídos
+        cur.execute("""
+            UPDATE mensajes_chat 
+            SET leido = TRUE 
+            WHERE chat_id = %s AND receptor_id = %s AND leido = FALSE
+        """, (chat_id, user_id))
         conn.commit()
+
         cur.close()
         conn.close()
 
         mensajes_list = [
             {
-                "id": row[0], "emisor_id": int(row[1]), "receptor_id": int(row[2]),
+                "id": row[0],
+                "emisor_id": int(row[1]),
+                "receptor_id": int(row[2]),
                 "contenido": row[3] if row[4] == 'texto' else "",
                 "tipo": row[4],
                 "media_url": f"/chats/media/{row[0]}" if row[4] in ['imagen', 'video', 'voz', 'document'] else "",
                 "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S"),
-                "leido": row[6], "es_mio": row[1] == user_id
+                "leido": row[6],
+                "es_mio": row[1] == user_id
             }
             for row in mensajes
         ]
@@ -373,8 +453,11 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
         return {
             "chat_id": chat_id,
             "otro_usuario": {
-                "id": otro_usuario_id, "display_name": otro_usuario[0], "tipo_usuario": otro_usuario[1],
-                "foto_perfil_url": f"/foto_perfil/{otro_usuario_id}"
+                "id": otro_usuario_id,
+                "display_name": otro_usuario[0],
+                "tipo_usuario": otro_usuario[1],
+                # 🔥 FIX DE FOTO DE PERFIL 🔥
+                "foto_perfil_url": f"/foto_perfil/{otro_usuario_id}" if otro_usuario[2] else ""
             },
             "mensajes": mensajes_list
         }
@@ -397,7 +480,12 @@ async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = 
         receptor_id = chat[2] if chat[1] == user_id else chat[1]
         verificar_bloqueo(cur, user_id, receptor_id)
 
-        cur.execute("SELECT (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s), (SELECT fcm_token FROM usuarios WHERE id = %s)", (user_id, receptor_id))
+        # 🔥 Buscar el nombre de quien envía y el token del receptor
+        cur.execute("""
+            SELECT 
+                (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s),
+                (SELECT fcm_token FROM usuarios WHERE id = %s)
+        """, (user_id, receptor_id))
         row = cur.fetchone()
         emisor_nombre = row[0] if row and row[0] else "Usuario"
         fcm_token = row[1] if row and row[1] else None
@@ -422,11 +510,25 @@ async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = 
             try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
             except: del websocket_connections[receptor_id]
 
+        # 🔥 ENVIAR PUSH NOTIFICATION (CHAT) 🔥
         if fcm_token:
             try:
-                push_msg = messaging.Message(notification=messaging.Notification(title=f"Nuevo mensaje de {emisor_nombre}", body=contenido), apns=messaging.APNSConfig(payload=messaging.APNSPayload(aps=messaging.Aps(sound="default"))), data={"tipo": "chat", "chat_id": str(chat_id)}, token=fcm_token)
+                push_msg = messaging.Message(
+                    notification=messaging.Notification(
+                        title=f"Nuevo mensaje de {emisor_nombre}",
+                        body=contenido
+                    ),
+                    apns=messaging.APNSConfig(
+                        payload=messaging.APNSPayload(
+                            aps=messaging.Aps(sound="default")
+                        )
+                    ),
+                    data={"tipo": "chat", "chat_id": str(chat_id)},
+                    token=fcm_token,
+                )
                 messaging.send(push_msg)
-            except Exception as e: logging.error(f"Error Push: {e}")
+            except Exception as e:
+                logging.error(f"Error enviando Push (Chat): {e}")
 
         cur.close()
         conn.close()
@@ -451,7 +553,8 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
             if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'bmp']: tipo = 'imagen'
             elif ext in ['mp4', 'mov', 'avi', 'mkv', 'webm']: tipo = 'video'
 
-        if not tipo: raise HTTPException(status_code=400, detail=f"Formato no soportado")
+        if not tipo:
+            raise HTTPException(status_code=400, detail=f"Formato no soportado ({ext or content_type})")
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -463,19 +566,29 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
             verificar_bloqueo(cur, user_id, receptor_id)
             
-            cur.execute("SELECT (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s), (SELECT fcm_token FROM usuarios WHERE id = %s)", (user_id, receptor_id))
+            # 🔥 NUEVO: Obtener nombre y token para push
+            cur.execute("""
+                SELECT 
+                    (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s),
+                    (SELECT fcm_token FROM usuarios WHERE id = %s)
+            """, (user_id, receptor_id))
             row = cur.fetchone()
             emisor_nombre = row[0] if row and row[0] else "Usuario"
             fcm_token = row[1] if row and row[1] else None
 
+            # 1. Crear carpeta del chat en Ubuntu
             chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
             os.makedirs(chat_folder, exist_ok=True)
+            
+            # 2. Generar nombre de archivo único
             unique_filename = f"{uuid.uuid4().hex}_{sanitize_filename(filename)}"
             file_path = os.path.join(chat_folder, unique_filename)
 
+            # 3. Guardar archivo físico en disco duro
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
+            # 4. Guardar RUTA en BD en columna contenido (y ya NO en media_content_bytea)
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, contenido, fecha_envio)
                 VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
@@ -495,12 +608,26 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
                 try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
                 except: del websocket_connections[receptor_id]
 
+            # 🔥 NUEVO: ENVIAR PUSH NOTIFICATION (MEDIA) 🔥
             if fcm_token:
                 cuerpo = "📷 Te ha enviado una foto." if tipo == 'imagen' else "🎥 Te ha enviado un video."
                 try:
-                    push_msg = messaging.Message(notification=messaging.Notification(title=f"Nuevo mensaje de {emisor_nombre}", body=cuerpo), apns=messaging.APNSConfig(payload=messaging.APNSPayload(aps=messaging.Aps(sound="default"))), data={"tipo": "chat", "chat_id": str(chat_id)}, token=fcm_token)
+                    push_msg = messaging.Message(
+                        notification=messaging.Notification(
+                            title=f"Nuevo mensaje de {emisor_nombre}",
+                            body=cuerpo
+                        ),
+                        apns=messaging.APNSConfig(
+                            payload=messaging.APNSPayload(
+                                aps=messaging.Aps(sound="default")
+                            )
+                        ),
+                        data={"tipo": "chat", "chat_id": str(chat_id)},
+                        token=fcm_token,
+                    )
                     messaging.send(push_msg)
-                except Exception as e: logging.error(f"Error Push: {e}")
+                except Exception as e:
+                    logging.error(f"Error enviando Push ({tipo}): {e}")
 
             return message_data
         except Exception as e:
@@ -510,6 +637,8 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
             cur.close()
             conn.close()
     except HTTPException as he: raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{chat_id}/voz")
 async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: int = Depends(get_session)):
@@ -525,7 +654,8 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
         elif ext in ['m4a', 'mp3', 'wav', 'aac', 'webm', 'ogg', 'opus']: es_audio = True
         elif content_type == 'video/mp4' and ext == 'm4a': es_audio = True 
 
-        if not es_audio: raise HTTPException(status_code=400, detail="No es un audio válido")
+        if not es_audio:
+            raise HTTPException(status_code=400, detail=f"No es un audio válido ({ext or content_type})")
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -537,19 +667,29 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
             verificar_bloqueo(cur, user_id, receptor_id)
             
-            cur.execute("SELECT (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s), (SELECT fcm_token FROM usuarios WHERE id = %s)", (user_id, receptor_id))
+            # 🔥 NUEVO: Obtener nombre y token para push
+            cur.execute("""
+                SELECT 
+                    (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s),
+                    (SELECT fcm_token FROM usuarios WHERE id = %s)
+            """, (user_id, receptor_id))
             row = cur.fetchone()
             emisor_nombre = row[0] if row and row[0] else "Usuario"
             fcm_token = row[1] if row and row[1] else None
 
+            # 1. Crear carpeta en Ubuntu
             chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
             os.makedirs(chat_folder, exist_ok=True)
+            
+            # 2. Generar nombre único
             unique_filename = f"{uuid.uuid4().hex}_{sanitize_filename(filename)}"
             file_path = os.path.join(chat_folder, unique_filename)
 
+            # 3. Guardar archivo de voz
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
+            # 4. Guardar RUTA en BD (Columna contenido)
             cur.execute("""
                 INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, contenido, fecha_envio)
                 VALUES (%s, %s, %s, 'voz', %s, CURRENT_TIMESTAMP)
@@ -569,11 +709,25 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
                 try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
                 except: del websocket_connections[receptor_id]
 
+            # 🔥 NUEVO: ENVIAR PUSH NOTIFICATION (VOZ) 🔥
             if fcm_token:
                 try:
-                    push_msg = messaging.Message(notification=messaging.Notification(title=f"Nuevo mensaje de {emisor_nombre}", body="🎙️ Te ha enviado una nota de voz."), apns=messaging.APNSConfig(payload=messaging.APNSPayload(aps=messaging.Aps(sound="default"))), data={"tipo": "chat", "chat_id": str(chat_id)}, token=fcm_token)
+                    push_msg = messaging.Message(
+                        notification=messaging.Notification(
+                            title=f"Nuevo mensaje de {emisor_nombre}",
+                            body="🎙️ Te ha enviado una nota de voz."
+                        ),
+                        apns=messaging.APNSConfig(
+                            payload=messaging.APNSPayload(
+                                aps=messaging.Aps(sound="default")
+                            )
+                        ),
+                        data={"tipo": "chat", "chat_id": str(chat_id)},
+                        token=fcm_token,
+                    )
                     messaging.send(push_msg)
-                except Exception as e: logging.error(f"Error Push: {e}")
+                except Exception as e:
+                    logging.error(f"Error enviando Push (voz): {e}")
 
             return message_data
         except Exception as e:
@@ -583,6 +737,8 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
             cur.close()
             conn.close()
     except HTTPException as he: raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{chat_id}/document")
 async def send_document(chat_id: int, file: UploadFile = File(...), contenido: str = Form(None), user_id: int = Depends(get_session)):
@@ -592,13 +748,16 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
         content_type = file.content_type or ""
         filename = file.filename.lower() if file.filename else "documento.pdf"
         ext = filename.split('.')[-1] if '.' in filename else ''
+        
         allowed_extensions = ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx']
         es_doc = False
         
         if content_type in ['application/pdf', 'application/msword', 'text/plain']: es_doc = True
         elif ext in allowed_extensions: es_doc = True
         elif 'application/' in content_type: es_doc = True
-        if not es_doc: raise HTTPException(status_code=400, detail="Documento no permitido")
+
+        if not es_doc:
+            raise HTTPException(status_code=400, detail=f"Documento no permitido ({ext})")
 
         doc_name = contenido if contenido else file.filename
         
@@ -612,19 +771,29 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
             receptor_id = chat[2] if chat[1] == user_id else chat[1]
             verificar_bloqueo(cur, user_id, receptor_id)
             
-            cur.execute("SELECT (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s), (SELECT fcm_token FROM usuarios WHERE id = %s)", (user_id, receptor_id))
+            # 🔥 NUEVO: Obtener nombre y token para push
+            cur.execute("""
+                SELECT 
+                    (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s),
+                    (SELECT fcm_token FROM usuarios WHERE id = %s)
+            """, (user_id, receptor_id))
             row = cur.fetchone()
             emisor_nombre = row[0] if row and row[0] else "Usuario"
             fcm_token = row[1] if row and row[1] else None
 
+            # 1. Crear carpeta en Ubuntu
             chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
             os.makedirs(chat_folder, exist_ok=True)
+            
+            # 2. Generar nombre único
             unique_filename = f"{uuid.uuid4().hex}_{sanitize_filename(filename)}"
             file_path = os.path.join(chat_folder, unique_filename)
 
+            # 3. Guardar archivo documento
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
+            # 4. Guardar "Nombre|Ruta" en la BD
             valor_bd = f"{doc_name}|{file_path}"
 
             cur.execute("""
@@ -646,11 +815,25 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
                 try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
                 except: del websocket_connections[receptor_id]
 
+            # 🔥 NUEVO: ENVIAR PUSH NOTIFICATION (DOCUMENTO) 🔥
             if fcm_token:
                 try:
-                    push_msg = messaging.Message(notification=messaging.Notification(title=f"Nuevo mensaje de {emisor_nombre}", body=f"📄 Te ha enviado un documento: {doc_name}"), apns=messaging.APNSConfig(payload=messaging.APNSPayload(aps=messaging.Aps(sound="default"))), data={"tipo": "chat", "chat_id": str(chat_id)}, token=fcm_token)
+                    push_msg = messaging.Message(
+                        notification=messaging.Notification(
+                            title=f"Nuevo mensaje de {emisor_nombre}",
+                            body=f"📄 Te ha enviado un documento: {doc_name}"
+                        ),
+                        apns=messaging.APNSConfig(
+                            payload=messaging.APNSPayload(
+                                aps=messaging.Aps(sound="default")
+                            )
+                        ),
+                        data={"tipo": "chat", "chat_id": str(chat_id)},
+                        token=fcm_token,
+                    )
                     messaging.send(push_msg)
-                except Exception as e: logging.error(f"Error Push: {e}")
+                except Exception as e:
+                    logging.error(f"Error enviando Push (documento): {e}")
 
             return message_data
         except Exception as e:
@@ -660,7 +843,8 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
             cur.close()
             conn.close()
     except HTTPException as he: raise he
-
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/buscar")
 async def search_chats(query: str, user_id: int = Depends(get_session), limit: int = 10, offset: int = 0):
@@ -695,7 +879,7 @@ async def search_chats(query: str, user_id: int = Depends(get_session), limit: i
         chats_list = [
             {
                 "chat_id": row[0], "otro_usuario_id": int(row[1]), "display_name": row[2], "tipo_usuario": row[3],
-                "foto_perfil_url": f"/foto_perfil/{row[1]}", 
+                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[8] else "",
                 "ultimo_mensaje": row[4] if row[6] == 'texto' else (f"[{row[6].upper()}]" if row[6] else ""), 
                 "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
                 "tipo_ultimo_mensaje": row[6] if row[6] else "texto", "unread_count": int(row[7])
@@ -758,6 +942,7 @@ async def delete_chat(chat_id: int, user_id: int = Depends(get_session)):
 
         receptor_id = chat[2] if chat[1] == user_id else chat[1]
         
+        # 🔥 BORRAR CARPETA COMPLETA DEL CHAT AL ELIMINAR EL CHAT 🔥
         chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
         if os.path.exists(chat_folder):
             try:
