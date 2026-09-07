@@ -384,6 +384,7 @@
         }
         .post-user-info .company-name:hover { text-decoration: underline; }
 
+        /* --- MENÚ DE OPCIONES DE PUBLICACIÓN --- */
         .post-options { margin-left: auto; position: relative; }
         .options-btn { background: transparent; border: none; font-size: 18px; cursor: pointer; padding: 8px; color: #666; border-radius: 50%; }
         .options-btn:hover { background-color: #e0e0e0; color: #000; }
@@ -394,10 +395,12 @@
         .dropdown-item.danger { color: #d32f2f; }
         .dropdown-item.danger:hover { background-color: #ffebee; }
 
-        .post-content { max-height: 4.5em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; text-overflow: ellipsis; margin-bottom: 10px;}
+        .post-content { margin-bottom: 10px; max-height: 4.5em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; text-overflow: ellipsis;}
         .post-content.expanded { max-height: none; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; }
-        .post-content p { margin: 0 0 10px; font-size: 16px; color: #333; line-height: 1.5; transition: color 0.3s ease; }
-        
+        .post-content p {
+            margin: 0 0 10px; font-size: 16px; color: #000;
+            line-height: 1.5; transition: color 0.3s ease;
+        }
         .read-more { display: none; color: #1976d2; font-size: 14px; cursor: pointer; margin-top: 5px; font-weight: bold; }
         .read-more.visible { display: inline-block; }
 
@@ -410,28 +413,94 @@
 
         /* --- Miniaturas de video y Carrusel (para múltiples imágenes) --- */
         .post-media .video-thumbnail-container {
-            position: relative; display: flex; justify-content: center; align-items: center; width: 25%; margin-top: 10px; cursor: pointer; border-radius: 8px; overflow: hidden; background-color: transparent;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 25%;
+            margin-top: 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: transparent;
         }
-        .post-media .video-thumbnail-container video { width: 100%; height: auto; display: block; object-fit: contain; }
+        .post-media .video-thumbnail-container video {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: contain;
+        }
         .post-media .play-icon-overlay {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background-color: rgba(0, 0, 0, 0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; z-index: 10; pointer-events: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+            z-index: 10;
+            pointer-events: none;
         }
         .post-media .play-icon-overlay i { font-size: 18px; }
 
         .post-media .carousel-container {
-            display: flex; overflow-x: auto; gap: 10px; padding-bottom: 6px; scroll-snap-type: x mandatory; margin-top: 10px; width: 100%; scrollbar-width: thin; scrollbar-color: transparent transparent; transition: scrollbar-color 0.3s ease;
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding-bottom: 6px;
+            scroll-snap-type: x mandatory;
+            margin-top: 10px;
+            width: 100%;
+            scrollbar-width: thin;
+            scrollbar-color: transparent transparent;
+            transition: scrollbar-color 0.3s ease;
         }
-        .post-media .carousel-container:hover { scrollbar-color: rgba(0, 0, 0, 0.25) transparent; }
-        .post-media .carousel-container::-webkit-scrollbar { height: 5px; }
-        .post-media .carousel-container::-webkit-scrollbar-track { background: transparent; }
-        .post-media .carousel-container::-webkit-scrollbar-thumb { background: transparent; border-radius: 10px; transition: background-color 0.3s ease; }
-        .post-media .carousel-container:hover::-webkit-scrollbar-thumb { background-color: rgba(0, 0, 0, 0.25); }
-        body.dark-mode .post-media .carousel-container:hover { scrollbar-color: rgba(255, 255, 255, 0.3) transparent; }
-        body.dark-mode .post-media .carousel-container:hover::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.3); }
+        .post-media .carousel-container:hover {
+            scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+        }
+        .post-media .carousel-container::-webkit-scrollbar {
+            height: 5px;
+        }
+        .post-media .carousel-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .post-media .carousel-container::-webkit-scrollbar-thumb {
+            background: transparent;
+            border-radius: 10px;
+            transition: background-color 0.3s ease;
+        }
+        .post-media .carousel-container:hover::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.25);
+        }
+        body.dark-mode .post-media .carousel-container:hover {
+            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+        }
+        body.dark-mode .post-media .carousel-container:hover::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
 
-        .post-media .carousel-container .carousel-item { flex-shrink: 0; width: 100%; max-width: 100%; max-height: 500px; scroll-snap-align: center; cursor: pointer; border-radius: 8px; }
-        .post-media .carousel-container .video-thumbnail-container { width: 100%; margin-top: 0; }
-        .post-media .carousel-container .play-icon-overlay { width: 70px; height: 70px; }
+        .post-media .carousel-container .carousel-item {
+            flex-shrink: 0;
+            width: 100%;
+            max-width: 100%;
+            max-height: 500px;
+            scroll-snap-align: center;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+        .post-media .carousel-container .video-thumbnail-container {
+            width: 100%;
+            margin-top: 0;
+        }
+        .post-media .carousel-container .play-icon-overlay {
+            width: 70px;
+            height: 70px;
+        }
         .post-media .carousel-container .play-icon-overlay i { font-size: 24px; }
         /* --- Fin Miniaturas de video y Carrusel --- */
 
@@ -443,16 +512,7 @@
             font-size: 12px; color: #999;
         }
 
-        .delete-button {
-            position: absolute; top: 10px; right: 10px;
-            background-color: #f44336; color: #fff; border: none; border-radius: 5px;
-            padding: 5px; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;
-            display: flex; align-items: center; justify-content: center;
-            width: 30px; height: 30px;
-        }
-        .delete-button:hover { background-color: #d32f2f; }
-
-        /* 🔥 BOTONES PREMIUM ESTILO INSTAGRAM 🔥 */
+        /* 🔥 ESTILOS BOTONES PREMIUM Y COMENTARIOS 🔥 */
         .premium-actions { display: flex; align-items: center; gap: 20px; margin-top: 15px; }
         .action-icon-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 0; color: #000; transition: transform 0.2s; }
         .action-icon-btn i { font-size: 24px; }
@@ -480,6 +540,29 @@
         .reply-indicator { background-color: #e3f2fd; color: #1976d2; padding: 5px 10px; font-size: 12px; border-radius: 10px 10px 0 0; justify-content: space-between; align-items: center; border: 1px solid #bbdefb; margin-bottom: -1px; z-index: 1; display: none; }
         .reply-indicator button { background: none; border: none; color: #1976d2; font-weight: bold; font-size: 14px; cursor: pointer; }
         .load-more-comments { font-size: 14px; color: #1976d2; cursor: pointer; text-align: center; margin-top: 10px; }
+
+        /* --- ESTILOS MODAL REPORTE (NUEVO) --- */
+        #report-modal .modal-content { text-align: left; padding: 20px; }
+        .report-options { display: flex; flex-direction: column; gap: 10px; margin: 15px 0; }
+        .report-option { 
+            display: flex; align-items: center; gap: 10px; padding: 10px; 
+            border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer; background: #fff; 
+        }
+        .report-option:hover { background-color: #f9f9f9; border-color: #999; }
+        .report-option span { color: #333; font-weight: 500; }
+
+        body.dark-mode .report-option { background-color: #2a2a2a; border-color: #444; }
+        body.dark-mode .report-option:hover { background-color: #333; }
+        body.dark-mode .report-option span { color: #fff; }
+
+        .delete-button {
+            position: absolute; top: 10px; right: 10px;
+            background-color: #f44336; color: #fff; border: none; border-radius: 5px;
+            padding: 5px; font-size: 14px; cursor: pointer; transition: background-color 0.3s ease;
+            display: flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px;
+        }
+        .delete-button:hover { background-color: #d32f2f; }
 
         .notification {
             position: fixed; top: 20px; right: 20px;
@@ -710,25 +793,11 @@
         }
         .block-btn:hover { background-color: #b71c1c; }
 
-        /* --- ESTILOS MODAL REPORTE (NUEVO) --- */
-        #report-modal .modal-content { text-align: left; padding: 20px; }
-        .report-options { display: flex; flex-direction: column; gap: 10px; margin: 15px 0; }
-        .report-option { 
-            display: flex; align-items: center; gap: 10px; padding: 10px; 
-            border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer; background: #fff; 
-        }
-        .report-option:hover { background-color: #f9f9f9; border-color: #999; }
-        .report-option span { color: #333; font-weight: 500; }
-
-        body.dark-mode .report-option { background-color: #2a2a2a; border-color: #444; }
-        body.dark-mode .report-option:hover { background-color: #333; }
-        body.dark-mode .report-option span { color: #fff; }
-
         body.dark-mode .report-btn { background-color: #546e7a; }
         body.dark-mode .report-btn:hover { background-color: #455a64; }
         body.dark-mode .block-btn { background-color: #c62828; }
         body.dark-mode .block-btn:hover { background-color: #b71c1c; }
-        
+
         /* Fix mode oscuro nuevos botones premium */
         body.dark-mode .post-dropdown-menu { background-color: #2a2a2a; border-color: #444; }
         body.dark-mode .dropdown-item { color: #e0e0e0; }
@@ -868,7 +937,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Modal Reporte de Publicación (NUEVO) -->
     <div id="report-modal" class="modal">
       <div class="modal-content">
