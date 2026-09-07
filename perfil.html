@@ -371,7 +371,40 @@
         .read-more.visible { display: inline-block; }
 
         .post-media { margin-top: 10px; }
-        .carousel-container { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; scroll-snap-type: x mandatory; margin-top: 10px;}
+        .carousel-container {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding-bottom: 6px;
+            scroll-snap-type: x mandatory;
+            margin-top: 10px;
+            scrollbar-width: thin;
+            scrollbar-color: transparent transparent;
+            transition: scrollbar-color 0.3s ease;
+        }
+        .carousel-container:hover {
+            scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+        }
+        .carousel-container::-webkit-scrollbar {
+            height: 5px;
+        }
+        .carousel-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .carousel-container::-webkit-scrollbar-thumb {
+            background: transparent;
+            border-radius: 10px;
+            transition: background-color 0.3s ease;
+        }
+        .carousel-container:hover::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.25);
+        }
+        body.dark-mode .carousel-container:hover {
+            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+        }
+        body.dark-mode .carousel-container:hover::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
         .carousel-item { scroll-snap-align: center; flex-shrink: 0; width: 100%; max-height: 500px; object-fit: cover; border-radius: 8px; cursor: pointer; }
         .post-media img, .post-media video { width: 100%; height: auto; max-height: 500px; object-fit: cover; border-radius: 8px; display: block; cursor: pointer; margin-top: 10px; }
         
@@ -410,12 +443,107 @@
         .reply-indicator button { background: none; border: none; color: #1976d2; font-weight: bold; font-size: 14px; cursor: pointer; }
         .load-more-comments { font-size: 14px; color: #1976d2; cursor: pointer; text-align: center; margin-top: 10px; }
 
-        /* Visor Multimedia */
-        #media-viewer { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.95); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
+        /* --- Visor Multimedia Moderno --- */
+        #media-viewer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
         #media-viewer.active { display: flex; }
-        #media-viewer-content { max-width: 90%; max-height: 80%; object-fit: contain; transition: transform 0.3s ease; }
+
+        #media-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #media-container img#media-viewer-image {
+            max-width: 90%;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 10px;
+            cursor: zoom-in;
+            user-select: none;
+            -webkit-user-drag: none;
+            transition: transform 0.25s ease;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        #media-container video#media-viewer-video {
+            max-width: 90%;
+            max-height: 85vh;
+            border-radius: 10px;
+            background: #000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
         .viewer-controls { position: absolute; top: 20px; right: 20px; display: flex; gap: 15px; z-index: 10000; }
-        .viewer-btn { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255,255,255,0.5); color: white; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .viewer-btn { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255,255,255,0.5); color: white; border-radius: 50%; width: 44px; height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; backdrop-filter: blur(6px); transition: background-color 0.2s ease, transform 0.2s ease; }
+        .viewer-btn:hover { background-color: rgba(255, 255, 255, 0.3); transform: scale(1.08); }
+
+        .viewer-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: #fff;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(6px);
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        .viewer-nav-btn:hover { background-color: rgba(255, 255, 255, 0.3); transform: translateY(-50%) scale(1.08); }
+        .viewer-nav-prev { left: 20px; }
+        .viewer-nav-next { right: 20px; }
+
+        .viewer-counter {
+            display: none;
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: #fff;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            backdrop-filter: blur(6px);
+            z-index: 10000;
+        }
+
+        @media (max-width: 768px) {
+            .viewer-nav-btn { width: 40px; height: 40px; font-size: 16px; }
+            .viewer-nav-prev { left: 10px; }
+            .viewer-nav-next { right: 10px; }
+            .viewer-btn { width: 38px; height: 38px; font-size: 16px; }
+            .viewer-controls { top: 12px; right: 12px; gap: 10px; }
+        }
+        /* --- Fin Visor Multimedia Moderno --- */
 
 
         .reviews {
@@ -1021,12 +1149,21 @@
 
     <div id="media-viewer">
         <div class="viewer-controls">
-            <button class="viewer-btn" onclick="zoomMedia(0.2)" title="Zoom In"><i class="fas fa-search-plus"></i></button>
-            <button class="viewer-btn" onclick="zoomMedia(-0.2)" title="Zoom Out"><i class="fas fa-search-minus"></i></button>
+            <button class="viewer-btn" id="zoom-in-btn-viewer" onclick="zoomMedia(0.3)" title="Acercar"><i class="fas fa-search-plus"></i></button>
+            <button class="viewer-btn" id="zoom-out-btn-viewer" onclick="zoomMedia(-0.3)" title="Alejar"><i class="fas fa-search-minus"></i></button>
             <button class="viewer-btn" onclick="closeMediaViewer()" title="Cerrar"><i class="fas fa-times"></i></button>
         </div>
-        <div id="media-container" style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;">
-        </div>
+
+        <button class="viewer-nav-btn viewer-nav-prev" id="viewer-prev-btn" onclick="navigateMedia(-1)" title="Anterior">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="viewer-nav-btn viewer-nav-next" id="viewer-next-btn" onclick="navigateMedia(1)" title="Siguiente">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+
+        <div id="media-container"></div>
+
+        <div class="viewer-counter" id="viewer-counter"></div>
     </div>
 
     <div id="user-report-modal" class="modal">
@@ -1348,6 +1485,9 @@
             document.querySelectorAll('.post-dropdown-menu').forEach(m => m.classList.remove('show'));
         });
 
+        // 🔥 ALMACÉN DE MEDIOS POR PUBLICACIÓN (para el Visor Multimedia) 🔥
+        let postMediaMap = {};
+
         // 🔥 GENERADOR DE POSTS PREMIUM ESTILO INSTAGRAM 🔥
         function generatePostHTML(pub) {
             let menuOpciones = '';
@@ -1355,24 +1495,45 @@
                 menuOpciones = `<button class="dropdown-item danger" onclick="borrarPublicacion(${pub.id}, this.closest('.post'))"><i class="fas fa-trash-alt"></i> Eliminar</button>`;
             }
 
-            let mediaHtml = '';
+            // Construir la lista unificada de medios (imágenes + video) para el visor
+            let mediaItems = [];
             if (pub.imagenes && pub.imagenes.length > 0) {
-              if(pub.imagenes.length === 1) { 
-                  mediaHtml = `<img src="${pub.imagenes[0]}" onclick="openMediaModal('image', '${pub.imagenes[0]}')">`; 
-              } else {
-                  mediaHtml = `<div class="carousel-container">`;
-                  pub.imagenes.forEach(img => { mediaHtml += `<img src="${img}" class="carousel-item" onclick="openMediaModal('image', '${img}')">`; });
-                  mediaHtml += `</div>`;
-              }
-            } else if (pub.imagen_url) { 
-                mediaHtml = `<img src="${pub.imagen_url}" onclick="openMediaModal('image', '${pub.imagen_url}')">`; 
+                pub.imagenes.forEach(img => mediaItems.push({ type: 'image', src: img }));
+            } else if (pub.imagen_url) {
+                mediaItems.push({ type: 'image', src: pub.imagen_url });
             }
+            if (pub.video_url) {
+                mediaItems.push({ type: 'video', src: pub.video_url });
+            }
+            postMediaMap[pub.id] = mediaItems;
 
-            let videoHtml = pub.video_url ? `
-              <div class="video-thumbnail-container" onclick="openMediaModal('video', '${pub.video_url}')">
-                  <video src="${pub.video_url}#t=0.1" preload="metadata"></video>
-                  <div class="play-icon-overlay"><i class="fas fa-play" style="color: white; font-size: 24px;"></i></div>
-              </div>` : '';
+            let mediaHtml = '';
+            if (mediaItems.length === 1) {
+                const item = mediaItems[0];
+                if (item.type === 'image') {
+                    mediaHtml = `<img src="${item.src}" onclick="openMediaViewer(${pub.id}, 0)">`;
+                } else {
+                    mediaHtml = `
+                      <div class="video-thumbnail-container" onclick="openMediaViewer(${pub.id}, 0)">
+                          <video src="${item.src}#t=0.1" preload="metadata"></video>
+                          <div class="play-icon-overlay"><i class="fas fa-play" style="color: white; font-size: 24px;"></i></div>
+                      </div>`;
+                }
+            } else if (mediaItems.length > 1) {
+                mediaHtml = `<div class="carousel-container">`;
+                mediaItems.forEach((item, idx) => {
+                    if (item.type === 'image') {
+                        mediaHtml += `<img src="${item.src}" class="carousel-item" onclick="openMediaViewer(${pub.id}, ${idx})">`;
+                    } else {
+                        mediaHtml += `
+                          <div class="carousel-item video-thumbnail-container" onclick="openMediaViewer(${pub.id}, ${idx})">
+                              <video src="${item.src}#t=0.1" preload="metadata"></video>
+                              <div class="play-icon-overlay"><i class="fas fa-play" style="color: white; font-size: 24px;"></i></div>
+                          </div>`;
+                    }
+                });
+                mediaHtml += `</div>`;
+            }
 
             return `
                 <div class="post-header">
@@ -1388,7 +1549,7 @@
                   </div>
                 </div>
                 <div class="post-content">${pub.contenido ? `<p>${pub.contenido}</p>` : ''}</div>
-                <div class="post-media">${mediaHtml}${videoHtml}</div>
+                <div class="post-media">${mediaHtml}</div>
                 <div class="post-meta">
                   <p>Etiquetas: ${pub.etiquetas || 'Ninguna'}</p>
                   <p>${formatearFecha(pub.fecha_creacion)}</p>
@@ -1916,46 +2077,116 @@
             });
         }
 
-        // Funcionalidad para el modal de multimedia
-        function openMediaModal(type, src) {
-            const modal = document.getElementById('media-modal');
-            const content = document.getElementById('media-modal-content');
+        // ==========================================
+        // 🔥 VISOR MULTIMEDIA MODERNO 🔥
+        // Múltiples imágenes con flechas + contador,
+        // zoom, video con controles nativos y fondo
+        // desenfocado.
+        // ==========================================
+        let currentViewerPostId = null;
+        let currentViewerIndex = 0;
+        let currentZoomLevel = 1;
+        const MEDIA_ZOOM_MIN = 1;
+        const MEDIA_ZOOM_MAX = 4;
 
-            content.innerHTML = `
-                <button class="close-media-btn" id="close-media-btn"><i class="fas fa-times"></i></button>
-                <div class="media-controls" id="media-controls" style="display: none;">
-                    <button id="zoom-in-btn"><i class="fas fa-search-plus"></i></button>
-                    <button id="zoom-out-btn"><i class="fas fa-search-minus"></i></button>
-                    <button id="volume-up-btn" style="display: none;"><i class="fas fa-volume-up"></i></button>
-                    <button id="volume-down-btn" style="display: none;"><i class="fas fa-volume-down"></i></button>
-                </div>
-            `;
-            document.getElementById('close-media-btn').onclick = closeMediaModal;
+        function openMediaViewer(postId, index) {
+            const items = postMediaMap[postId];
+            if (!items || !items.length) return;
+            currentViewerPostId = postId;
+            currentViewerIndex = index;
+            document.getElementById('media-viewer').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            renderViewerItem();
+        }
 
-            if (type === 'image') {
-                const img = document.createElement('img');
-                img.src = src;
-                img.alt = 'Imagen ampliada';
-                content.insertBefore(img, document.getElementById('media-controls'));
-            } else if (type === 'video') {
-                const video = document.createElement('video');
-                video.src = src;
-                video.controls = true;
-                content.insertBefore(video, document.getElementById('media-controls'));
+        function renderViewerItem() {
+            const items = postMediaMap[currentViewerPostId];
+            if (!items || !items.length) return;
+            const item = items[currentViewerIndex];
+            const container = document.getElementById('media-container');
+            currentZoomLevel = 1;
+
+            if (item.type === 'image') {
+                container.innerHTML = `<img id="media-viewer-image" src="${item.src}" alt="Imagen" draggable="false">`;
+            } else {
+                container.innerHTML = `<video id="media-viewer-video" src="${item.src}" controls autoplay playsinline></video>`;
             }
-            modal.style.display = 'flex';
+
+            // El zoom solo aplica a imágenes; el video ya trae sus propios controles nativos
+            const zoomInBtn = document.getElementById('zoom-in-btn-viewer');
+            const zoomOutBtn = document.getElementById('zoom-out-btn-viewer');
+            const showZoom = item.type === 'image';
+            if (zoomInBtn) zoomInBtn.style.display = showZoom ? 'flex' : 'none';
+            if (zoomOutBtn) zoomOutBtn.style.display = showZoom ? 'flex' : 'none';
+
+            // Flechas y contador solo si hay más de un elemento
+            const prevBtn = document.getElementById('viewer-prev-btn');
+            const nextBtn = document.getElementById('viewer-next-btn');
+            const counter = document.getElementById('viewer-counter');
+
+            if (items.length > 1) {
+                prevBtn.style.display = 'flex';
+                nextBtn.style.display = 'flex';
+                counter.style.display = 'block';
+                counter.textContent = `${currentViewerIndex + 1} / ${items.length}`;
+            } else {
+                prevBtn.style.display = 'none';
+                nextBtn.style.display = 'none';
+                counter.style.display = 'none';
+            }
         }
 
-        function closeMediaModal() {
-            document.getElementById('media-modal').style.display = 'none';
+        function navigateMedia(direction) {
+            const items = postMediaMap[currentViewerPostId];
+            if (!items || items.length <= 1) return;
+            currentViewerIndex = (currentViewerIndex + direction + items.length) % items.length;
+            renderViewerItem();
         }
 
-        document.getElementById('feed').addEventListener('click', (event) => {
-            const target = event.target;
-            if (target.classList.contains('media-item')) {
-                openMediaModal(target.dataset.type, target.dataset.src);
+        function zoomMedia(delta) {
+            const img = document.getElementById('media-viewer-image');
+            if (!img) return; // El zoom solo aplica a imágenes
+            currentZoomLevel = Math.min(MEDIA_ZOOM_MAX, Math.max(MEDIA_ZOOM_MIN, currentZoomLevel + delta));
+            img.style.transform = `scale(${currentZoomLevel})`;
+            img.style.cursor = currentZoomLevel > MEDIA_ZOOM_MIN ? 'zoom-out' : 'zoom-in';
+        }
+
+        function closeMediaViewer() {
+            const viewer = document.getElementById('media-viewer');
+            viewer.classList.remove('active');
+            document.body.style.overflow = '';
+
+            const video = document.getElementById('media-viewer-video');
+            if (video) video.pause();
+
+            document.getElementById('media-container').innerHTML = '';
+            currentViewerPostId = null;
+            currentViewerIndex = 0;
+            currentZoomLevel = 1;
+        }
+
+        // Clic en el fondo (fuera de la imagen/video) cierra el visor
+        document.getElementById('media-viewer').addEventListener('click', (e) => {
+            if (e.target.id === 'media-viewer' || e.target.id === 'media-container') {
+                closeMediaViewer();
             }
         });
+
+        // Doble clic sobre la imagen alterna el zoom
+        document.getElementById('media-container').addEventListener('dblclick', (e) => {
+            if (e.target.id === 'media-viewer-image') {
+                zoomMedia(currentZoomLevel > MEDIA_ZOOM_MIN ? (MEDIA_ZOOM_MIN - currentZoomLevel) : 1);
+            }
+        });
+
+        // Navegación y cierre con teclado
+        document.addEventListener('keydown', (e) => {
+            if (!document.getElementById('media-viewer').classList.contains('active')) return;
+            if (e.key === 'ArrowLeft') navigateMedia(-1);
+            if (e.key === 'ArrowRight') navigateMedia(1);
+            if (e.key === 'Escape') closeMediaViewer();
+        });
+        // --- Fin Visor Multimedia Moderno ---
 
         // Inicialización
         let hasLoaded = false;
