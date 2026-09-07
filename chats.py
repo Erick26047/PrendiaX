@@ -13,7 +13,7 @@ import uuid
 import shutil
 from pydantic import BaseModel
 import jwt 
-from firebase_admin import messaging 
+from firebase_admin import messaging
 
 
 router = APIRouter(prefix="/chats", tags=["chats"])
@@ -128,8 +128,53 @@ def verificar_bloqueo(cur, user_a: int, user_b: int):
             detail="No puedes interactuar con este usuario (Bloqueo activo)"
         )
 
-# LECTOR DE ARCHIVOS DESDE EL DISCO DURO
-def send_bytes_range_requests(request: Request, file_path: str, content_type: str, filename: str):
+# LECTOR DE ARCHIVOS EN MEMORIA (BYTEA VIEJO)
+def send_bytes_range_requests(request: Request, file_bytes: bytes, content_type: str, filename: str):
+    file_size = len(file_bytes)
+    range_header = request.headers.get("range")
+
+    if not range_header:
+        return StreamingResponse(
+            io.BytesIO(file_bytes),
+            media_type=content_type,
+            headers={"Content-Disposition": f"inline; filename={filename}"}
+        )
+
+    try:
+        start, end = 0, None
+        match = range_header.strip().replace("bytes=", "").split("-")
+        if match[0]: start = int(match[0])
+        if len(match) > 1 and match[1]: end = int(match[1])
+        
+        if end is None: end = file_size - 1
+        if start >= file_size: raise HTTPException(status_code=416, detail="Range Not Satisfiable")
+        if end >= file_size: end = file_size - 1
+
+        chunk_length = end - start + 1
+        data_chunk = file_bytes[start : end + 1]
+
+        headers = {
+            "Content-Range": f"bytes {start}-{end}/{file_size}",
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(chunk_length),
+            "Content-Disposition": f"inline; filename={filename}",
+        }
+
+        return StreamingResponse(
+            io.BytesIO(data_chunk),
+            status_code=206,
+            headers=headers,
+            media_type=content_type
+        )
+    except ValueError:
+        return StreamingResponse(
+            io.BytesIO(file_bytes),
+            media_type=content_type,
+            headers={"Content-Disposition": f"inline; filename={filename}"}
+        )
+
+# LECTOR DE ARCHIVOS EN DISCO DURO (NUEVOS)
+def send_file_range_requests(request: Request, file_path: str, content_type: str, filename: str):
     file_size = os.path.getsize(file_path)
     range_header = request.headers.get("range")
 
@@ -184,13 +229,8 @@ def send_bytes_range_requests(request: Request, file_path: str, content_type: st
             headers={"Content-Disposition": f"inline; filename={filename}"}
         )
 
-# =========================================================================
-# LECTURA DE TOKEN REAL (JWT)
-# =========================================================================
 def get_user_id_hybrid(request: Request):
-    # 1. Intentar Token de App Móvil (JWT REAL)
     auth_header = request.headers.get("Authorization")
-    
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
         try:
@@ -204,23 +244,16 @@ def get_user_id_hybrid(request: Request):
                  try: return int(token.split("jwt_app_")[1])
                  except: pass
 
-    # 2. Intentar Sesión Web (Cookie)
     if 'user' in request.session and 'id' in request.session['user']:
         return int(request.session['user']['id'])
         
     return None
 
-# =========================================================================
-# SESSION DE CHATS (JWT REAL)
-# =========================================================================
 async def get_session(request: Request):
-    # 1. Web
     if 'user' in request.session and 'id' in request.session['user']:
         return request.session['user']['id']
     
-    # 2. App (JWT)
     auth_header = request.headers.get("Authorization")
-    
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
         try:
@@ -236,7 +269,6 @@ async def get_session(request: Request):
 
     raise HTTPException(status_code=401, detail="No autorizado. Inicia sesión.")
 
-
 @router.get("/current_user")
 async def get_current_user_endpoint(user_id: int = Depends(get_session)):
     return {"user_id": user_id}
@@ -248,7 +280,7 @@ async def get_user_info(user_id: int, requesting_user_id: int = Depends(get_sess
         cur = conn.cursor()
         cur.execute("""
             SELECT u.id, u.nombre, COALESCE(du.nombre_empresa, '') AS nombre_empresa,
-                   du.categoria, du.foto IS NOT NULL AS has_foto
+                   du.categoria, (du.foto IS NOT NULL OR du.ruta_foto IS NOT NULL) AS has_foto
             FROM usuarios u
             LEFT JOIN datos_usuario du ON u.id = du.user_id
             WHERE u.id = %s
@@ -288,7 +320,7 @@ async def get_media_chat(request: Request, mensaje_id: int, user_id: int = Depen
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            SELECT m.media_content, m.tipo
+            SELECT m.media_content, m.contenido, m.tipo
             FROM mensajes_chat m
             JOIN chats c ON m.chat_id = c.id
             WHERE m.id = %s AND (c.usuario1_id = %s OR c.usuario2_id = %s)
@@ -297,19 +329,10 @@ async def get_media_chat(request: Request, mensaje_id: int, user_id: int = Depen
         cur.close()
         conn.close()
 
-        if not result or not result[0]:
-            raise HTTPException(status_code=404, detail="Archivo no encontrado en la base de datos")
+        if not result:
+            raise HTTPException(status_code=404, detail="Archivo no encontrado")
 
-        file_path_or_bytes, tipo = result
-        
-        # Validar por si quedo algun bytea sin migrar
-        if isinstance(file_path_or_bytes, memoryview) or isinstance(file_path_or_bytes, bytes):
-            file_path = file_path_or_bytes.tobytes().decode('utf-8') if hasattr(file_path_or_bytes, 'tobytes') else file_path_or_bytes.decode('utf-8')
-        else:
-            file_path = file_path_or_bytes
-
-        if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="El archivo fue eliminado del servidor")
+        media_content, contenido, tipo = result
 
         content_type = {
             'imagen': 'image/jpeg',
@@ -323,8 +346,18 @@ async def get_media_chat(request: Request, mensaje_id: int, user_id: int = Depen
         elif tipo == 'voz': filename += ".m4a"
         elif tipo == 'imagen': filename += ".jpg"
         elif tipo == 'document': filename += ".pdf"
-        
-        return send_bytes_range_requests(request, file_path, content_type, filename)
+
+        # Lógica inteligente: Si tiene bytea, es mensaje viejo. Si tiene ruta en contenido, es mensaje nuevo.
+        if media_content:
+            file_bytes = media_content.tobytes() if hasattr(media_content, 'tobytes') else bytes(media_content)
+            return send_bytes_range_requests(request, file_bytes, content_type, filename)
+        elif contenido:
+            file_path = contenido.split('|')[1] if tipo == 'document' and '|' in contenido else contenido
+            if not os.path.exists(file_path):
+                raise HTTPException(status_code=404, detail="El archivo fue eliminado del servidor")
+            return send_file_range_requests(request, file_path, content_type, filename)
+        else:
+            raise HTTPException(status_code=404, detail="Archivo no encontrado")
 
     except HTTPException as he:
         raise he
@@ -351,7 +384,7 @@ async def list_chats(user_id: int = Depends(get_session), limit: int = 10, offse
                    m.fecha_envio,
                    m.tipo AS tipo_ultimo_mensaje,
                    SUM(CASE WHEN m.leido = FALSE AND m.receptor_id = %s THEN 1 ELSE 0 END) AS unread_count,
-                   du.foto IS NOT NULL AS has_foto,
+                   (du.foto IS NOT NULL OR du.ruta_foto IS NOT NULL) AS has_foto,
                    m.emisor_id = %s AS es_mio,
                    c.creado_en
             FROM chats c
@@ -362,7 +395,7 @@ async def list_chats(user_id: int = Depends(get_session), limit: int = 10, offse
             LEFT JOIN datos_usuario du ON u.id = du.user_id
             LEFT JOIN mensajes_chat m ON c.ultimo_mensaje_id = m.id
             WHERE c.usuario1_id = %s OR c.usuario2_id = %s
-            GROUP BY c.id, c.usuario1_id, c.usuario2_id, u.nombre, du.nombre_empresa, du.categoria, m.contenido, m.fecha_envio, m.tipo, du.foto, m.emisor_id, c.creado_en
+            GROUP BY c.id, c.usuario1_id, c.usuario2_id, u.nombre, du.nombre_empresa, du.categoria, m.contenido, m.fecha_envio, m.tipo, du.foto, du.ruta_foto, m.emisor_id, c.creado_en
             ORDER BY COALESCE(m.fecha_envio, c.creado_en) DESC
             LIMIT %s OFFSET %s
         """, (user_id, user_id, user_id, user_id, user_id, user_id, limit, offset))
@@ -377,7 +410,7 @@ async def list_chats(user_id: int = Depends(get_session), limit: int = 10, offse
                 "display_name": row[2],
                 "tipo_usuario": row[3],
                 "foto_perfil_url": f"/chats/user/{row[1]}/foto_perfil" if row[3] == 'emprendedor' and row[8] else "",
-                "ultimo_mensaje": row[4] if row[4] else "",
+                "ultimo_mensaje": row[4].split('|')[0] if row[6] == 'document' and row[4] and '|' in row[4] else (row[4] if row[6] == 'texto' else ""),
                 "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
                 "tipo_ultimo_mensaje": row[6] if row[6] else "texto",
                 "unread_count": int(row[7]),
@@ -410,7 +443,7 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
                        WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor'
                        ELSE 'explorador'
                    END AS tipo_usuario,
-                   du.foto IS NOT NULL AS has_foto
+                   (du.foto IS NOT NULL OR du.ruta_foto IS NOT NULL) AS has_foto
             FROM usuarios u
             LEFT JOIN datos_usuario du ON u.id = du.user_id
             WHERE u.id = %s
@@ -421,12 +454,14 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
             SELECT m.id, m.emisor_id, m.receptor_id, m.contenido, m.tipo, m.fecha_envio, m.leido
             FROM mensajes_chat m
             WHERE m.chat_id = %s
-            ORDER BY m.fecha_envio ASC
+            ORDER BY m.fecha_envio DESC
             LIMIT %s OFFSET %s
         """, (chat_id, limit, offset))
         mensajes = cur.fetchall()
+        
+        # Invertir para que se lean cronológicamente
+        mensajes.reverse()
 
-        # Marcar como leídos
         cur.execute("""
             UPDATE mensajes_chat 
             SET leido = TRUE 
@@ -442,7 +477,7 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
                 "id": row[0],
                 "emisor_id": int(row[1]),
                 "receptor_id": int(row[2]),
-                "contenido": row[3] if row[3] else "",
+                "contenido": row[3].split('|')[0] if row[4] == 'document' and row[3] and '|' in row[3] else (row[3] if row[4] == 'texto' else ""),
                 "tipo": row[4],
                 "media_url": f"/chats/media/{row[0]}" if row[4] in ['imagen', 'video', 'voz', 'document'] else "",
                 "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S"),
@@ -481,7 +516,6 @@ async def send_message(chat_id: int, contenido: str = Form(...), user_id: int = 
         receptor_id = chat[2] if chat[1] == user_id else chat[1]
         verificar_bloqueo(cur, user_id, receptor_id)
 
-        # Buscar el nombre de quien envía y el token del receptor
         cur.execute("""
             SELECT 
                 (SELECT COALESCE(du.nombre_empresa, u.nombre) FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s),
@@ -579,7 +613,6 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
             emisor_nombre = row[0] if row and row[0] else "Usuario"
             fcm_token = row[1] if row and row[1] else None
 
-            # GUARDAR AL DISCO DURO (No a la BD)
             chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
             os.makedirs(chat_folder, exist_ok=True)
             unique_filename = f"{uuid.uuid4().hex}_{sanitize_filename(filename)}"
@@ -588,9 +621,8 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
             with open(file_path, "wb") as buffer:
                 buffer.write(file_content)
 
-            # Insertamos la ruta como texto normal
             cur.execute("""
-                INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, media_content, fecha_envio)
+                INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, contenido, fecha_envio)
                 VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
                 RETURNING id, fecha_envio
             """, (chat_id, user_id, receptor_id, tipo, file_path))
@@ -679,7 +711,6 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
             emisor_nombre = row[0] if row and row[0] else "Usuario"
             fcm_token = row[1] if row and row[1] else None
 
-            # GUARDAR AL DISCO DURO
             chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
             os.makedirs(chat_folder, exist_ok=True)
             unique_filename = f"{uuid.uuid4().hex}_{sanitize_filename(filename)}"
@@ -689,7 +720,7 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
                 buffer.write(file_content)
 
             cur.execute("""
-                INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, media_content, fecha_envio)
+                INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, contenido, fecha_envio)
                 VALUES (%s, %s, %s, 'voz', %s, CURRENT_TIMESTAMP)
                 RETURNING id, fecha_envio
             """, (chat_id, user_id, receptor_id, file_path))
@@ -781,7 +812,6 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
             emisor_nombre = row[0] if row and row[0] else "Usuario"
             fcm_token = row[1] if row and row[1] else None
 
-            # GUARDAR AL DISCO DURO
             chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
             os.makedirs(chat_folder, exist_ok=True)
             unique_filename = f"{uuid.uuid4().hex}_{sanitize_filename(filename)}"
@@ -790,11 +820,13 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
             with open(file_path, "wb") as buffer:
                 buffer.write(file_content)
 
+            valor_bd = f"{doc_name}|{file_path}"
+
             cur.execute("""
-                INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, contenido, tipo, media_content, fecha_envio)
-                VALUES (%s, %s, %s, %s, 'document', %s, CURRENT_TIMESTAMP)
+                INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, contenido, fecha_envio)
+                VALUES (%s, %s, %s, 'document', %s, CURRENT_TIMESTAMP)
                 RETURNING id, fecha_envio
-            """, (chat_id, user_id, receptor_id, doc_name, file_path))
+            """, (chat_id, user_id, receptor_id, valor_bd))
             mensaje = cur.fetchone()
 
             cur.execute("UPDATE chats SET ultimo_mensaje_id = %s WHERE id = %s", (mensaje[0], chat_id))
@@ -854,14 +886,14 @@ async def search_chats(query: str, user_id: int = Depends(get_session), limit: i
                    CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END AS tipo_usuario,
                    m.contenido AS ultimo_mensaje, m.fecha_envio, m.tipo AS tipo_ultimo_mensaje,
                    SUM(CASE WHEN m.leido = FALSE AND m.receptor_id = %s THEN 1 ELSE 0 END) AS unread_count,
-                   du.foto IS NOT NULL AS has_foto
+                   (du.foto IS NOT NULL OR du.ruta_foto IS NOT NULL) AS has_foto
             FROM chats c
             JOIN usuarios u ON (CASE WHEN c.usuario1_id = %s THEN c.usuario2_id ELSE c.usuario1_id END) = u.id
             LEFT JOIN datos_usuario du ON u.id = du.user_id
             LEFT JOIN mensajes_chat m ON c.ultimo_mensaje_id = m.id
             WHERE (c.usuario1_id = %s OR c.usuario2_id = %s)
               AND (LOWER(COALESCE(du.nombre_empresa, u.nombre)) LIKE %s)
-            GROUP BY c.id, c.usuario1_id, c.usuario2_id, u.nombre, du.nombre_empresa, du.categoria, m.contenido, m.fecha_envio, m.tipo, du.foto
+            GROUP BY c.id, c.usuario1_id, c.usuario2_id, u.nombre, du.nombre_empresa, du.categoria, m.contenido, m.fecha_envio, m.tipo, du.foto, du.ruta_foto
             ORDER BY m.fecha_envio DESC NULLS LAST
             LIMIT %s OFFSET %s
         """, (user_id, user_id, user_id, user_id, user_id, f"%{query}%", limit, offset))
@@ -873,7 +905,8 @@ async def search_chats(query: str, user_id: int = Depends(get_session), limit: i
             {
                 "chat_id": row[0], "otro_usuario_id": int(row[1]), "display_name": row[2], "tipo_usuario": row[3],
                 "foto_perfil_url": f"/chats/user/{row[1]}/foto_perfil" if row[3] == 'emprendedor' and row[8] else "",
-                "ultimo_mensaje": row[4] if row[4] else "", "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
+                "ultimo_mensaje": row[4].split('|')[0] if row[6] == 'document' and row[4] and '|' in row[4] else (row[4] if row[6] == 'texto' else ""),
+                "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
                 "tipo_ultimo_mensaje": row[6] if row[6] else "texto", "unread_count": int(row[7])
             } for row in chats
         ]
@@ -934,7 +967,6 @@ async def delete_chat(chat_id: int, user_id: int = Depends(get_session)):
 
         receptor_id = chat[2] if chat[1] == user_id else chat[1]
         
-        # 🔥 ELIMINAR LA CARPETA DEL CHAT DEL DISCO DURO 🔥
         chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
         if os.path.exists(chat_folder):
             try:
@@ -989,20 +1021,28 @@ async def get_user_profile_picture(user_id: int):
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            SELECT CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END, du.foto
+            SELECT CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END, du.foto, du.ruta_foto
             FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s
         """, (user_id,))
         result = cur.fetchone()
         cur.close()
         conn.close()
 
-        if not result or result[0] != 'emprendedor' or not result[1]:
+        if not result or result[0] != 'emprendedor' or (not result[1] and not result[2]):
             try:
                 with open("default_profile.jpg", "rb") as f: default_foto = f.read()
                 return StreamingResponse(io.BytesIO(default_foto), media_type="image/jpeg")
             except: raise HTTPException(status_code=404)
 
-        return StreamingResponse(io.BytesIO(result[1]), media_type="image/jpeg")
+        if result[2]: # Si tiene foto nueva en disco
+            file_path = os.path.join("media", "perfiles", result[2])
+            if os.path.exists(file_path):
+                return FileResponse(file_path)
+
+        if result[1]: # Si tiene bytea viejo
+            return StreamingResponse(io.BytesIO(result[1]), media_type="image/jpeg")
+
+        raise HTTPException(status_code=404)
     except Exception: raise HTTPException(status_code=500)
 
 @router.get("/unread_count")
