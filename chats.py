@@ -613,163 +613,163 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
             conn.close()
     except HTTPException as he: raise he
 
-    @router.get("/buscar")
-    async def search_chats(query: str, user_id: int = Depends(get_session), limit: int = 10, offset: int = 0):
-        try:
-            query = query.strip().lower()
-            if not query: raise HTTPException(status_code=400, detail="Búsqueda vacía")
+@router.get("/buscar")
+async def search_chats(query: str, user_id: int = Depends(get_session), limit: int = 10, offset: int = 0):
+    try:
+        query = query.strip().lower()
+        if not query: raise HTTPException(status_code=400, detail="Búsqueda vacía")
 
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT c.id, 
-                       CASE WHEN c.usuario1_id = %s THEN c.usuario2_id ELSE c.usuario1_id END AS otro_usuario_id,
-                       COALESCE(du.nombre_empresa, u.nombre) AS display_name,
-                       CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END AS tipo_usuario,
-                       m.contenido AS ultimo_mensaje, m.fecha_envio, m.tipo AS tipo_ultimo_mensaje,
-                       SUM(CASE WHEN m.leido = FALSE AND m.receptor_id = %s THEN 1 ELSE 0 END) AS unread_count,
-                       (du.foto IS NOT NULL OR du.ruta_foto IS NOT NULL) AS has_foto
-                FROM chats c
-                JOIN usuarios u ON (CASE WHEN c.usuario1_id = %s THEN c.usuario2_id ELSE c.usuario1_id END) = u.id
-                LEFT JOIN datos_usuario du ON u.id = du.user_id
-                LEFT JOIN mensajes_chat m ON c.ultimo_mensaje_id = m.id
-                WHERE (c.usuario1_id = %s OR c.usuario2_id = %s)
-                  AND (LOWER(COALESCE(du.nombre_empresa, u.nombre)) LIKE %s)
-                GROUP BY c.id, c.usuario1_id, c.usuario2_id, u.nombre, du.nombre_empresa, du.categoria, m.contenido, m.fecha_envio, m.tipo, du.foto, du.ruta_foto
-                ORDER BY m.fecha_envio DESC NULLS LAST
-                LIMIT %s OFFSET %s
-            """, (user_id, user_id, user_id, user_id, user_id, f"%{query}%", limit, offset))
-            chats = cur.fetchall()
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT c.id, 
+                   CASE WHEN c.usuario1_id = %s THEN c.usuario2_id ELSE c.usuario1_id END AS otro_usuario_id,
+                   COALESCE(du.nombre_empresa, u.nombre) AS display_name,
+                   CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END AS tipo_usuario,
+                   m.contenido AS ultimo_mensaje, m.fecha_envio, m.tipo AS tipo_ultimo_mensaje,
+                   SUM(CASE WHEN m.leido = FALSE AND m.receptor_id = %s THEN 1 ELSE 0 END) AS unread_count,
+                   (du.foto IS NOT NULL OR du.ruta_foto IS NOT NULL) AS has_foto
+            FROM chats c
+            JOIN usuarios u ON (CASE WHEN c.usuario1_id = %s THEN c.usuario2_id ELSE c.usuario1_id END) = u.id
+            LEFT JOIN datos_usuario du ON u.id = du.user_id
+            LEFT JOIN mensajes_chat m ON c.ultimo_mensaje_id = m.id
+            WHERE (c.usuario1_id = %s OR c.usuario2_id = %s)
+              AND (LOWER(COALESCE(du.nombre_empresa, u.nombre)) LIKE %s)
+            GROUP BY c.id, c.usuario1_id, c.usuario2_id, u.nombre, du.nombre_empresa, du.categoria, m.contenido, m.fecha_envio, m.tipo, du.foto, du.ruta_foto
+            ORDER BY m.fecha_envio DESC NULLS LAST
+            LIMIT %s OFFSET %s
+        """, (user_id, user_id, user_id, user_id, user_id, f"%{query}%", limit, offset))
+        chats = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        chats_list = [
+            {
+                "chat_id": row[0], "otro_usuario_id": int(row[1]), "display_name": row[2], "tipo_usuario": row[3],
+                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[8] else "",
+                "ultimo_mensaje": row[4] if row[6] in ['texto', 'document'] else (f"[{row[6].upper()}]" if row[6] else ""), 
+                "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
+                "tipo_ultimo_mensaje": row[6] if row[6] else "texto", "unread_count": int(row[7])
+            } for row in chats
+        ]
+        return chats_list
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/iniciar/{otro_usuario_id}")
+async def start_chat(otro_usuario_id: int, user_id: int = Depends(get_session)):
+    try:
+        if user_id == otro_usuario_id: raise HTTPException(status_code=400, detail="No auto-chat")
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        verificar_bloqueo(cur, user_id, otro_usuario_id)
+
+        cur.execute("SELECT id FROM usuarios WHERE id = %s", (otro_usuario_id,))
+        if not cur.fetchone(): raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        cur.execute("""
+            SELECT id FROM chats 
+            WHERE (usuario1_id = %s AND usuario2_id = %s) OR (usuario1_id = %s AND usuario2_id = %s)
+        """, (user_id, otro_usuario_id, otro_usuario_id, user_id))
+        chat = cur.fetchone()
+        if chat: 
             cur.close()
             conn.close()
+            return {"chat_id": chat[0]}
 
-            chats_list = [
-                {
-                    "chat_id": row[0], "otro_usuario_id": int(row[1]), "display_name": row[2], "tipo_usuario": row[3],
-                    "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[8] else "",
-                    "ultimo_mensaje": row[4] if row[6] in ['texto', 'document'] else (f"[{row[6].upper()}]" if row[6] else ""), 
-                    "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
-                    "tipo_ultimo_mensaje": row[6] if row[6] else "texto", "unread_count": int(row[7])
-                } for row in chats
-            ]
-            return chats_list
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        cur.execute("""
+            INSERT INTO chats (usuario1_id, usuario2_id, creado_en)
+            VALUES (%s, %s, CURRENT_TIMESTAMP)
+            RETURNING id
+        """, (user_id, otro_usuario_id))
+        chat_id = cur.fetchone()[0]
+        conn.commit()
 
-    @router.post("/iniciar/{otro_usuario_id}")
-    async def start_chat(otro_usuario_id: int, user_id: int = Depends(get_session)):
+        message_data = {"chat_id": chat_id, "otro_usuario_id": user_id, "tipo": "nuevo_chat", "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        if otro_usuario_id in websocket_connections:
+            try: await websocket_connections[otro_usuario_id].send_text(json.dumps(message_data))
+            except: del websocket_connections[otro_usuario_id]
+
+        cur.close()
+        conn.close()
+        return {"chat_id": chat_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{chat_id}")
+async def delete_chat(chat_id: int, user_id: int = Depends(get_session)):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT id, usuario1_id, usuario2_id FROM chats WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)", (chat_id, user_id, user_id))
+        chat = cur.fetchone()
+        if not chat: raise HTTPException(status_code=404, detail="Chat no encontrado")
+
+        receptor_id = chat[2] if chat[1] == user_id else chat[1]
+        
+        chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
+        if os.path.exists(chat_folder):
+            try: shutil.rmtree(chat_folder)
+            except Exception as e: logging.error(f"Error borrando carpeta: {e}")
+
+        cur.execute("DELETE FROM mensajes_chat WHERE chat_id = %s", (chat_id,))
+        cur.execute("DELETE FROM chats WHERE id = %s", (chat_id,))
+        conn.commit()
+
+        message_data = {"chat_id": chat_id, "otro_usuario_id": user_id, "tipo": "chat_deleted", "fecha_eliminacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        if receptor_id in websocket_connections:
+            try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
+            except: del websocket_connections[receptor_id]
+
+        cur.close()
+        conn.close()
+        return {"message": "Chat eliminado"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: int):
+    await websocket.accept()
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM usuarios WHERE id = %s", (user_id,))
+        if not cur.fetchone():
+            await websocket.close(code=1008, reason="Usuario no encontrado")
+            return
+        cur.close()
+        conn.close()
+
+        websocket_connections[user_id] = websocket
         try:
-            if user_id == otro_usuario_id: raise HTTPException(status_code=400, detail="No auto-chat")
+            while True:
+                await websocket.receive_text()
+                await websocket.send_text(json.dumps({"type": "ping"}))
+        except WebSocketDisconnect:
+            if user_id in websocket_connections: del websocket_connections[user_id]
+        except Exception:
+            if user_id in websocket_connections: del websocket_connections[user_id]
+    except Exception as e:
+        logging.error(f"Error WS: {e}")
+        await websocket.close(code=1008)
 
-            conn = get_db_connection()
-            cur = conn.cursor()
-            
-            verificar_bloqueo(cur, user_id, otro_usuario_id)
+@router.get("/user/{user_id}/foto_perfil")
+async def get_user_profile_picture(user_id: int):
+    return RedirectResponse(url=f"/foto_perfil/{user_id}")
 
-            cur.execute("SELECT id FROM usuarios WHERE id = %s", (otro_usuario_id,))
-            if not cur.fetchone(): raise HTTPException(status_code=404, detail="Usuario no encontrado")
-
-            cur.execute("""
-                SELECT id FROM chats 
-                WHERE (usuario1_id = %s AND usuario2_id = %s) OR (usuario1_id = %s AND usuario2_id = %s)
-            """, (user_id, otro_usuario_id, otro_usuario_id, user_id))
-            chat = cur.fetchone()
-            if chat: 
-                cur.close()
-                conn.close()
-                return {"chat_id": chat[0]}
-
-            cur.execute("""
-                INSERT INTO chats (usuario1_id, usuario2_id, creado_en)
-                VALUES (%s, %s, CURRENT_TIMESTAMP)
-                RETURNING id
-            """, (user_id, otro_usuario_id))
-            chat_id = cur.fetchone()[0]
-            conn.commit()
-
-            message_data = {"chat_id": chat_id, "otro_usuario_id": user_id, "tipo": "nuevo_chat", "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-            if otro_usuario_id in websocket_connections:
-                try: await websocket_connections[otro_usuario_id].send_text(json.dumps(message_data))
-                except: del websocket_connections[otro_usuario_id]
-
-            cur.close()
-            conn.close()
-            return {"chat_id": chat_id}
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-
-    @router.delete("/{chat_id}")
-    async def delete_chat(chat_id: int, user_id: int = Depends(get_session)):
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("SELECT id, usuario1_id, usuario2_id FROM chats WHERE id = %s AND (usuario1_id = %s OR usuario2_id = %s)", (chat_id, user_id, user_id))
-            chat = cur.fetchone()
-            if not chat: raise HTTPException(status_code=404, detail="Chat no encontrado")
-
-            receptor_id = chat[2] if chat[1] == user_id else chat[1]
-            
-            chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
-            if os.path.exists(chat_folder):
-                try: shutil.rmtree(chat_folder)
-                except Exception as e: logging.error(f"Error borrando carpeta: {e}")
-
-            cur.execute("DELETE FROM mensajes_chat WHERE chat_id = %s", (chat_id,))
-            cur.execute("DELETE FROM chats WHERE id = %s", (chat_id,))
-            conn.commit()
-
-            message_data = {"chat_id": chat_id, "otro_usuario_id": user_id, "tipo": "chat_deleted", "fecha_eliminacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-            if receptor_id in websocket_connections:
-                try: await websocket_connections[receptor_id].send_text(json.dumps(message_data))
-                except: del websocket_connections[receptor_id]
-
-            cur.close()
-            conn.close()
-            return {"message": "Chat eliminado"}
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-
-    @router.websocket("/ws/{user_id}")
-    async def websocket_endpoint(websocket: WebSocket, user_id: int):
-        await websocket.accept()
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("SELECT id FROM usuarios WHERE id = %s", (user_id,))
-            if not cur.fetchone():
-                await websocket.close(code=1008, reason="Usuario no encontrado")
-                return
-            cur.close()
-            conn.close()
-
-            websocket_connections[user_id] = websocket
-            try:
-                while True:
-                    await websocket.receive_text()
-                    await websocket.send_text(json.dumps({"type": "ping"}))
-            except WebSocketDisconnect:
-                if user_id in websocket_connections: del websocket_connections[user_id]
-            except Exception:
-                if user_id in websocket_connections: del websocket_connections[user_id]
-        except Exception as e:
-            logging.error(f"Error WS: {e}")
-            await websocket.close(code=1008)
-
-    @router.get("/user/{user_id}/foto_perfil")
-    async def get_user_profile_picture(user_id: int):
-        return RedirectResponse(url=f"/foto_perfil/{user_id}")
-
-    @router.get("/unread_count")
-    async def get_unread_count(user_id: int = Depends(get_session)):
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT COUNT(*) FROM mensajes_chat m JOIN chats c ON m.chat_id = c.id
-                WHERE m.receptor_id = %s AND m.leido = FALSE AND (c.usuario1_id = %s OR c.usuario2_id = %s)
-            """, (user_id, user_id, user_id))
-            count = cur.fetchone()[0]
-            cur.close()
-            conn.close()
-            return {"unread_count": count}
-        except Exception: raise HTTPException(status_code=500)
+@router.get("/unread_count")
+async def get_unread_count(user_id: int = Depends(get_session)):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT COUNT(*) FROM mensajes_chat m JOIN chats c ON m.chat_id = c.id
+            WHERE m.receptor_id = %s AND m.leido = FALSE AND (c.usuario1_id = %s OR c.usuario2_id = %s)
+        """, (user_id, user_id, user_id))
+        count = cur.fetchone()[0]
+        cur.close()
+        conn.close()
+        return {"unread_count": count}
+    except Exception: raise HTTPException(status_code=500)
