@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException, Header, WebSocket, WebSocketDisconnect, Depends
-from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse, StreamingResponse, Response, FileResponse
+from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse, StreamingResponse, Response
 from fastapi.templating import Jinja2Templates
 from typing import List, Dict
 import psycopg2
@@ -128,14 +128,13 @@ def verificar_bloqueo(cur, user_a: int, user_b: int):
             detail="No puedes interactuar con este usuario (Bloqueo activo)"
         )
 
-# 🔥 MODIFICACIÓN: LECTURA DIRECTA DEL DISCO PARA LA APP 🔥
-def send_bytes_range_requests(request: Request, file_path: str, content_type: str, filename: str):
-    file_size = os.path.getsize(file_path)
+def send_bytes_range_requests(request: Request, file_bytes: bytes, content_type: str, filename: str):
+    file_size = len(file_bytes)
     range_header = request.headers.get("range")
 
     if not range_header:
-        return FileResponse(
-            path=file_path,
+        return StreamingResponse(
+            io.BytesIO(file_bytes),
             media_type=content_type,
             headers={"Content-Disposition": f"inline; filename={filename}"}
         )
@@ -151,18 +150,7 @@ def send_bytes_range_requests(request: Request, file_path: str, content_type: st
         if end >= file_size: end = file_size - 1
 
         chunk_length = end - start + 1
-
-        def file_iterator(file_path, offset, bytes_to_read):
-            with open(file_path, "rb") as f:
-                f.seek(offset)
-                remaining = bytes_to_read
-                while remaining > 0:
-                    chunk_size = min(65536, remaining)
-                    data = f.read(chunk_size)
-                    if not data:
-                        break
-                    remaining -= len(data)
-                    yield data
+        data_chunk = file_bytes[start : end + 1]
 
         headers = {
             "Content-Range": f"bytes {start}-{end}/{file_size}",
@@ -172,14 +160,14 @@ def send_bytes_range_requests(request: Request, file_path: str, content_type: st
         }
 
         return StreamingResponse(
-            file_iterator(file_path, start, chunk_length),
+            io.BytesIO(data_chunk),
             status_code=206,
             headers=headers,
             media_type=content_type
         )
-    except Exception:
-        return FileResponse(
-            path=file_path,
+    except ValueError:
+        return StreamingResponse(
+            io.BytesIO(file_bytes),
             media_type=content_type,
             headers={"Content-Disposition": f"inline; filename={filename}"}
         )
@@ -270,8 +258,7 @@ async def get_user_info(user_id: int, requesting_user_id: int = Depends(get_sess
             "nombre": user[1],
             "nombre_empresa": user[2],
             "categoria": user[3] if user[3] else "",
-            # 🔥 FIX DE FOTO DE PERFIL 🔥
-            "foto_perfil_url": f"/foto_perfil/{user_id}" if user[4] else ""
+            "foto_perfil_url": f"/foto_perfil/{user_id}" if user[3] and user[4] else ""
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -293,9 +280,8 @@ async def get_media_chat(request: Request, mensaje_id: int, user_id: int = Depen
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        # 🔥 AHORA LEEMOS LA COLUMNA CONTENIDO PARA OBTENER LA RUTA DEL ARCHIVO 🔥
         cur.execute("""
-            SELECT m.contenido, m.tipo
+            SELECT m.media_content, m.tipo
             FROM mensajes_chat m
             JOIN chats c ON m.chat_id = c.id
             WHERE m.id = %s AND (c.usuario1_id = %s OR c.usuario2_id = %s)
@@ -307,11 +293,18 @@ async def get_media_chat(request: Request, mensaje_id: int, user_id: int = Depen
         if not result or not result[0]:
             raise HTTPException(status_code=404, detail="Archivo no encontrado")
 
-        file_path, tipo = result
+        media_content, tipo = result
         
-        # Validar si el documento existe físicamente
-        if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="El archivo físico fue eliminado")
+        # 🔥 Detectar si es una ruta en disco o bytea antiguo
+        try:
+            decoded_path = media_content.tobytes().decode('utf-8') if hasattr(media_content, 'tobytes') else media_content.decode('utf-8')
+            if decoded_path.startswith(MEDIA_DIR) and os.path.exists(decoded_path):
+                with open(decoded_path, "rb") as f:
+                    file_bytes = f.read()
+            else:
+                file_bytes = media_content.tobytes() if hasattr(media_content, 'tobytes') else bytes(media_content)
+        except Exception:
+            file_bytes = media_content.tobytes() if hasattr(media_content, 'tobytes') else bytes(media_content)
 
         content_type = {
             'imagen': 'image/jpeg',
@@ -320,11 +313,14 @@ async def get_media_chat(request: Request, mensaje_id: int, user_id: int = Depen
             'document': 'application/pdf'
         }.get(tipo, 'application/octet-stream')
 
-        filename = os.path.basename(file_path)
+        filename = f"file_{mensaje_id}"
+        if tipo == 'video': filename += ".mp4"
+        elif tipo == 'voz': filename += ".m4a"
+        elif tipo == 'imagen': filename += ".jpg"
+        elif tipo == 'document': filename += ".pdf"
         
-        return send_bytes_range_requests(request, file_path, content_type, filename)
+        return send_bytes_range_requests(request, file_bytes, content_type, filename)
 
-    except HTTPException as h: raise h
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -373,9 +369,8 @@ async def list_chats(user_id: int = Depends(get_session), limit: int = 10, offse
                 "otro_usuario_id": int(row[1]),
                 "display_name": row[2],
                 "tipo_usuario": row[3],
-                # 🔥 FIX DE FOTO DE PERFIL 🔥
-                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[8] else "",
-                "ultimo_mensaje": row[4] if row[6] == 'texto' else (f"[{row[6].upper()}]" if row[6] else ""),
+                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[3] == 'emprendedor' and row[8] else "",
+                "ultimo_mensaje": row[4] if row[4] else "",
                 "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
                 "tipo_ultimo_mensaje": row[6] if row[6] else "texto",
                 "unread_count": int(row[7]),
@@ -440,7 +435,7 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
                 "id": row[0],
                 "emisor_id": int(row[1]),
                 "receptor_id": int(row[2]),
-                "contenido": row[3] if row[4] == 'texto' else "",
+                "contenido": row[3] if row[3] else "",
                 "tipo": row[4],
                 "media_url": f"/chats/media/{row[0]}" if row[4] in ['imagen', 'video', 'voz', 'document'] else "",
                 "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S"),
@@ -456,8 +451,7 @@ async def get_chat_messages(chat_id: int, user_id: int = Depends(get_session), l
                 "id": otro_usuario_id,
                 "display_name": otro_usuario[0],
                 "tipo_usuario": otro_usuario[1],
-                # 🔥 FIX DE FOTO DE PERFIL 🔥
-                "foto_perfil_url": f"/foto_perfil/{otro_usuario_id}" if otro_usuario[2] else ""
+                "foto_perfil_url": f"/foto_perfil/{otro_usuario_id}" if otro_usuario[1] == 'emprendedor' and otro_usuario[2] else ""
             },
             "mensajes": mensajes_list
         }
@@ -576,24 +570,21 @@ async def send_media(chat_id: int, file: UploadFile = File(...), user_id: int = 
             emisor_nombre = row[0] if row and row[0] else "Usuario"
             fcm_token = row[1] if row and row[1] else None
 
-            # 1. Crear carpeta del chat en Ubuntu
+            # Guardar archivo en disco
             chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
             os.makedirs(chat_folder, exist_ok=True)
-            
-            # 2. Generar nombre de archivo único
             unique_filename = f"{uuid.uuid4().hex}_{sanitize_filename(filename)}"
             file_path = os.path.join(chat_folder, unique_filename)
 
-            # 3. Guardar archivo físico en disco duro
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
-            # 4. Guardar RUTA en BD en columna contenido (y ya NO en media_content_bytea)
+            # 🔥 FIX: Guardar la ruta codificada como bytes en la columna bytea
             cur.execute("""
-                INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, contenido, fecha_envio)
+                INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, media_content, fecha_envio)
                 VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
                 RETURNING id, fecha_envio
-            """, (chat_id, user_id, receptor_id, tipo, file_path))
+            """, (chat_id, user_id, receptor_id, tipo, psycopg2.Binary(file_path.encode('utf-8'))))
             mensaje = cur.fetchone()
 
             cur.execute("UPDATE chats SET ultimo_mensaje_id = %s WHERE id = %s", (mensaje[0], chat_id))
@@ -677,24 +668,21 @@ async def send_voice_note(chat_id: int, file: UploadFile = File(...), user_id: i
             emisor_nombre = row[0] if row and row[0] else "Usuario"
             fcm_token = row[1] if row and row[1] else None
 
-            # 1. Crear carpeta en Ubuntu
+            # Guardar archivo en disco
             chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
             os.makedirs(chat_folder, exist_ok=True)
-            
-            # 2. Generar nombre único
             unique_filename = f"{uuid.uuid4().hex}_{sanitize_filename(filename)}"
             file_path = os.path.join(chat_folder, unique_filename)
 
-            # 3. Guardar archivo de voz
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
-            # 4. Guardar RUTA en BD (Columna contenido)
+            # 🔥 FIX: Guardar la ruta codificada como bytes en la columna bytea
             cur.execute("""
-                INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, contenido, fecha_envio)
+                INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, media_content, fecha_envio)
                 VALUES (%s, %s, %s, 'voz', %s, CURRENT_TIMESTAMP)
                 RETURNING id, fecha_envio
-            """, (chat_id, user_id, receptor_id, file_path))
+            """, (chat_id, user_id, receptor_id, psycopg2.Binary(file_path.encode('utf-8'))))
             mensaje = cur.fetchone()
 
             cur.execute("UPDATE chats SET ultimo_mensaje_id = %s WHERE id = %s", (mensaje[0], chat_id))
@@ -781,26 +769,21 @@ async def send_document(chat_id: int, file: UploadFile = File(...), contenido: s
             emisor_nombre = row[0] if row and row[0] else "Usuario"
             fcm_token = row[1] if row and row[1] else None
 
-            # 1. Crear carpeta en Ubuntu
+            # Guardar archivo en disco
             chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
             os.makedirs(chat_folder, exist_ok=True)
-            
-            # 2. Generar nombre único
             unique_filename = f"{uuid.uuid4().hex}_{sanitize_filename(filename)}"
             file_path = os.path.join(chat_folder, unique_filename)
 
-            # 3. Guardar archivo documento
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
-            # 4. Guardar "Nombre|Ruta" en la BD
-            valor_bd = f"{doc_name}|{file_path}"
-
+            # 🔥 FIX: Guardar la ruta codificada como bytes en la columna bytea
             cur.execute("""
-                INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, tipo, contenido, fecha_envio)
-                VALUES (%s, %s, %s, 'document', %s, CURRENT_TIMESTAMP)
+                INSERT INTO mensajes_chat (chat_id, emisor_id, receptor_id, contenido, tipo, media_content, fecha_envio)
+                VALUES (%s, %s, %s, %s, 'document', %s, CURRENT_TIMESTAMP)
                 RETURNING id, fecha_envio
-            """, (chat_id, user_id, receptor_id, valor_bd))
+            """, (chat_id, user_id, receptor_id, doc_name, psycopg2.Binary(file_path.encode('utf-8'))))
             mensaje = cur.fetchone()
 
             cur.execute("UPDATE chats SET ultimo_mensaje_id = %s WHERE id = %s", (mensaje[0], chat_id))
@@ -879,9 +862,8 @@ async def search_chats(query: str, user_id: int = Depends(get_session), limit: i
         chats_list = [
             {
                 "chat_id": row[0], "otro_usuario_id": int(row[1]), "display_name": row[2], "tipo_usuario": row[3],
-                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[8] else "",
-                "ultimo_mensaje": row[4] if row[6] == 'texto' else (f"[{row[6].upper()}]" if row[6] else ""), 
-                "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
+                "foto_perfil_url": f"/foto_perfil/{row[1]}" if row[3] == 'emprendedor' and row[8] else "",
+                "ultimo_mensaje": row[4] if row[4] else "", "fecha_envio": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else "",
                 "tipo_ultimo_mensaje": row[6] if row[6] else "texto", "unread_count": int(row[7])
             } for row in chats
         ]
@@ -941,7 +923,7 @@ async def delete_chat(chat_id: int, user_id: int = Depends(get_session)):
         if not chat: raise HTTPException(status_code=404, detail="Chat no encontrado")
 
         receptor_id = chat[2] if chat[1] == user_id else chat[1]
-        
+
         # 🔥 BORRAR CARPETA COMPLETA DEL CHAT AL ELIMINAR EL CHAT 🔥
         chat_folder = os.path.join(MEDIA_DIR, str(chat_id))
         if os.path.exists(chat_folder):
@@ -990,6 +972,28 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
     except Exception as e:
         logging.error(f"Error WS: {e}")
         await websocket.close(code=1008)
+
+@router.get("/user/{user_id}/foto_perfil")
+async def get_user_profile_picture(user_id: int):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT CASE WHEN du.categoria IS NOT NULL AND du.categoria != '' THEN 'emprendedor' ELSE 'explorador' END, du.foto
+            FROM usuarios u LEFT JOIN datos_usuario du ON u.id = du.user_id WHERE u.id = %s
+        """, (user_id,))
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if not result or result[0] != 'emprendedor' or not result[1]:
+            try:
+                with open("default_profile.jpg", "rb") as f: default_foto = f.read()
+                return StreamingResponse(io.BytesIO(default_foto), media_type="image/jpeg")
+            except: raise HTTPException(status_code=404)
+
+        return StreamingResponse(io.BytesIO(result[1]), media_type="image/jpeg")
+    except Exception: raise HTTPException(status_code=500)
 
 @router.get("/unread_count")
 async def get_unread_count(user_id: int = Depends(get_session)):
