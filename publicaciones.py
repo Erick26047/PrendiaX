@@ -17,6 +17,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
 import uuid
+import html
 
 # 🔥 CONFIGURACIÓN DE TU CORREO (Llena estos datos) 🔥
 SMTP_SERVER = "smtp.gmail.com"
@@ -498,7 +499,8 @@ async def publicar(request: Request, background_tasks: BackgroundTasks):
 
         imagenes_validas = [img for img in imagenes if getattr(img, "filename", None)]
         video_valido = video if getattr(video, "filename", None) else None
-        texto = contenido.strip() if contenido else ""
+        texto_raw = contenido.strip() if contenido else ""
+        texto = html.escape(texto_raw)
 
         if not texto and not imagenes_validas and not video_valido:
             raise HTTPException(status_code=400, detail="Debe incluir contenido o multimedia")
@@ -621,9 +623,10 @@ async def editar_publicacion(post_id: int, request: Request):
         if not row: raise HTTPException(status_code=404, detail="Publicación no encontrada")
         if row[0] != user_id: raise HTTPException(status_code=403, detail="No tienes permiso")
 
-        texto = contenido.strip() if contenido else ""
+        texto_raw = contenido.strip() if contenido else ""
+        texto = html.escape(texto_raw)
         etiquetas_lista = [e.strip() for e in etiquetas.split(",") if e.strip()] if isinstance(etiquetas, str) and etiquetas else []
-
+        
         if reemplazar_media == "true":
             cur.execute("DELETE FROM publicacion_imagenes WHERE publicacion_id = %s", (post_id,))
             
@@ -1106,7 +1109,9 @@ async def post_comment(post_id: int, request: CommentRequest, http_request: Requ
         user_id = get_user_id_hybrid(http_request)
         if not user_id: raise HTTPException(status_code=401, detail="Login requerido")
 
-        contenido = request.contenido.strip()
+        contenido_raw = request.contenido.strip()
+        contenido = html.escape(contenido_raw)
+
         if not contenido: raise HTTPException(status_code=400, detail="Contenido vacío")
 
         conn = get_db_connection()
